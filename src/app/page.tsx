@@ -173,18 +173,6 @@ function AppContent({ onNotifyOpen }: { onNotifyOpen: () => void }) {
           </motion.button>
         </motion.div>
 
-        {/* Secondary CTA */}
-        <motion.a
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 200, damping: 20, delay: 1.0 }}
-          href="https://wa.me/919999999999"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs tracking-wider uppercase text-gameon-yellow-dim/50 hover:text-gameon-yellow transition-colors font-medium"
-        >
-          Updates on WhatsApp →
-        </motion.a>
       </motion.div>
 
       {/* Footer */}

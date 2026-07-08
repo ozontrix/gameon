@@ -23,6 +23,8 @@ const inter = Inter({
   display: "swap",
 });
 
+const siteUrl = "https://game-on.in";
+
 export const metadata: Metadata = {
   title: "GAME ON — Premium Sports Destination | Gurugram",
   description:
@@ -35,6 +37,30 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     apple: "/icons/apple-touch-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    siteName: "Game On",
+    title: "GAME ON — Premium Sports Destination | Gurugram",
+    description:
+      "India's premium multi-sports destination launching in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
+    url: siteUrl,
+    images: [
+      {
+        url: `${siteUrl}/game_on.png`,
+        width: 1200,
+        height: 630,
+        alt: "Game On — India's premium multi-sports destination",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GAME ON — Premium Sports Destination | Gurugram",
+    description:
+      "India's premium multi-sports destination launching in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
+    images: [`${siteUrl}/game_on.png`],
   },
 };
 
