@@ -59,19 +59,19 @@ function AnimatedCounter({ from = 0, to, suffix = "" }: { from?: number; to: num
   );
 }
 
-// ─── App Content (shared between mobile & desktop) ───
+// ─── App Content ───
 function AppContent({ onNotifyOpen }: { onNotifyOpen: () => void }) {
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center px-8 py-16 overflow-hidden">
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 py-16 overflow-hidden">
       {/* Court-line grid background */}
       <div className="absolute inset-0 court-line-bg" />
 
       {/* Floodlight glow */}
-      <div className="floodlight-glow top-1/4 left-1/2 -translate-x-1/2" />
+      <div className="floodlight-glow top-1/3 left-1/2 -translate-x-1/2" />
 
       {/* Content */}
       <motion.div
-        className="relative z-10 flex flex-col items-center justify-center flex-1 gap-6"
+        className="relative z-10 flex flex-col items-center justify-center gap-5 sm:gap-6 w-full max-w-lg mx-auto"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -81,16 +81,15 @@ function AppContent({ onNotifyOpen }: { onNotifyOpen: () => void }) {
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.1 }}
-          className="mb-4"
         >
           <Image
             src="/game_on.png"
             alt="Game On"
-            width={280}
-            height={80}
+            width={320}
+            height={96}
             priority
             className="object-contain w-auto h-auto"
-            style={{ maxWidth: "280px", height: "auto" }}
+            style={{ maxWidth: "320px", height: "auto" }}
           />
         </motion.div>
 
@@ -124,7 +123,7 @@ function AppContent({ onNotifyOpen }: { onNotifyOpen: () => void }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.55 }}
-          className="flex items-center gap-8 md:gap-12 mt-2"
+          className="flex items-center gap-8 md:gap-12 mt-1"
         >
           <div className="flex flex-col items-center gap-1">
             <AnimatedCounter to={5} suffix="+" />
@@ -160,11 +159,11 @@ function AppContent({ onNotifyOpen }: { onNotifyOpen: () => void }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.85 }}
-          className="w-full max-w-xs mt-2"
+          className="w-full max-w-xs mt-1"
         >
           <motion.button
             onClick={onNotifyOpen}
-            className="w-full bg-gameon-yellow text-gameon-black font-semibold text-sm tracking-wider uppercase rounded-full py-4 flex items-center justify-center gap-2 shadow-lg shadow-gameon-yellow/20"
+            className="w-full bg-gameon-yellow text-gameon-black font-semibold text-sm tracking-wider uppercase rounded-full py-4 flex items-center justify-center gap-2 shadow-lg shadow-gameon-yellow/20 cursor-pointer"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.96 }}
             transition={spring}
@@ -193,7 +192,7 @@ function AppContent({ onNotifyOpen }: { onNotifyOpen: () => void }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2, duration: 0.5 }}
-        className="relative z-10 flex flex-col items-center gap-3 mt-auto pt-8"
+        className="relative z-10 flex flex-col items-center gap-3 mt-auto pt-12"
       >
         <div className="w-8 h-px bg-gameon-line" />
         <p className="text-[10px] text-gameon-off-white/20 tracking-widest uppercase">
@@ -252,7 +251,7 @@ function NotifyModal({ open, onClose }: { open: boolean; onClose: () => void }) 
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -260,7 +259,7 @@ function NotifyModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           <motion.div
-            className="glass-panel w-full md:max-w-sm mx-4 mb-0 md:mb-0 rounded-b-none md:rounded-b-[28px] rounded-t-[28px] p-6 md:p-8"
+            className="glass-panel w-full sm:max-w-sm mx-4 mb-0 sm:mb-0 rounded-b-none sm:rounded-b-[28px] rounded-t-[28px] p-6 sm:p-8"
             initial={{ y: 300, opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 300, opacity: 0, scale: 0.95 }}
@@ -268,7 +267,7 @@ function NotifyModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4 text-gameon-off-white/60" />
             </button>
@@ -289,7 +288,7 @@ function NotifyModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                 </p>
                 <motion.button
                   onClick={onClose}
-                  className="mt-4 text-xs tracking-wider uppercase text-gameon-yellow-dim hover:text-gameon-yellow transition-colors font-medium"
+                  className="mt-4 text-xs tracking-wider uppercase text-gameon-yellow-dim hover:text-gameon-yellow transition-colors font-medium cursor-pointer"
                   whileTap={{ scale: 0.96 }}
                 >
                   Close
@@ -318,7 +317,7 @@ function NotifyModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   <motion.button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-gameon-yellow text-gameon-black font-semibold text-sm tracking-wider uppercase rounded-full py-4 flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
+                    className="w-full bg-gameon-yellow text-gameon-black font-semibold text-sm tracking-wider uppercase rounded-full py-4 flex items-center justify-center gap-2 disabled:opacity-50 mt-1 cursor-pointer"
                     whileTap={{ scale: 0.96 }}
                     transition={spring}
                   >
@@ -344,48 +343,9 @@ export default function Home() {
 
   return (
     <>
-      {/* ─── Mobile View (full screen) ─── */}
-      <div className="min-h-screen bg-gameon-black md:hidden">
+      {/* ─── Single Responsive Layout ─── */}
+      <div className="min-h-screen bg-gameon-black flex flex-col">
         <AppContent onNotifyOpen={() => setModalOpen(true)} />
-      </div>
-
-      {/* ─── Desktop View (laptop mockup) ─── */}
-      <div className="hidden md:flex min-h-screen bg-gameon-black items-center justify-center p-8 lg:p-12">
-        <div className="relative w-full max-w-6xl mx-auto">
-          {/* Laptop screen outer frame */}
-          <div className="relative bg-gameon-black-soft rounded-t-2xl rounded-b-sm border border-gameon-line/30 overflow-hidden shadow-2xl shadow-gameon-yellow/5">
-            {/* Laptop screen bezel */}
-            <div className="relative bg-gameon-black rounded-lg m-2 lg:m-3 overflow-hidden" style={{ aspectRatio: "16/10" }}>
-              {/* Camera notch */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
-                <div className="w-2 h-2 rounded-full bg-gameon-black-soft border border-gameon-line/30" />
-              </div>
-
-              {/* Screen content */}
-              <div className="absolute inset-0">
-                <AppContent onNotifyOpen={() => setModalOpen(true)} />
-              </div>
-            </div>
-
-            {/* Laptop base hinge */}
-            <div className="h-1 bg-gameon-black-soft" />
-          </div>
-
-          {/* Laptop base / keyboard deck */}
-          <div className="bg-gameon-black-soft rounded-b-xl h-4 lg:h-6 relative border-x border-b border-gameon-line/20">
-            {/* Hinge dots */}
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 flex gap-1">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="w-1 h-1 rounded-full bg-gameon-line/30" />
-              ))}
-            </div>
-          </div>
-
-          {/* Subtle glow behind laptop */}
-          <div className="absolute -inset-20 -z-10 opacity-30">
-            <div className="w-full h-full floodlight-glow" />
-          </div>
-        </div>
       </div>
 
       {/* Modal (shared) */}
