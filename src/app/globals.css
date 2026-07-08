@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+:root {
+  --gameon-black: #0B0B0C;
+  --gameon-black-soft: #141416;
+  --gameon-yellow: #F5D000;
+  --gameon-yellow-dim: #A98F00;
+  --gameon-off-white: #F3F2ED;
+  --gameon-line: rgba(245, 208, 0, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--gameon-black);
+  --color-foreground: var(--gameon-off-white);
+  --color-gameon-black: var(--gameon-black);
+  --color-gameon-black-soft: var(--gameon-black-soft);
+  --color-gameon-yellow: var(--gameon-yellow);
+  --color-gameon-yellow-dim: var(--gameon-yellow-dim);
+  --color-gameon-off-white: var(--gameon-off-white);
+  --color-gameon-line: var(--gameon-line);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Anton", sans-serif;
+  --font-scoreboard: "Chakra Petch", sans-serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--gameon-black);
+  color: var(--gameon-off-white);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+/* Glass panel utility */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--gameon-line);
+  border-radius: 28px;
+}
+
+/* Court-line grid background */
+.court-line-bg {
+  background-image: 
+    /* Horizontal court lines */
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 40px,
+      var(--gameon-line) 40px,
+      var(--gameon-line) 41px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 40px,
+      var(--gameon-line) 40px,
+      var(--gameon-line) 41px
+    );
+  background-size: 80px 80px;
+  background-position: 0 0;
+  animation: courtDrift 60s linear infinite;
+}
+
+@keyframes courtDrift {
+  0% { background-position: 0 0; }
+  100% { background-position: 80px 80px; }
+}
+
+/* Floodlight glow */
+.floodlight-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 208, 0, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Flip-digit glow */
+.flip-digit {
+  font-family: var(--font-scoreboard);
+  text-shadow: 0 0 12px var(--gameon-yellow);
+  font-weight: 700;
+}
+
+/* Smooth scroll sections */
+.scroll-container {
+  scroll-snap-type: y proximity;
+  overflow-y: scroll;
+  height: 100vh;
+}
+
+.scroll-section {
+  scroll-snap-align: start;
+}
+
+/* Pillar cards snap container */
+.pillar-snap {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+}
+
+.pillar-card-snap {
+  scroll-snap-align: center;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--gameon-yellow);
+  outline-offset: 2px;
+}
+
+/* Remove default focus for mouse users */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Safe area padding */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Custom scrollbar hide */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Confetti override - yellow and black only */
+@media (prefers-reduced-motion: reduce) {
+  .court-line-bg {
+    animation: none;
+  }
+  .floodlight-glow {
+    animation: none;
+  }
+  .scroll-container {
+    scroll-snap-type: none;
+  }
+}
