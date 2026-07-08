@@ -49,34 +49,6 @@ body {
   border-radius: 28px;
 }
 
-/* Court-line grid background */
-.court-line-bg {
-  background-image: 
-    /* Horizontal court lines */
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 40px,
-      var(--gameon-line) 40px,
-      var(--gameon-line) 41px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 40px,
-      var(--gameon-line) 40px,
-      var(--gameon-line) 41px
-    );
-  background-size: 80px 80px;
-  background-position: 0 0;
-  animation: courtDrift 60s linear infinite;
-}
-
-@keyframes courtDrift {
-  0% { background-position: 0 0; }
-  100% { background-position: 80px 80px; }
-}
-
 /* Floodlight glow */
 .floodlight-glow {
   position: absolute;
@@ -153,9 +125,6 @@ body {
 
 /* Confetti override - yellow and black only */
 @media (prefers-reduced-motion: reduce) {
-  .court-line-bg {
-    animation: none;
-  }
   .floodlight-glow {
     animation: none;
   }

@@ -63,9 +63,6 @@ function AnimatedCounter({ from = 0, to, suffix = "" }: { from?: number; to: num
 function AppContent({ onNotifyOpen }: { onNotifyOpen: () => void }) {
   return (
     <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 py-16 overflow-hidden">
-      {/* Court-line grid background */}
-      <div className="absolute inset-0 court-line-bg" />
-
       {/* Floodlight glow */}
       <div className="floodlight-glow top-1/3 left-1/2 -translate-x-1/2" />
 
