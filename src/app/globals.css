@@ -1,120 +1,139 @@
 @import "tailwindcss";
 
+/* ─── SINGLE SOURCE OF TRUTH — Change --go-brand to re-theme everything ─── */
 :root {
-  --gameon-black: #0B0B0C;
-  --gameon-black-soft: #141416;
-  --gameon-yellow: #F5D000;
-  --gameon-yellow-dim: #A98F00;
-  --gameon-off-white: #F3F2ED;
-  --gameon-line: rgba(245, 208, 0, 0.12);
+  /* ══ THE ONLY COLOR YOU NEED TO CHANGE ══ */
+  --go-brand: #F5A623;
+
+  /* Secondary */
+  --go-navy: #1A1D23;
+
+  /* Light Surfaces */
+  --go-white: #FFFFFF;
+  --go-off: #F3F2ED;
+
+  /* Dark Base */
+  --go-black: #0B0B0C;
+
+  /* ── Everything below is derived automatically ── */
+  --go-brand-light: color-mix(in srgb, var(--go-brand) 20%, transparent);
+  --go-brand-glass: color-mix(in srgb, var(--go-brand) 8%, transparent);
+  --go-navy-glass: rgba(26, 29, 35, 0.80);
+  --go-white-glass: rgba(255, 255, 255, 0.06);
+  --go-white-glass-2: rgba(255, 255, 255, 0.10);
+  --go-border-subtle: color-mix(in srgb, var(--go-brand) 15%, transparent);
+  --go-border-glass: color-mix(in srgb, var(--go-brand) 20%, transparent);
+  --go-glow: color-mix(in srgb, var(--go-brand) 25%, transparent);
+  --go-shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.20);
+  --go-shadow-glass: 0 4px 24px rgba(0, 0, 0, 0.12);
 }
 
 @theme inline {
-  --color-background: var(--gameon-black);
-  --color-foreground: var(--gameon-off-white);
-  --color-gameon-black: var(--gameon-black);
-  --color-gameon-black-soft: var(--gameon-black-soft);
-  --color-gameon-yellow: var(--gameon-yellow);
-  --color-gameon-yellow-dim: var(--gameon-yellow-dim);
-  --color-gameon-off-white: var(--gameon-off-white);
-  --color-gameon-line: var(--gameon-line);
+  --color-go-brand: var(--go-brand);
+  --color-go-navy: #1A1D23;
+  --color-go-white: #FFFFFF;
+  --color-go-off: #F3F2ED;
+  --color-go-black: #0B0B0C;
+  --color-go-brand-glass: color-mix(in srgb, var(--go-brand) 8%, transparent);
+  --color-go-navy-glass: rgba(26, 29, 35, 0.80);
+  --color-go-white-glass: rgba(255, 255, 255, 0.06);
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Anton", sans-serif;
-  --font-scoreboard: "Chakra Petch", sans-serif;
+  --font-display: "Clash Display", "General Sans", "Satoshi", "Anton", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-glass: 28px;
+  --radius-glass-sm: 20px;
+  --radius-glass-xs: 16px;
+  --radius-pill: 9999px;
+
+  --blur-glass: 20px;
+  --blur-heavy: 40px;
+  --blur-light: 12px;
 }
 
-* {
+/* ─── Base Reset ─── */
+*, *::before, *::after {
   -webkit-tap-highlight-color: transparent;
 }
 
 html {
+  height: 100%;
   scroll-behavior: smooth;
 }
 
 body {
-  background: var(--gameon-black);
-  color: var(--gameon-off-white);
+  min-height: 100%;
+  background: var(--go-black);
+  color: var(--go-off);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+  overflow-x: hidden;
 }
 
-/* Glass panel utility */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid var(--gameon-line);
-  border-radius: 28px;
+/* ─── Glass Utilities (all driven by --go-brand) ─── */
+.glass {
+  background: var(--go-white-glass);
+  backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  border: 1px solid var(--go-border-glass);
 }
 
-/* Floodlight glow */
-.floodlight-glow {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(245, 208, 0, 0.15) 0%, transparent 70%);
-  pointer-events: none;
-  animation: pulseGlow 4s ease-in-out infinite;
+.glass-subtle {
+  background: var(--go-brand-glass);
+  backdrop-filter: blur(var(--blur-light)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur-light)) saturate(140%);
+  border: 1px solid var(--go-border-subtle);
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+.glass-navy {
+  background: var(--go-navy-glass);
+  backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  border: 1px solid var(--go-border-glass);
 }
 
-/* Flip-digit glow */
-.flip-digit {
-  font-family: var(--font-scoreboard);
-  text-shadow: 0 0 12px var(--gameon-yellow);
-  font-weight: 700;
+.glass-brand {
+  background: var(--go-brand-glass);
+  backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  border: 1px solid var(--go-border-glass);
 }
 
-/* Smooth scroll sections */
-.scroll-container {
-  scroll-snap-type: y proximity;
-  overflow-y: scroll;
-  height: 100vh;
+.glass-hover {
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.glass-hover:hover {
+  background: var(--go-brand-glass);
+  border-color: var(--go-brand);
 }
 
-.scroll-section {
-  scroll-snap-align: start;
+/* ─── Typography Helpers ─── */
+.text-balance {
+  text-wrap: balance;
 }
 
-/* Pillar cards snap container */
-.pillar-snap {
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  overflow-x: auto;
-}
-
-.pillar-card-snap {
-  scroll-snap-align: center;
-}
-
-/* Focus ring */
+/* ─── Focus States ─── */
 *:focus-visible {
-  outline: 2px solid var(--gameon-yellow);
+  outline: 2px solid var(--go-brand);
   outline-offset: 2px;
+  border-radius: 4px;
 }
-
-/* Remove default focus for mouse users */
 *:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Safe area padding */
+/* ─── Safe Area ─── */
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
-
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Custom scrollbar hide */
+/* ─── Scrollbar ─── */
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -123,12 +142,72 @@ body {
   display: none;
 }
 
-/* Confetti override - yellow and black only */
+/* ─── Scroll Snap ─── */
+.snap-y-proximity {
+  scroll-snap-type: y proximity;
+}
+.snap-x-mandatory {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.snap-start {
+  scroll-snap-align: start;
+}
+.snap-center {
+  scroll-snap-align: center;
+}
+
+/* ─── Glass Ring (for legacy avatars) ─── */
+.glass-ring {
+  box-shadow:
+    0 0 0 2px var(--go-border-glass),
+    0 0 0 4px rgba(255, 255, 255, 0.03),
+    0 8px 24px rgba(0, 0, 0, 0.20);
+}
+
+/* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
-  .floodlight-glow {
-    animation: none;
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  .scroll-container {
+  .snap-y-proximity {
     scroll-snap-type: none;
   }
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: var(--go-brand);
+  color: var(--go-black);
+}
+
+/* ─── Pill/Segmented Control base ─── */
+.pill-container {
+  display: flex;
+  background: var(--go-brand-glass);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+}
+
+.pill-option {
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--go-brand) 60%, transparent);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+.pill-option[data-active="true"] {
+  background: var(--go-brand);
+  color: var(--go-black);
+}
+.pill-option:hover:not([data-active="true"]) {
+  color: var(--go-brand);
 }

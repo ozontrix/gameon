@@ -1,25 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Anton, Chakra_Petch, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
-
-const anton = Anton({
-  variable: "--font-anton",
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
-
-const chakraPetch = Chakra_Petch({
-  variable: "--font-chakra-petch",
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  display: "swap",
-});
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -69,6 +56,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#0B0B0C",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -79,10 +67,22 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${anton.variable} ${chakraPetch.variable} ${inter.variable} h-full`}
+      className={`${inter.variable} h-full`}
     >
-      <body className="min-h-full bg-gameon-black text-gameon-off-white font-sans antialiased">
+      <body className="min-h-full bg-go-black text-go-off font-sans antialiased">
         {children}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: "rgba(14, 17, 22, 0.9)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              color: "#F7F5F2",
+              borderRadius: "20px",
+            },
+          }}
+        />
       </body>
     </html>
   );
