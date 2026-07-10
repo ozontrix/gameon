@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import {
   Home,
   LayoutGrid,
@@ -13,6 +13,7 @@ import {
   Building,
   Phone,
   Sparkles,
+  ArrowUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,10 +43,22 @@ export function Navigation() {
   const [activeSection, setActiveSection] = useState("hero");
   const [scrolled, setScrolled] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 60);
+      setShowBackToTop(window.scrollY > 600);
+
+      // Calculate scroll progress for the bar
+      const docEl = document.documentElement;
+      const scrollTop = window.scrollY;
+      const docHeight = docEl.scrollHeight - docEl.clientHeight;
+      setScrollProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
 
       // Determine active section
       const sections = desktopSections.map((s) => s.id);
@@ -62,6 +75,10 @@ export function Navigation() {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const scrollTo = (id: string) => {
@@ -82,6 +99,31 @@ export function Navigation() {
 
   return (
     <>
+      {/* ─── Scroll Progress Bar ─── */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 z-[60] h-0.5 origin-left"
+        style={{ scaleX, background: "linear-gradient(90deg, var(--go-brand), color-mix(in srgb, var(--go-brand) 40%, transparent))" }}
+      />
+
+      {/* ─── Back to Top Button ─── */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            onClick={scrollToTop}
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-24 lg:bottom-8 right-4 sm:right-6 z-50 w-11 h-11 rounded-full glass flex items-center justify-center cursor-pointer hover:bg-go-white-glass-2 transition-colors group"
+            aria-label="Back to top"
+          >
+            <ArrowUp className="w-4.5 h-4.5 text-go-off/60 group-hover:text-go-brand transition-colors" />
+            {/* Pulse ring */}
+            <span className="absolute inset-0 rounded-full border border-go-brand/20 animate-ping opacity-20" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* ─── Desktop Floating Dock ─── */}
       <motion.header
         initial={{ y: -20, opacity: 0 }}

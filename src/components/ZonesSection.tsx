@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
-import { Thermometer, Wind, Sun, Building2 } from "lucide-react";
+import { Thermometer, Wind, Sun, Building2, RefreshCw } from "lucide-react";
 import { SegmentedControl } from "./SegmentedControl";
 import { cn } from "@/lib/utils";
 
@@ -53,10 +53,22 @@ const zones = [
 
 export function ZonesSection() {
   const [activeZone, setActiveZone] = useState("ac-indoor");
+  const [autoRotate, setAutoRotate] = useState(true);
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
   const currentZone = zones.find((z) => z.id === activeZone)!;
+
+  // Auto-rotate through zones when in view
+  useEffect(() => {
+    if (!inView || !autoRotate) return;
+    const timer = setInterval(() => {
+      const ids = zones.map((z) => z.id);
+      const currentIdx = ids.indexOf(activeZone);
+      setActiveZone(ids[(currentIdx + 1) % ids.length]);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [inView, autoRotate, activeZone]);
 
   return (
     <section id="zones" ref={ref} className="relative px-6 sm:px-8 lg:px-14 xl:px-20 py-20 lg:py-28">
@@ -66,13 +78,27 @@ export function ZonesSection() {
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.5 }}
       >
-        <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">Zone Explorer</span>
-        <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display font-bold text-go-white mt-2">
-          Choose Your Climate
-        </h2>
-        <p className="text-sm text-go-off/50 mt-3 max-w-lg">
-          Three zones. Three vibes. Every court designed for the way you play.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">Zone Explorer</span>
+            <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display font-bold text-go-white mt-2">
+              Choose Your Climate
+            </h2>
+            <p className="text-sm text-go-off/50 mt-3 max-w-lg">
+              Three zones. Three vibes. Every court designed for the way you play.
+            </p>
+          </div>
+          {/* Auto-rotate toggle */}
+          <button
+            onClick={() => setAutoRotate(!autoRotate)}
+            className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] tracking-wider uppercase transition-all duration-300 ${
+              autoRotate ? "bg-go-brand/15 text-go-brand border border-go-brand/20" : "text-go-off/30 border border-transparent"
+            }`}
+          >
+            <RefreshCw className={`w-3 h-3 transition-transform duration-500 ${autoRotate ? "animate-spin" : ""}`} />
+            Auto
+          </button>
+        </div>
       </motion.div>
 
       {/* Segmented Control */}

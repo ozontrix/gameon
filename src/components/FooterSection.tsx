@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import {
   ChevronRight,
@@ -14,30 +14,34 @@ import {
   Heart,
   Shield,
   MessageCircle,
+  Sparkles,
+  ArrowUpRight,
+  Send,
 } from "lucide-react";
 import Image from "next/image";
 
 const settingsRows = [
   [
-    { label: "Contact Us", icon: Mail, href: "mailto:info@gameonmultisports.com" },
-    { label: "Call Us", icon: Phone, href: "tel:+13465923545" },
+    { label: "Contact Us", icon: Mail, href: "mailto:info@gameonmultisports.com", desc: "We respond within 4 hours" },
+    { label: "Call Us", icon: Phone, href: "tel:+13465923545", desc: "Mon–Sat, 9 AM – 8 PM" },
   ],
   [
-    { label: "WhatsApp", icon: MessageCircle, href: "https://wa.me/13465923545" },
-    { label: "Partnerships", icon: Building2, href: "#" },
+    { label: "WhatsApp", icon: MessageCircle, href: "https://wa.me/13465923545", desc: "Quickest way to reach us" },
+    { label: "Partnerships", icon: Building2, href: "#", desc: "Brands, sponsors, events" },
   ],
   [
-    { label: "Careers", icon: Briefcase, href: "#" },
-    { label: "Terms of Use", icon: Shield, href: "#" },
+    { label: "Careers", icon: Briefcase, href: "#", desc: "Join the Game On team" },
+    { label: "Terms of Use", icon: Shield, href: "#", desc: "Policies & guidelines" },
   ],
   [
-    { label: "Privacy Policy", icon: Heart, href: "#" },
+    { label: "Privacy Policy", icon: Heart, href: "#", desc: "How we handle your data" },
   ],
 ];
 
 export function FooterSection() {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
+  const [emailFocused, setEmailFocused] = useState(false);
 
   return (
     <section id="more" ref={ref} className="relative">
@@ -45,16 +49,43 @@ export function FooterSection() {
       <div className="bg-go-navy">
         <div className="px-6 sm:px-8 lg:px-14 xl:px-20 py-16 lg:py-20">
           <motion.div
-            className="mb-12"
+            className="mb-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8"
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5 }}
           >
-            <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">More</span>
-            <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display font-bold text-go-white mt-2">
-              Game On
-            </h2>
-            <p className="text-sm text-go-off/50 mt-2">A Splitwaters Company</p>
+            <div>
+              <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">More</span>
+              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display font-bold text-go-white mt-2">
+                Game On
+              </h2>
+              <p className="text-sm text-go-off/50 mt-2">A Splitwaters Company</p>
+            </div>
+
+            {/* Newsletter / Waitlist mini */}
+            <div className="w-full lg:max-w-sm">
+              <p className="text-[10px] tracking-wider uppercase text-go-off/30 font-medium mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-go-brand" />
+                Stay in the loop
+              </p>
+              <div className={`flex items-center gap-2 p-1.5 rounded-2xl transition-all duration-300 border ${
+                emailFocused ? "border-go-brand/40 bg-go-brand/5" : "border-go-border-subtle bg-go-white-glass"
+              }`}>
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                  className="flex-1 bg-transparent text-xs text-go-off/80 placeholder:text-go-off/30 px-3 py-2 focus:outline-none"
+                />
+                <button className="shrink-0 w-8 h-8 rounded-full bg-go-brand flex items-center justify-center hover:bg-go-brand/90 transition-colors cursor-pointer">
+                  <Send className="w-3.5 h-3.5 text-go-black" />
+                </button>
+              </div>
+              <p className="text-[9px] text-go-off/30 mt-1.5 px-1">
+                Be the first to know about launches & offers
+              </p>
+            </div>
           </motion.div>
 
           {/* iOS-style grouped list */}
@@ -74,7 +105,12 @@ export function FooterSection() {
                   >
                     <div className="flex items-center gap-3">
                       <item.icon className="w-4 h-4 text-go-brand" />
-                      <span className="text-sm font-medium text-go-off/80">{item.label}</span>
+                      <div>
+                        <span className="text-sm font-medium text-go-off/80">{item.label}</span>
+                        {item.desc && (
+                          <p className="text-[10px] text-go-off/30 mt-0.5">{item.desc}</p>
+                        )}
+                      </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-go-off/30 group-hover:text-go-off/50 transition-colors" />
                   </a>
@@ -101,22 +137,26 @@ export function FooterSection() {
               />
             </div>
 
-            {/* Social */}
+            {/* Social with hover tooltips */}
             <div className="flex items-center gap-4">
               {[
-                { icon: Camera, href: "https://instagram.com", label: "Instagram" },
-                { icon: Globe, href: "https://x.com", label: "X / Twitter" },
-                { icon: UserPlus, href: "https://linkedin.com", label: "LinkedIn" },
-              ].map(({ icon: Icon, href, label }) => (
+                { icon: Camera, href: "https://instagram.com", label: "Instagram", handle: "@GameOnMultisports" },
+                { icon: Globe, href: "https://x.com", label: "X / Twitter", handle: "@GameOnHQ" },
+                { icon: UserPlus, href: "https://linkedin.com", label: "LinkedIn", handle: "/company/gameon" },
+              ].map(({ icon: Icon, href, label, handle }) => (
                 <a
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full bg-go-white-glass flex items-center justify-center hover:bg-go-white-glass-2 transition-colors"
+                  className="group relative w-10 h-10 rounded-full bg-go-white-glass flex items-center justify-center hover:bg-go-white-glass-2 transition-all duration-300 hover:scale-110"
                   aria-label={label}
                 >
-                  <Icon className="w-4 h-4 text-go-off/60" />
+                  <Icon className="w-4 h-4 text-go-off/60 group-hover:text-go-brand transition-colors" />
+                  {/* Tooltip */}
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-lg bg-go-black text-[9px] text-go-off/70 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none backdrop-blur-sm border border-go-border-subtle">
+                    {handle}
+                  </span>
                 </a>
               ))}
             </div>
@@ -125,6 +165,16 @@ export function FooterSection() {
               © {new Date().getFullYear()} Game On Multisports Complex. All rights reserved.
             </p>
           </motion.div>
+
+          {/* Bottom tagline */}
+          <motion.p
+            className="text-[9px] text-go-off/20 text-center mt-8 tracking-wider uppercase"
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : {}}
+            transition={{ delay: 0.5 }}
+          >
+            Built for the love of the game.
+          </motion.p>
         </div>
       </div>
 

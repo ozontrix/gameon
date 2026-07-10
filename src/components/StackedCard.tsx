@@ -36,11 +36,11 @@ export function StackedCard({
   // Card slides up from below
   const cardY = useTransform(scrollYProgress, [0, 1], ["140px", "0px"]);
 
-  // Rounded corners flatten as card locks in — creating the "card" feel
+  // Rounded top corners — stays rounded even when locked in for a distinct card look
   const borderRadius = useTransform(
     scrollYProgress,
     [0, 1],
-    ["28px", "0px"]
+    ["36px", "28px"]
   );
 
   // Scale: slightly compressed when below, natural when locked

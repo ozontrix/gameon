@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import Image from "next/image";
-import { MapPin, Bell, ArrowRight, Sparkles, Swords, Table, Goal } from "lucide-react";
+import { MapPin, Bell, ArrowRight, Sparkles, Swords, Table, Goal, Timer } from "lucide-react";
 import { GlassCard } from "./GlassCard";
 
 const stats = [
@@ -12,6 +12,50 @@ const stats = [
   { value: 4, label: "Pickleball Courts", subtitle: "2 Indoor AC + 2 Outdoor" },
   { value: 6, label: "Cricket Nets", subtitle: "2 Indoor + 4 Outdoor" },
 ];
+
+// ─── Countdown Timer ───
+function CountdownTimer() {
+  const launchDate = useMemo(() => new Date("2025-07-01T00:00:00+05:30"), []);
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+
+  useEffect(() => {
+    const update = () => {
+      const diff = launchDate.getTime() - Date.now();
+      if (diff <= 0) return;
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+      });
+    };
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, [launchDate]);
+
+  return (
+    <motion.div
+      className="flex items-center gap-3 text-[10px] tracking-[0.15em] uppercase text-go-brand/80 font-medium"
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+    >
+      <Timer className="w-3 h-3" />
+      <span>Opening in</span>
+      <span className="tabular-nums font-bold text-go-brand">
+        {timeLeft.days}d
+      </span>
+      <span className="text-go-off/30">:</span>
+      <span className="tabular-nums font-bold text-go-brand">
+        {timeLeft.hours.toString().padStart(2, "0")}h
+      </span>
+      <span className="text-go-off/30">:</span>
+      <span className="tabular-nums font-bold text-go-brand">
+        {timeLeft.minutes.toString().padStart(2, "0")}m
+      </span>
+    </motion.div>
+  );
+}
 
 const sportsRotator = [
   { text: "Pickleball", icon: "🏓" },

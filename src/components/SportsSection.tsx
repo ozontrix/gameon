@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
+import { useRef, useState, useCallback } from "react";
+import { motion, useInView, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
   BadgePlus,
   Swords,
@@ -14,9 +14,13 @@ import {
   Users,
   Calendar,
   ChevronDown,
-  MapPin,
   Star,
   Sparkles,
+  TrendingUp,
+  Zap,
+  Shield,
+  Award,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +41,7 @@ const sports = [
     features: ["Indoor AC", "Pro Coaching", "Equipment Provided"],
     highlights: ["4 Dedicated Courts", "Tournament Ready", "Beginner Friendly"],
     stat: "Fastest Growing Sport in India",
+    trending: true,
   },
   {
     id: "badminton",
@@ -53,6 +58,7 @@ const sports = [
     features: ["Synthetic Flooring", "Tournament Grade", "Floodlit"],
     highlights: ["2 AC + 3 Non-AC", "Professional Lighting", "Coaching Available"],
     stat: "5 Courts • Most in Sector 70",
+    trending: false,
   },
   {
     id: "box-cricket",
@@ -69,6 +75,7 @@ const sports = [
     features: ["Astro Turf", "Floodlit", "Scoreboard"],
     highlights: ["100×60 ft Arena", "Night Cricket", "Team Events"],
     stat: "Full-size Box Cricket Experience",
+    trending: false,
   },
   {
     id: "cricket-nets",
@@ -85,6 +92,7 @@ const sports = [
     features: ["Bowling Machine", "Net Practice", "Coaching"],
     highlights: ["2 Indoor + 4 Outdoor", "Bowling Machines", "All Formats"],
     stat: "Practice Like a Pro",
+    trending: false,
   },
 ];
 
@@ -93,6 +101,193 @@ const springSnap = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 interface SportsSectionProps {
   onReserve?: () => void;
+}
+
+// ─── Floating Particle ───
+function SportParticle({ emoji, delay = 0, x = 0, y = 0 }: { emoji: string; delay?: number; x?: number; y?: number }) {
+  return (
+    <motion.div
+      className="absolute pointer-events-none select-none z-0"
+      style={{ left: `${x}%`, top: `${y}%` }}
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{
+        opacity: [0, 0.12, 0],
+        scale: [0, 1, 0],
+        y: [0, -120 - Math.random() * 80],
+        x: [0, (Math.random() - 0.5) * 60],
+        rotate: [0, 180, 360],
+      }}
+      transition={{
+        duration: 8 + Math.random() * 6,
+        repeat: Infinity,
+        delay,
+        ease: "easeOut",
+      }}
+    >
+      <span className="text-3xl">{emoji}</span>
+    </motion.div>
+  );
+}
+
+// ─── 3D Tilt Card ───
+function TiltCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0.5);
+  const y = useMotionValue(0.5);
+  const smoothX = useSpring(x, { stiffness: 200, damping: 30 });
+  const smoothY = useSpring(y, { stiffness: 200, damping: 30 });
+
+  const rotateX = useTransform(smoothY, [0, 1], [6, -6]);
+  const rotateY = useTransform(smoothX, [0, 1], [-6, 6]);
+
+  const handleMouse = useCallback((e: React.MouseEvent) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    x.set((e.clientX - rect.left) / rect.width);
+    y.set((e.clientY - rect.top) / rect.height);
+  }, [x, y]);
+
+  const handleLeave = useCallback(() => {
+    x.set(0.5);
+    y.set(0.5);
+  }, [x, y]);
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouse}
+      onMouseLeave={handleLeave}
+      className={className}
+      style={{
+        rotateX,
+        rotateY,
+        perspective: 1200,
+        transformStyle: "preserve-3d",
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ─── Magnetic Button ───
+function MagneticButton({ children, onClick, className = "" }: { children: React.ReactNode; onClick?: () => void; className?: string }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const smoothX = useSpring(x, { stiffness: 250, damping: 20 });
+  const smoothY = useSpring(y, { stiffness: 250, damping: 20 });
+
+  const handleMouse = useCallback((e: React.MouseEvent) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const dx = e.clientX - rect.left - rect.width / 2;
+    const dy = e.clientY - rect.top - rect.height / 2;
+    x.set(dx * 0.25);
+    y.set(dy * 0.25);
+  }, [x, y]);
+
+  const handleLeave = useCallback(() => {
+    x.set(0);
+    y.set(0);
+  }, [x, y]);
+
+  return (
+    <motion.button
+      ref={ref}
+      onClick={onClick}
+      onMouseMove={handleMouse}
+      onMouseLeave={handleLeave}
+      className={className}
+      style={{ x: smoothX, y: smoothY }}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
+// ─── Gradient Border ───
+function GradientBorder({ accentColor }: { accentColor: string }) {
+  return (
+    <motion.div
+      className="absolute inset-0 rounded-[28px] pointer-events-none z-20"
+      style={{
+        padding: "1px",
+        WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+        WebkitMaskComposite: "xor",
+        maskComposite: "exclude",
+      }}
+      animate={{
+        background: [
+          `linear-gradient(135deg, ${accentColor}60, transparent 30%, ${accentColor}30 60%, transparent 80%, ${accentColor}40)`,
+          `linear-gradient(135deg, ${accentColor}40, ${accentColor}60 30%, transparent 50%, ${accentColor}30 75%, transparent)`,
+          `linear-gradient(135deg, ${accentColor}60, transparent 30%, ${accentColor}30 60%, transparent 80%, ${accentColor}40)`,
+        ],
+      }}
+      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+    />
+  );
+}
+
+// ─── Marquee Stats ───
+function StatsMarquee() {
+  const stats = [
+    { label: "Active Players", value: "1,000+" },
+    { label: "Courts Available", value: "16+" },
+    { label: "Happy Members", value: "500+" },
+    { label: "Tournaments Held", value: "24+" },
+    { label: "Avg Rating", value: "4.8 ★" },
+    { label: "Coaching Hours", value: "2,000+" },
+  ];
+
+  return (
+    <div className="relative overflow-hidden w-full max-w-4xl mx-auto mt-12 lg:mt-16 py-4">
+      {/* Fade edges */}
+      <div className="absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-[#0E0E18] to-transparent pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-[#0E0E18] to-transparent pointer-events-none" />
+
+      <motion.div
+        className="flex gap-10 items-center"
+        animate={{ x: [0, -1800] }}
+        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+      >
+        {[...stats, ...stats].map((stat, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 shrink-0"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-go-brand/40" />
+            <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-medium">
+              {stat.label}
+            </span>
+            <span className="text-sm font-bold text-go-brand tabular-nums">
+              {stat.value}
+            </span>
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Word-by-word reveal ───
+function AnimatedHeading({ text, className = "" }: { text: string; className?: string }) {
+  const words = text.split(" ");
+  return (
+    <span className={className}>
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          className="inline-block mr-[0.3em]"
+          initial={{ opacity: 0, y: 30, rotateX: -30 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 + i * 0.08, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
+  );
 }
 
 // ─── Individual Sport Card ───
@@ -113,139 +308,161 @@ function SportCard({
     <>
       <motion.button
         onClick={() => setExpanded(true)}
-        initial={{ opacity: 0, y: 50 }}
+        initial={{ opacity: 0, y: 60 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{
-          duration: 0.6,
-          delay: 0.1 + index * 0.12,
+          duration: 0.7,
+          delay: 0.15 + index * 0.15,
           ease: [0.25, 0.1, 0.25, 1],
         }}
         className="group relative rounded-[28px] overflow-hidden text-left cursor-pointer w-full border border-white/[0.06] hover:border-white/[0.15] transition-all duration-500"
         style={{ background: sport.gradient }}
       >
-        {/* ─── Animated Background Effects ─── */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* Gradient sweep on hover */}
-          <motion.div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-            style={{
-              background: `linear-gradient(135deg, ${sport.accentColor}25 0%, transparent 60%)`,
-            }}
-          />
-
-          {/* Radial glow spots */}
-          <div
-            className="absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage: `
-                radial-gradient(circle at 15% 30%, ${sport.accentColor} 0%, transparent 50%),
-                radial-gradient(circle at 85% 70%, ${sport.accentColor} 0%, transparent 40%),
-                radial-gradient(circle at 50% 50%, ${sport.accentColor} 0%, transparent 60%)
-              `,
-            }}
-          />
-
-          {/* Grid pattern */}
-          <div
-            className="absolute inset-0 opacity-[0.015]"
-            style={{
-              backgroundImage: `linear-gradient(${sport.accentColor} 1px, transparent 1px), linear-gradient(90deg, ${sport.accentColor} 1px, transparent 1px)`,
-              backgroundSize: "48px 48px",
-            }}
-          />
-
-          {/* Floating emoji */}
-          <motion.span
-            className="absolute pointer-events-none select-none text-9xl -top-6 -right-6 opacity-[0.06]"
-            animate={{ rotate: [0, 6, -6, 0] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          >
-            {sport.emoji}
-          </motion.span>
-        </div>
-
-        {/* ─── Content ─── */}
-        <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col min-h-[320px] sm:min-h-[360px] lg:min-h-[400px]">
-          {/* Top Row: Icon + Badge */}
-          <div className="flex items-start justify-between mb-auto">
+        {/* ─── 3D Tilt Inner ─── */}
+        <TiltCard className="relative">
+          {/* ─── Animated Background Effects ─── */}
+          <div className="absolute inset-0 overflow-hidden">
+            {/* Gradient sweep on hover */}
             <motion.div
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center backdrop-blur-sm"
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
               style={{
-                background: `linear-gradient(135deg, ${sport.accentColor}30 0%, ${sport.accentColor}10 100%)`,
-                border: `1px solid ${sport.accentColor}20`,
+                background: `linear-gradient(135deg, ${sport.accentColor}25 0%, transparent 60%)`,
               }}
-              whileHover={{ scale: 1.08, rotate: [0, -5, 5, 0] }}
-              transition={{ duration: 0.3 }}
+            />
+
+            {/* Radial glow spots */}
+            <div
+              className="absolute inset-0 opacity-[0.04]"
+              style={{
+                backgroundImage: `
+                  radial-gradient(circle at 15% 30%, ${sport.accentColor} 0%, transparent 50%),
+                  radial-gradient(circle at 85% 70%, ${sport.accentColor} 0%, transparent 40%),
+                  radial-gradient(circle at 50% 50%, ${sport.accentColor} 0%, transparent 60%)
+                `,
+              }}
+            />
+
+            {/* Grid pattern */}
+            <div
+              className="absolute inset-0 opacity-[0.015]"
+              style={{
+                backgroundImage: `linear-gradient(${sport.accentColor} 1px, transparent 1px), linear-gradient(90deg, ${sport.accentColor} 1px, transparent 1px)`,
+                backgroundSize: "48px 48px",
+              }}
+            />
+
+            {/* Floating emoji */}
+            <motion.span
+              className="absolute pointer-events-none select-none text-9xl -top-6 -right-6 opacity-[0.06]"
+              animate={{ rotate: [0, 6, -6, 0] }}
+              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             >
-              <div className="scale-110 sm:scale-125">{sport.icon}</div>
-            </motion.div>
-
-            <motion.div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-sm border border-white/[0.08]"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Star className="w-3 h-3" style={{ color: sport.accentColor }} />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white/60">
-                {sport.subtitle}
-              </span>
-            </motion.div>
+              {sport.emoji}
+            </motion.span>
           </div>
 
-          {/* Middle: Title + Description */}
-          <div className="mt-6 sm:mt-8">
-            <h3 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-white leading-tight">
-              {sport.title}
-            </h3>
-            <p className="text-sm sm:text-base text-white/40 mt-2 max-w-sm leading-relaxed">
-              {sport.description}
-            </p>
-          </div>
+          {/* Gradient Border */}
+          <GradientBorder accentColor={sport.accentColor} />
 
-          {/* Bottom: Stats Row */}
-          <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-4 sm:gap-6">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{ background: sport.accentColor }}
-              />
-              <span className="text-xs sm:text-sm text-white/60 font-medium">
-                {sport.courts} {sport.courts === 1 ? "Court" : "Courts"}
-              </span>
-            </div>
-            {sport.ac && (
-              <div className="flex items-center gap-2">
-                <Thermometer className="w-3.5 h-3.5 text-white/40" />
-                <span className="text-xs sm:text-sm text-white/60 font-medium">AC</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-3.5 h-3.5 text-white/40" />
-              <span className="text-xs sm:text-sm text-white/60 font-medium">{sport.pricing}</span>
-            </div>
-          </div>
-
-          {/* Feature Tags */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {sport.features.map((feature) => (
-              <span
-                key={feature}
-                className="px-2.5 py-1 rounded-full text-[9px] font-medium uppercase tracking-wider bg-white/5 text-white/40 border border-white/[0.06]"
+          {/* ─── Content ─── */}
+          <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col min-h-[320px] sm:min-h-[360px] lg:min-h-[400px]">
+            {/* Top Row: Icon + Badge */}
+            <div className="flex items-start justify-between mb-auto">
+              <motion.div
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center backdrop-blur-sm"
+                style={{
+                  background: `linear-gradient(135deg, ${sport.accentColor}30 0%, ${sport.accentColor}10 100%)`,
+                  border: `1px solid ${sport.accentColor}20`,
+                }}
+                whileHover={{ scale: 1.08, rotate: [0, -5, 5, 0] }}
+                transition={{ duration: 0.3 }}
               >
-                {feature}
-              </span>
-            ))}
-          </div>
+                <div className="scale-110 sm:scale-125">{sport.icon}</div>
+              </motion.div>
 
-          {/* Bottom accent glow */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-[2px] opacity-60"
-            style={{
-              background: `linear-gradient(90deg, transparent, ${sport.accentColor}, transparent)`,
-            }}
-          />
-        </div>
+              <div className="flex items-center gap-2">
+                {/* Trending Badge */}
+                {sport.trending && (
+                  <motion.div
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-go-brand/15 backdrop-blur-sm border border-go-brand/20"
+                    initial={{ opacity: 0, x: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <TrendingUp className="w-3 h-3 text-go-brand" />
+                    <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-go-brand">
+                      Most Popular
+                    </span>
+                  </motion.div>
+                )}
+                <motion.div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-sm border border-white/[0.08]"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Star className="w-3 h-3" style={{ color: sport.accentColor }} />
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white/60">
+                    {sport.subtitle}
+                  </span>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Middle: Title + Description */}
+            <div className="mt-6 sm:mt-8" style={{ transformStyle: "preserve-3d", transform: "translateZ(20px)" }}>
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-white leading-tight">
+                {sport.title}
+              </h3>
+              <p className="text-sm sm:text-base text-white/40 mt-2 max-w-sm leading-relaxed">
+                {sport.description}
+              </p>
+            </div>
+
+            {/* Bottom: Stats Row */}
+            <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-4 sm:gap-6" style={{ transformStyle: "preserve-3d", transform: "translateZ(15px)" }}>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: sport.accentColor }}
+                />
+                <span className="text-xs sm:text-sm text-white/60 font-medium">
+                  {sport.courts} {sport.courts === 1 ? "Court" : "Courts"}
+                </span>
+              </div>
+              {sport.ac && (
+                <div className="flex items-center gap-2">
+                  <Thermometer className="w-3.5 h-3.5 text-white/40" />
+                  <span className="text-xs sm:text-sm text-white/60 font-medium">AC</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-3.5 h-3.5 text-white/40" />
+                <span className="text-xs sm:text-sm text-white/60 font-medium">{sport.pricing}</span>
+              </div>
+            </div>
+
+            {/* Feature Tags */}
+            <div className="mt-4 flex flex-wrap gap-2" style={{ transformStyle: "preserve-3d", transform: "translateZ(10px)" }}>
+              {sport.features.map((feature) => (
+                <span
+                  key={feature}
+                  className="px-2.5 py-1 rounded-full text-[9px] font-medium uppercase tracking-wider bg-white/5 text-white/40 border border-white/[0.06]"
+                >
+                  {feature}
+                </span>
+              ))}
+            </div>
+
+            {/* Bottom accent glow */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-[2px] opacity-60"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${sport.accentColor}, transparent)`,
+              }}
+            />
+          </div>
+        </TiltCard>
 
         {/* ─── Expand Indicator ─── */}
         <div className="absolute bottom-5 right-5 z-20">
@@ -273,9 +490,9 @@ function SportCard({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
             style={{
-              background: "rgba(0,0,0,0.75)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
+              background: "rgba(0,0,0,0.85)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
             }}
             onClick={() => setExpanded(false)}
           >
@@ -408,47 +625,79 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
     <section
       id="sports"
       ref={ref}
-      className="relative px-5 sm:px-8 lg:px-14 xl:px-20 py-16 lg:py-28"
+      className="relative px-5 sm:px-8 lg:px-14 xl:px-20 py-16 lg:py-28 overflow-hidden"
     >
+      {/* ─── Floating Sport Particles ─── */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <SportParticle emoji="🏓" delay={0} x={10} y={15} />
+        <SportParticle emoji="🏸" delay={1.5} x={90} y={20} />
+        <SportParticle emoji="🏏" delay={3} x={85} y={75} />
+        <SportParticle emoji="🎯" delay={4.5} x={5} y={80} />
+        <SportParticle emoji="⚽" delay={2} x={50} y={10} />
+        <SportParticle emoji="🏀" delay={5} x={95} y={50} />
+        <SportParticle emoji="🎾" delay={6} x={20} y={85} />
+        <SportParticle emoji="🏐" delay={3.5} x={75} y={30} />
+      </div>
+
       {/* ─── Section Header ─── */}
       <motion.div
-        className="mb-12 lg:mb-16"
+        className="mb-12 lg:mb-16 relative z-10"
         initial={{ opacity: 0, y: 30 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
         <div className="flex items-center gap-3 mb-4">
-          <span className="h-px w-10 bg-go-brand/50" />
-          <span className="text-[10px] tracking-[0.25em] uppercase text-go-brand font-semibold">
-            Pick Your Game
-          </span>
+          <motion.span
+            className="h-px w-10 bg-go-brand/50"
+            initial={{ scaleX: 0 }}
+            animate={inView ? { scaleX: 1 } : {}}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            style={{ transformOrigin: "left" }}
+          />
+          <motion.span
+            className="text-[10px] tracking-[0.25em] uppercase text-go-brand font-semibold"
+            initial={{ opacity: 0, x: -10 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.4, delay: 0.15 }}
+          >
+            <span className="flex items-center gap-2">
+              <Zap className="w-3 h-3" />
+              Pick Your Game
+            </span>
+          </motion.span>
         </div>
 
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-display font-bold text-white leading-[1.1]">
-              One Address.
+              <AnimatedHeading text="One Address." />
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-go-brand via-go-brand to-go-brand/60">
-                Every Sport.
+                <AnimatedHeading text="Every Sport." />
               </span>
             </h2>
-            <p className="text-sm sm:text-base text-white/40 mt-4 max-w-xl leading-relaxed">
+            <motion.p
+              className="text-sm sm:text-base text-white/40 mt-4 max-w-xl leading-relaxed"
+              initial={{ opacity: 0, y: 10 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
               From air-conditioned pickleball to floodlit cricket nets — 1.5 acres
               purpose-built for every kind of player, from beginner to pro.
-            </p>
+            </motion.p>
           </div>
 
-          {/* Desktop CTA */}
-          <motion.button
+          {/* Desktop Magnetic CTA */}
+          <MagneticButton
             onClick={onReserve}
             className="hidden lg:inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.15] transition-all duration-300 text-sm font-medium shrink-0"
-            initial={{ opacity: 0, x: 20 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <span className="w-2 h-2 rounded-full bg-go-brand animate-pulse" />
-            View All Sports &amp; Pricing
+            <motion.span
+              className="w-2 h-2 rounded-full bg-go-brand"
+              animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            View All Sports & Pricing
             <motion.span
               className="inline-block"
               animate={{ x: [0, 4, 0] }}
@@ -456,12 +705,24 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
             >
               →
             </motion.span>
-          </motion.button>
+          </MagneticButton>
         </div>
+
+        {/* Animated Gradient Underline */}
+        <motion.div
+          className="h-[2px] mt-8 max-w-xs"
+          initial={{ scaleX: 0 }}
+          animate={inView ? { scaleX: 1 } : {}}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          style={{
+            transformOrigin: "left",
+            background: "linear-gradient(90deg, var(--go-brand), var(--go-brand)/30, transparent)",
+          }}
+        />
       </motion.div>
 
       {/* ─── Sports Grid: 2×2 on desktop, 1-col on mobile ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 relative z-10">
         {sports.map((sport, i) => (
           <SportCard
             key={sport.id}
@@ -473,19 +734,32 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
         ))}
       </div>
 
+      {/* ─── Live Stats Marquee ─── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={inView ? { opacity: 1 } : {}}
+        transition={{ duration: 0.6, delay: 0.8 }}
+      >
+        <StatsMarquee />
+      </motion.div>
+
       {/* ─── Mobile Bottom CTA ─── */}
       <motion.div
-        className="mt-10 flex lg:hidden justify-center"
+        className="mt-8 flex lg:hidden justify-center relative z-10"
         initial={{ opacity: 0, y: 20 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.5, delay: 0.6 }}
       >
-        <button
+        <MagneticButton
           onClick={onReserve}
           className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.15] transition-all duration-300 text-sm font-medium"
         >
-          <span className="w-2 h-2 rounded-full bg-go-brand animate-pulse" />
-          View All Sports &amp; Pricing
+          <motion.span
+            className="w-2 h-2 rounded-full bg-go-brand"
+            animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          View All Sports & Pricing
           <motion.span
             className="inline-block"
             animate={{ x: [0, 4, 0] }}
@@ -493,8 +767,16 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
           >
             →
           </motion.span>
-        </button>
+        </MagneticButton>
       </motion.div>
+
+      {/* ─── Bottom Glow Fade ─── */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+        style={{
+          background: "linear-gradient(to top, rgba(14,14,24,0.6), transparent)",
+        }}
+      />
     </section>
   );
 }

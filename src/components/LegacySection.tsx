@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
-import { X, Trophy, Medal, MapPin, Quote, ChevronRight } from "lucide-react";
+import { X, Trophy, Medal, MapPin, Quote, ChevronRight, Star, Award } from "lucide-react";
 
 // ─── Person Data ───
 interface LegacyPerson {
@@ -14,6 +14,7 @@ interface LegacyPerson {
   gradient: string;
   emoji: string;
   imageSrc?: string; // ready for real images
+  achievement?: string;
 }
 
 const athletes: LegacyPerson[] = [
@@ -26,6 +27,7 @@ const athletes: LegacyPerson[] = [
     quote: "Game On's nets gave me the perfect prep ground before the big season.",
     gradient: "from-[#F5A623] via-[#E8920E] to-[#D47900]",
     emoji: "🏏",
+    achievement: "15,000+ International Runs",
   },
   {
     name: "Ishant Sharma",
@@ -36,6 +38,7 @@ const athletes: LegacyPerson[] = [
     quote: "The indoor nets here are among the best I've trained on in India.",
     gradient: "from-[#FF6B6B] via-[#EE5A24] to-[#D63031]",
     emoji: "🏏",
+    achievement: "100+ Test Matches",
   },
   {
     name: "Ayush Badoni",
@@ -56,6 +59,7 @@ const athletes: LegacyPerson[] = [
     quote: "Game On is building exactly what pickleball needs in India — world-class courts.",
     gradient: "from-[#00B894] via-[#00A381] to-[#008B6E]",
     emoji: "🏓",
+    achievement: "2025 World Champion",
   },
 ];
 
@@ -252,6 +256,20 @@ export function LegacySection() {
                   <Trophy className="w-2.5 h-2.5" />
                   {person.sport}
                 </div>
+
+                {/* Achievement badge */}
+                {person.achievement && (
+                  <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] tracking-wider uppercase font-medium"
+                    style={{
+                      background: "rgba(245,166,35,0.08)",
+                      border: "1px solid rgba(245,166,35,0.12)",
+                      color: "rgba(245,166,35,0.6)",
+                    }}
+                  >
+                    <Star className="w-2.5 h-2.5" />
+                    {person.achievement}
+                  </div>
+                )}
 
                 {/* Short description */}
                 <p className="mt-3 text-xs text-go-off/40 leading-relaxed line-clamp-2">
