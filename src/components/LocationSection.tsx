@@ -181,7 +181,7 @@ export function LocationSection() {
             </div>
 
             <motion.a
-              href="https://maps.apple.com/?address=Sector+70,Gurugram,Haryana+122101"
+              href="https://www.google.com/maps/search/?api=1&query=GameOn+Multi+Sports+Sector+70+Gurugram+Haryana+122101"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-go-brand text-go-white text-sm font-semibold tracking-wider uppercase rounded-full py-3 px-6 hover:bg-go-brand/90 transition-all duration-300 w-fit group"
