@@ -67,7 +67,7 @@ export function LocationSection() {
           Find Us
         </h2>
         <p className="text-sm text-go-off/50 mt-3 max-w-lg">
-          Dwarka Expressway & SPR Road. Minutes from Sector 70.
+          10 minutes from Cyber City.
         </p>
       </motion.div>
 
@@ -151,7 +151,7 @@ export function LocationSection() {
                 <Car className="w-4 h-4 text-go-brand mt-0.5 shrink-0" />
                 <div>
                   <span className="text-sm text-go-off/80 font-medium">Dwarka Expressway & SPR Road</span>
-                  <p className="text-xs text-go-off/40 mt-0.5">Minutes from Sector 70</p>
+                  <p className="text-xs text-go-off/40 mt-0.5">10 min from Cyber City</p>
                 </div>
               </motion.div>
               <motion.div

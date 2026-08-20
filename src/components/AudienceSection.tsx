@@ -79,7 +79,7 @@ export function AudienceSection() {
       >
         <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">Built For You</span>
         <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display font-bold text-go-white mt-2">
-          Who Are You Playing For?
+          There&apos;s a Place for Every Player
         </h2>
       </motion.div>
 
