@@ -4,6 +4,7 @@ import { useRef, useState, useCallback } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Heart, MessageCircle, Share2, Camera, ChevronRight } from "lucide-react";
+import { FaInstagram } from "react-icons/fa";
 
 interface Post {
   image: string;
@@ -242,12 +243,12 @@ export function CommunitySection() {
         transition={{ duration: 0.5, delay: 0.6 }}
       >
         <a
-          href="https://instagram.com"
+          href="https://www.instagram.com/gameonmultisports"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-full glass text-xs tracking-wider uppercase text-go-off/60 hover:text-go-off hover:bg-go-white-glass-2 transition-all duration-300 group"
         >
-          <Camera className="w-3.5 h-3.5" />
+          <FaInstagram className="w-3.5 h-3.5" />
           Follow @GameOnMultisports
           <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
         </a>

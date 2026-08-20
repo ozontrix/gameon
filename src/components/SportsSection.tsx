@@ -39,7 +39,7 @@ const sports = [
   {
     id: "badminton",
     title: "Badminton",
-    subtitle: "Premium Courts",
+    subtitle: "All-time classic",
     description: "5 synthetic courts — 2 air-conditioned & 3 indoor for year-round play",
     courts: 5,
     ac: true,
@@ -47,7 +47,7 @@ const sports = [
     emoji: "🏸",
     gradient: "linear-gradient(145deg, #1B1B2F 0%, #1A1A3E 40%, #2D1B69 100%)",
     accentColor: "#A855F7",
-    features: ["Synthetic Flooring", "BWF Approved", "Premium AC Courts*"],
+    features: ["Synthetic Flooring", "BWF Approved", "Premium AC Courts"],
     highlights: ["2 AC + 3 Non-AC", "BWF Approved Courts", "Coaching Available"],
     surface: "Synthetic",
     stat: "5 Courts • Premium Indoor Play",

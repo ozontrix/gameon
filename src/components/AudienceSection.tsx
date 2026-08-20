@@ -20,7 +20,7 @@ const audiences: Audience[] = [
     label: "Corporate Professionals",
     icon: <Briefcase className="w-6 h-6" />,
     tagline: "After-work bookings & team leagues that don't feel like work.",
-    description: "Short on time but big on ambition. Book a late-evening slot, join a corporate league, or bring the team for a tournament that actually builds camaraderie. Located right off the Golf Course Extension Road — 10 minutes from DLF Phase 2.",
+    description: "Short on time but big on ambition. Book a late-evening slot, join a corporate league, or bring the team for a tournament that actually builds camaraderie. Located right off the Dwarka Expressway & SPR Road — minutes from Sector 70.",
     color: "#F5D000",
     bg: "from-[#F5D000]/20 via-transparent to-transparent",
   },

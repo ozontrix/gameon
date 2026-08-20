@@ -67,7 +67,7 @@ export function LocationSection() {
           Find Us
         </h2>
         <p className="text-sm text-go-off/50 mt-3 max-w-lg">
-          Golf Course Extension Road. 10 minutes from Cyber City.
+          Dwarka Expressway & SPR Road. Minutes from Sector 70.
         </p>
       </motion.div>
 
@@ -124,10 +124,10 @@ export function LocationSection() {
           {/* Details */}
           <div className="p-6 lg:p-8 flex flex-col justify-center">
             <h3 className="text-xl font-display font-bold text-go-white mb-1">
-              Sports Cube Campus
+              GameOn Multi Sports
             </h3>
             <p className="text-sm text-go-off/50 mb-6">
-              Sector 70, Gurugram, Haryana 122101
+              Sports Cube Campus, Sector 70, Gurugram, Haryana 122101
             </p>
 
             {/* 3D distance badge */}
@@ -138,7 +138,7 @@ export function LocationSection() {
               transition={{ delay: 0.3 }}
             >
               <LocateFixed className="w-3.5 h-3.5 text-go-brand" />
-              <span className="text-[10px] tracking-wider uppercase text-go-brand font-medium">~2.5 km from Golf Course Road</span>
+              <span className="text-[10px] tracking-wider uppercase text-go-brand font-medium">Off SPR Road • Near Dwarka Expressway</span>
             </motion.div>
 
             <div className="space-y-4 mb-6">
@@ -150,8 +150,8 @@ export function LocationSection() {
               >
                 <Car className="w-4 h-4 text-go-brand mt-0.5 shrink-0" />
                 <div>
-                  <span className="text-sm text-go-off/80 font-medium">Golf Course Extension Road</span>
-                  <p className="text-xs text-go-off/40 mt-0.5">10 min from DLF Phase 2 & Cyber City</p>
+                  <span className="text-sm text-go-off/80 font-medium">Dwarka Expressway & SPR Road</span>
+                  <p className="text-xs text-go-off/40 mt-0.5">Minutes from Sector 70</p>
                 </div>
               </motion.div>
               <motion.div

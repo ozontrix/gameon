@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Mail,
   Phone,
-  Camera,
   Building2,
   Briefcase,
   Heart,
@@ -16,14 +15,15 @@ import {
   Send,
 } from "lucide-react";
 import Image from "next/image";
+import { FaInstagram } from "react-icons/fa";
 
 const settingsRows = [
   [
     { label: "Contact Us", icon: Mail, href: "mailto:info@gameonmultisports.com", desc: "We respond within 4 hours" },
-    { label: "Call Us", icon: Phone, href: "tel:+13465923545", desc: "Mon–Sat, 9 AM – 8 PM" },
+    { label: "Call Us", icon: Phone, href: "tel:+919034844654", desc: "Mon–Sat, 9 AM – 8 PM" },
   ],
   [
-    { label: "WhatsApp", icon: MessageCircle, href: "https://wa.me/13465923545", desc: "Quickest way to reach us" },
+    { label: "WhatsApp", icon: MessageCircle, href: "https://wa.me/919034844654", desc: "Quickest way to reach us" },
     { label: "Partnerships", icon: Building2, href: "#", desc: "Brands, sponsors, events" },
   ],
   [
@@ -56,7 +56,6 @@ export function FooterSection() {
               <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display font-bold text-go-white mt-2">
                 Game On
               </h2>
-              <p className="text-sm text-go-off/50 mt-2">A Splitwaters Company</p>
             </div>
 
             {/* Newsletter / Waitlist mini */}
@@ -137,7 +136,7 @@ export function FooterSection() {
             {/* Social with hover tooltip */}
             <div className="flex items-center gap-4">
               {[
-                { icon: Camera, href: "https://www.instagram.com/gameonmultisports", label: "Instagram", handle: "@gameonmultisports" },
+                { icon: FaInstagram, href: "https://www.instagram.com/gameonmultisports", label: "Instagram", handle: "@gameonmultisports" },
               ].map(({ icon: Icon, href, label, handle }) => (
                 <a
                   key={label}
