@@ -10,7 +10,7 @@ const stats = [
   { value: 5, label: "Badminton Courts", subtitle: "2 AC + 3 Non-AC" },
   { value: 4, label: "Pickleball Courts", subtitle: "2 Indoor AC + 2 Outdoor" },
   { value: 5, label: "Cricket Nets", subtitle: "2 Indoor + 3 Outdoor" },
-  { value: 17, label: "Hours Open Daily", subtitle: "6 AM – 11 PM" },
+  { value: 1, label: "Cricket + Football Turf", subtitle: "100×60 ft Astro Turf" },
 ];
 
 // ─── Countdown Timer ───
