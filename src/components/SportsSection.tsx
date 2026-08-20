@@ -44,7 +44,7 @@ const sports = [
     courts: 5,
     ac: true,
     icon: <span className="text-3xl leading-none">🏸</span>,
-    emoji: "🏸",
+    emoji: "⚾",
     gradient: "linear-gradient(145deg, #1B1B2F 0%, #1A1A3E 40%, #2D1B69 100%)",
     accentColor: "#A855F7",
     features: ["Synthetic Flooring", "BWF Approved", "Premium AC Courts"],
