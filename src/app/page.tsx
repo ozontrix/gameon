@@ -12,7 +12,6 @@ import { Navigation } from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
 import { SportsSection } from "@/components/SportsSection";
 import { ZonesSection } from "@/components/ZonesSection";
-import { LegacySection } from "@/components/LegacySection";
 import { AudienceSection } from "@/components/AudienceSection";
 import { CommunitySection } from "@/components/CommunitySection";
 import { BookingSection } from "@/components/BookingSection";
@@ -101,7 +100,7 @@ function NotifyModal({ open, onClose }: { open: boolean; onClose: () => void }) 
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -273,39 +272,35 @@ export default function Home() {
 
   return (
     <>
-      <Navigation />
+      <Navigation onNotifyClick={() => setModalOpen(true)} />
 
       <main className="relative">
         <HeroSection onNotifyClick={() => setModalOpen(true)} />
 
         {/* Stacked cards — each section slides up as a card with rounded top corners */}
-        <StackedCard index={0} totalCards={7}>
+        <StackedCard index={0} totalCards={6}>
           <SportsSection onReserve={() => {
             document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" });
           }} />
         </StackedCard>
 
-        <StackedCard index={1} totalCards={7}>
+        <StackedCard index={1} totalCards={6}>
           <ZonesSection />
         </StackedCard>
 
-        <StackedCard index={2} totalCards={7}>
-          <LegacySection />
-        </StackedCard>
-
-        <StackedCard index={3} totalCards={7}>
+        <StackedCard index={2} totalCards={6}>
           <AudienceSection />
         </StackedCard>
 
-        <StackedCard index={4} totalCards={7}>
+        <StackedCard index={3} totalCards={6}>
           <CommunitySection />
         </StackedCard>
 
-        <StackedCard index={5} totalCards={7}>
+        <StackedCard index={4} totalCards={6}>
           <BookingSection />
         </StackedCard>
 
-        <StackedCard index={6} totalCards={7}>
+        <StackedCard index={5} totalCards={6}>
           <LocationSection />
         </StackedCard>
 

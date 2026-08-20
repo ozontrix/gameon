@@ -55,7 +55,7 @@ const audiences: Audience[] = [
     id: "cricket",
     label: "Cricket Practice Crowd",
     icon: <Building2 className="w-6 h-6" />,
-    tagline: "6 nets, 4 outdoor + 2 indoor. No more waiting.",
+    tagline: "5 nets, 3 outdoor + 2 indoor. No more waiting.",
     description: "Bowling machines, matting and turf options, indoor nets for monsoon months, outdoor floodlit nets for evening practice. From school kids to Ranji prospects — every level, every format.",
     color: "#2B3A4A",
     bg: "from-[#2B3A4A]/30 via-transparent to-transparent",

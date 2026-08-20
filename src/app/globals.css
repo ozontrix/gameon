@@ -146,6 +146,13 @@ body::before {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ─── Anchor scroll offset for the fixed desktop header ─── */
+@media (min-width: 1024px) {
+  section[id]:not(#hero) {
+    scroll-margin-top: 96px;
+  }
+}
+
 /* ─── Scrollbar ─── */
 .hide-scrollbar {
   -ms-overflow-style: none;
@@ -185,14 +192,6 @@ body::before {
 }
 .snap-center {
   scroll-snap-align: center;
-}
-
-/* ─── Glass Ring (for legacy avatars) ─── */
-.glass-ring {
-  box-shadow:
-    0 0 0 2px var(--go-border-glass),
-    0 0 0 4px rgba(255, 255, 255, 0.03),
-    0 8px 24px rgba(0, 0, 0, 0.20);
 }
 
 /* ─── Reduced Motion ─── */

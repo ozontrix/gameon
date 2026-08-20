@@ -15,7 +15,7 @@ const siteUrl = "https://game-on.in";
 export const metadata: Metadata = {
   title: "GAME ON — Premium Sports Destination | Gurugram",
   description:
-    "India's premium multi-sports destination launching in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
+    "Where the City Unplugs & GameOn Begins. A premium multi-sports destination in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -31,14 +31,14 @@ export const metadata: Metadata = {
     siteName: "Game On",
     title: "GAME ON — Premium Sports Destination | Gurugram",
     description:
-      "India's premium multi-sports destination launching in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
+      "Where the City Unplugs & GameOn Begins. A premium multi-sports destination in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
     url: siteUrl,
     images: [
       {
         url: `${siteUrl}/game_on.png`,
         width: 1200,
         height: 630,
-        alt: "Game On — India's premium multi-sports destination",
+        alt: "Game On — Where the City Unplugs & GameOn Begins",
       },
     ],
   },
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "GAME ON — Premium Sports Destination | Gurugram",
     description:
-      "India's premium multi-sports destination launching in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
+      "Where the City Unplugs & GameOn Begins. A premium multi-sports destination in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
     images: [`${siteUrl}/game_on.png`],
   },
 };

@@ -33,7 +33,7 @@ const communityPosts: Post[] = [
   },
   {
     image: "/non-ac-indoor.jpeg",
-    caption: "Saturday morning badminton clinic with the rising stars of Sector 70.",
+    caption: "Saturday morning badminton clinic with the rising stars of Gurgaon.",
     likes: 18,
     comments: 2,
     hashtags: ["badminton", "coaching", "futureStars"],

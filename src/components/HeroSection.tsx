@@ -1,16 +1,16 @@
 "use client";
 
 import { useRef, useEffect, useState, useMemo } from "react";
-import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { MapPin, Bell, ArrowRight, Sparkles, Swords, Table, Goal, Timer } from "lucide-react";
+import { Bell, ArrowRight, Timer } from "lucide-react";
 import { GlassCard } from "./GlassCard";
 
 const stats = [
-  { value: 1000, prefix: "", suffix: "+", label: "Monthly Active Players", subtitle: "Target Year-1" },
   { value: 5, label: "Badminton Courts", subtitle: "2 AC + 3 Non-AC" },
   { value: 4, label: "Pickleball Courts", subtitle: "2 Indoor AC + 2 Outdoor" },
-  { value: 6, label: "Cricket Nets", subtitle: "2 Indoor + 4 Outdoor" },
+  { value: 5, label: "Cricket Nets", subtitle: "2 Indoor + 3 Outdoor" },
+  { value: 17, label: "Hours Open Daily", subtitle: "6 AM – 11 PM" },
 ];
 
 // ─── Countdown Timer ───
@@ -63,6 +63,39 @@ const sportsRotator = [
   { text: "Box Cricket", icon: "🏏" },
   { text: "Football", icon: "⚽" },
 ];
+
+const taglineWords = [
+  { text: "Spin", emojis: ["🎾", "🏓", "⚾", "🥎"] },
+  { text: "Smash", emojis: ["🏸", "🏓", "🎾", "🏐"] },
+  { text: "Socialize", emojis: ["☕️", "🥤", "🍕", "🎉"] },
+];
+
+// ─── Rotating emoji — alternates icons for the tagline ───
+function RotatingEmoji({ emojis, interval = 2200 }: { emojis: string[]; interval?: number }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setIndex((prev) => (prev + 1) % emojis.length), interval);
+    return () => clearInterval(timer);
+  }, [emojis.length, interval]);
+
+  return (
+    <span className="inline-flex items-center justify-center w-7 h-7 overflow-hidden shrink-0">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={index}
+          initial={{ opacity: 0, y: 12, rotate: -25, scale: 0.5 }}
+          animate={{ opacity: 1, y: 0, rotate: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -12, rotate: 25, scale: 0.5 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="inline-block"
+        >
+          {emojis[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
 
 interface HeroSectionProps {
   onNotifyClick: () => void;
@@ -328,7 +361,8 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
           >
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-[10px] tracking-[0.18em] uppercase text-go-off/50 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-go-brand animate-pulse" />
-              India's Premier Multisport Destination
+              Where the City Unplugs &{" "}
+              <span className="text-go-brand font-bold">GameOn</span> Begins
             </span>
           </motion.div>
 
@@ -341,7 +375,7 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
           >
             <Image
               src="/game_on.png"
-              alt="Game On — Premium Multisports Destination"
+              alt="Game On — Where the City Unplugs & GameOn Begins"
               width={540}
               height={162}
               priority
@@ -371,21 +405,22 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
             <span className="text-xs text-go-off/40 tracking-wider uppercase">Every Day</span>
           </motion.div>
 
-          {/* Tagline with word-by-word reveal */}
+          {/* Tagline with rotating emojis */}
           <motion.div
-            className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1"
+            className="mt-5 flex flex-wrap justify-center gap-x-4 gap-y-1"
             initial="hidden"
             animate="visible"
           >
-            {["Play.", "Compete.", "Connect."].map((word, i) => (
+            {taglineWords.map((word, i) => (
               <motion.span
-                key={word}
-                className="text-lg lg:text-xl font-display text-go-off tracking-[0.15em] uppercase"
+                key={word.text}
+                className="inline-flex items-center gap-2 text-lg lg:text-xl font-display text-go-off tracking-[0.15em] uppercase"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 + i * 0.12, type: "spring", stiffness: 200, damping: 20 }}
               >
-                {word}
+                <span>{word.text}</span>
+                <RotatingEmoji emojis={word.emojis} />
               </motion.span>
             ))}
           </motion.div>
@@ -407,7 +442,7 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
           >
             1.5 acres of premium air-conditioned & open-air courts.
             <br />
-            5 badminton, 4 pickleball, 6 cricket nets, box cricket turf & more.
+            5 badminton, 4 pickleball, 5 cricket nets, box cricket & football turf & more.
           </motion.p>
 
           {/* CTA with glow effect */}
@@ -450,9 +485,7 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
                 transition={{ delay: 1.4 + i * 0.08, duration: 0.4 }}
               >
                 <span className="text-2xl lg:text-3xl font-display text-go-brand font-bold tabular-nums">
-                  {stat.prefix || ""}
                   <AnimatedNumber to={stat.value} />
-                  {stat.suffix || ""}
                 </span>
                 <span className="text-xs font-medium text-go-off/70 mt-1 leading-tight">{stat.label}</span>
                 {stat.subtitle && (

@@ -44,7 +44,7 @@ const zones = [
     highlights: [
       "Box Cricket / Football turf (100×60 ft)",
       "2 Pickleball courts (hard surface)",
-      "4 Cricket batting nets",
+      "3 Cricket batting nets",
       "Evening floodlit play",
     ],
     color: "#F5D000",

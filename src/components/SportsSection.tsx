@@ -3,13 +3,8 @@
 import { useRef, useState, useCallback } from "react";
 import { motion, useInView, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
-  BadgePlus,
-  Swords,
-  Goal,
-  Table,
   X,
   Clock,
-  DollarSign,
   Thermometer,
   Users,
   Calendar,
@@ -19,8 +14,6 @@ import {
   TrendingUp,
   Zap,
   Shield,
-  Award,
-  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,16 +23,16 @@ const sports = [
     id: "pickleball",
     title: "Pickleball",
     subtitle: "Fastest Growing Sport",
-    description: "4 premium indoor AC courts with professional-grade equipment",
+    description: "2 premium indoor AC courts & 2 outdoor courts with professional-grade equipment",
     courts: 4,
     ac: true,
-    pricing: "₹800/hr",
-    icon: <BadgePlus className="w-5 h-5 text-white" />,
+    icon: <span className="text-3xl leading-none">🏓</span>,
     emoji: "🏓",
     gradient: "linear-gradient(145deg, #1A1A2E 0%, #16213E 40%, #0F3460 100%)",
     accentColor: "#F5D000",
-    features: ["Indoor AC", "Pro Coaching", "Equipment Provided"],
-    highlights: ["4 Dedicated Courts", "Tournament Ready", "Beginner Friendly"],
+    features: ["Premium AC Courts", "Outdoor Courts", "Equipment Provided"],
+    highlights: ["2 Indoor AC + 2 Outdoor", "Tournament Ready", "Beginner Friendly"],
+    surface: "Pro-Grade",
     stat: "Fastest Growing Sport in India",
     trending: true,
   },
@@ -47,50 +40,50 @@ const sports = [
     id: "badminton",
     title: "Badminton",
     subtitle: "Premium Courts",
-    description: "5 synthetic courts — 2 air-conditioned, 3 floodlit for night play",
+    description: "5 synthetic courts — 2 air-conditioned & 3 indoor for year-round play",
     courts: 5,
     ac: true,
-    pricing: "₹600/hr",
-    icon: <Swords className="w-5 h-5 text-white" />,
+    icon: <span className="text-3xl leading-none">🏸</span>,
     emoji: "🏸",
     gradient: "linear-gradient(145deg, #1B1B2F 0%, #1A1A3E 40%, #2D1B69 100%)",
     accentColor: "#A855F7",
-    features: ["Synthetic Flooring", "Tournament Grade", "Floodlit"],
-    highlights: ["2 AC + 3 Non-AC", "Professional Lighting", "Coaching Available"],
-    stat: "5 Courts • Most in Sector 70",
+    features: ["Synthetic Flooring", "BWF Approved", "Premium AC Courts*"],
+    highlights: ["2 AC + 3 Non-AC", "BWF Approved Courts", "Coaching Available"],
+    surface: "Synthetic",
+    stat: "5 Courts • Premium Indoor Play",
     trending: false,
   },
   {
     id: "box-cricket",
-    title: "Box Cricket",
-    subtitle: "Turf Arena",
-    description: "100×60 ft astroturf arena with floodlights and digital scoreboard",
+    title: "Box Cricket / Football",
+    subtitle: "Shared Turf Arena",
+    description: "One 100×60 ft astroturf arena for Box Cricket & Football — floodlights & digital scoreboard",
     courts: 1,
     ac: false,
-    pricing: "₹2,500/hr",
-    icon: <Goal className="w-5 h-5 text-white" />,
+    icon: <span className="text-xl leading-none">🏏⚽</span>,
     emoji: "🏏",
     gradient: "linear-gradient(145deg, #0F2027 0%, #203A43 40%, #2C5364 100%)",
     accentColor: "#34D399",
-    features: ["Astro Turf", "Floodlit", "Scoreboard"],
-    highlights: ["100×60 ft Arena", "Night Cricket", "Team Events"],
-    stat: "Full-size Box Cricket Experience",
+    features: ["Astro Turf", "Floodlit", "Football-Ready"],
+    highlights: ["100×60 ft Arena", "Box Cricket + Football", "Night Floodlit Play"],
+    surface: "Astro Turf",
+    stat: "Box Cricket & Football on One Turf",
     trending: false,
   },
   {
     id: "cricket-nets",
     title: "Cricket Nets",
-    subtitle: "6 Nets Total",
-    description: "2 indoor + 4 outdoor nets with bowling machines & expert coaching",
-    courts: 6,
+    subtitle: "5 Nets Total",
+    description: "2 indoor + 3 outdoor nets with bowling machines & expert coaching",
+    courts: 5,
     ac: false,
-    pricing: "₹400/hr",
-    icon: <Table className="w-5 h-5 text-white" />,
+    icon: <span className="text-3xl leading-none">🎯</span>,
     emoji: "🎯",
     gradient: "linear-gradient(145deg, #1A1A2E 0%, #16213E 40%, #0F3460 100%)",
     accentColor: "#F59E0B",
     features: ["Bowling Machine", "Net Practice", "Coaching"],
-    highlights: ["2 Indoor + 4 Outdoor", "Bowling Machines", "All Formats"],
+    highlights: ["2 Indoor + 3 Outdoor", "Bowling Machines", "All Formats"],
+    surface: "Matting + Turf",
     stat: "Practice Like a Pro",
     trending: false,
   },
@@ -232,10 +225,10 @@ function GradientBorder({ accentColor }: { accentColor: string }) {
 // ─── Marquee Stats ───
 function StatsMarquee() {
   const stats = [
-    { label: "Active Players", value: "1,000+" },
-    { label: "Courts Available", value: "16+" },
+    { label: "Cricket Nets", value: "5" },
+    { label: "Courts Available", value: "15+" },
+    { label: "Box Cricket + Football", value: "100×60 ft" },
     { label: "Happy Members", value: "500+" },
-    { label: "Tournaments Held", value: "24+" },
     { label: "Avg Rating", value: "4.8 ★" },
     { label: "Coaching Hours", value: "2,000+" },
   ];
@@ -436,10 +429,6 @@ function SportCard({
                   <span className="text-xs sm:text-sm text-white/60 font-medium">AC</span>
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-3.5 h-3.5 text-white/40" />
-                <span className="text-xs sm:text-sm text-white/60 font-medium">{sport.pricing}</span>
-              </div>
             </div>
 
             {/* Feature Tags */}
@@ -544,9 +533,9 @@ function SportCard({
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {[
-                    { icon: Users, label: "Capacity", value: `${sport.courts} Courts` },
+                    { icon: Users, label: "Capacity", value: `${sport.courts} ${sport.courts === 1 ? "Court" : "Courts"}` },
                     { icon: Clock, label: "Timing", value: "6AM – 11PM" },
-                    { icon: DollarSign, label: "Starting From", value: sport.pricing },
+                    { icon: Shield, label: "Surface", value: sport.surface },
                     { icon: Thermometer, label: "Climate", value: sport.ac ? "AC" : "Natural" },
                   ].map((stat) => (
                     <div
@@ -697,7 +686,7 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
               animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             />
-            View All Sports & Pricing
+            View All Sports
             <motion.span
               className="inline-block"
               animate={{ x: [0, 4, 0] }}
@@ -759,7 +748,7 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
             animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           />
-          View All Sports & Pricing
+          View All Sports
           <motion.span
             className="inline-block"
             animate={{ x: [0, 4, 0] }}

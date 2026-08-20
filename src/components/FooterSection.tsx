@@ -6,16 +6,13 @@ import {
   ChevronRight,
   Mail,
   Phone,
-  Globe,
   Camera,
-  UserPlus,
   Building2,
   Briefcase,
   Heart,
   Shield,
   MessageCircle,
   Sparkles,
-  ArrowUpRight,
   Send,
 } from "lucide-react";
 import Image from "next/image";
@@ -137,12 +134,10 @@ export function FooterSection() {
               />
             </div>
 
-            {/* Social with hover tooltips */}
+            {/* Social with hover tooltip */}
             <div className="flex items-center gap-4">
               {[
-                { icon: Camera, href: "https://instagram.com", label: "Instagram", handle: "@GameOnMultisports" },
-                { icon: Globe, href: "https://x.com", label: "X / Twitter", handle: "@GameOnHQ" },
-                { icon: UserPlus, href: "https://linkedin.com", label: "LinkedIn", handle: "/company/gameon" },
+                { icon: Camera, href: "https://www.instagram.com/gameonmultisports", label: "Instagram", handle: "@gameonmultisports" },
               ].map(({ icon: Icon, href, label, handle }) => (
                 <a
                   key={label}
