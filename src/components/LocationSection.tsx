@@ -4,58 +4,39 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { MapPin, Navigation, Clock, Car, Building2, LocateFixed } from "lucide-react";
 
-// ─── Animated Dropped Pin ───
-function AnimatedPin() {
-  return (
-    <motion.div
-      className="relative"
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.6 }}
-    >
-      {/* Shadow */}
-      <motion.div
-        className="w-6 h-2 rounded-full bg-go-brand/30 mx-auto"
-        animate={{ scale: [1, 0.7, 1], opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-      />
-      {/* Pin body */}
-      <motion.div
-        className="relative -mt-2"
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-      >
-        {/* Glow */}
-        <div className="absolute -top-2 -left-2 w-12 h-12 rounded-full bg-go-brand/20 blur-xl" />
-        {/* Pin */}
-        <svg
-          width="32"
-          height="44"
-          viewBox="0 0 32 44"
-          fill="none"
-          className="relative"
-        >
-          <defs>
-            <linearGradient id="pinGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F5A623" />
-              <stop offset="100%" stopColor="#D47900" />
-            </linearGradient>
-          </defs>
-          <ellipse cx="16" cy="40" rx="6" ry="2" fill="#F5A623" opacity="0.3" />
-          <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 44 16 44C16 44 32 28 32 16C32 7.16 24.84 0 16 0Z" fill="url(#pinGradient)" />
-          <circle cx="16" cy="15" r="6" fill="#0B0B0C" />
-        </svg>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 export function LocationSection() {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
+  const connectivity = ["SPR Road", "Dwarka Expressway", "NH-48"];
+
+  const proximity = [
+    { value: "10 min", label: "Cyber City" },
+    { value: "Minutes", label: "Dwarka Expressway" },
+    { value: "Direct", label: "NH-48 Access" },
+  ];
+
+  const highlights = [
+    {
+      icon: Car,
+      title: "Sector 70, Gurugram",
+      desc: "Right in a rapidly evolving Gurugram corridor",
+    },
+    {
+      icon: Building2,
+      title: "Growing Residential Communities",
+      desc: "New homes, schools & neighbourhoods rising nearby",
+    },
+    {
+      icon: Clock,
+      title: "Open Daily",
+      desc: "6:00 AM – 11:00 PM",
+    },
+  ];
+
   return (
     <section id="location" ref={ref} className="relative px-6 sm:px-8 lg:px-14 xl:px-20 py-20 lg:py-28">
+      {/* ─── Header ─── */}
       <motion.div
         className="mb-10"
         initial={{ opacity: 0, y: 20 }}
@@ -64,14 +45,16 @@ export function LocationSection() {
       >
         <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">Location</span>
         <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display font-bold text-go-white mt-2">
-          Find Us
+          At the Heart of <span className="text-go-brand">What&apos;s Next</span>
         </h2>
-        <p className="text-sm text-go-off/50 mt-3 max-w-lg">
-          10 minutes from Cyber City.
+        <p className="text-sm text-go-off/50 mt-3 max-w-xl">
+          Right in Sector 70, Gurugram — GameOn sits in a rapidly evolving
+          Gurugram corridor, with growing residential communities and improving
+          connectivity to SPR, Dwarka Expressway & NH-48.
         </p>
       </motion.div>
 
-      {/* Destination Card */}
+      {/* ─── Destination Card ─── */}
       <motion.div
         className="glass rounded-[28px] overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
@@ -79,120 +62,126 @@ export function LocationSection() {
         transition={{ duration: 0.4, delay: 0.1 }}
       >
         <div className="grid lg:grid-cols-2">
-          {/* Map Placeholder */}
-          <div className="relative min-h-[300px] lg:min-h-[380px] bg-gradient-to-br from-go-navy/30 to-go-black overflow-hidden">
-            {/* Grid background */}
-            <motion.div
-              className="absolute inset-0 opacity-40"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
-                `,
-                backgroundSize: "40px 40px",
-              }}
-              animate={{ backgroundPosition: ["0px 0px", "40px 40px"] }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          {/* ─── Map Panel — live Google Maps embed ─── */}
+          <div className="relative min-h-[320px] lg:min-h-[460px] bg-go-navy/20 overflow-hidden">
+            <iframe
+              src="https://maps.google.com/maps?q=28.394899,77.014454&amp;z=16&amp;output=embed"
+              className="absolute inset-0 w-full h-full"
+              style={{ border: 0, filter: "saturate(0.9) contrast(1.05)" }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="GameOn Multi Sports — SportsCube Center for Excellence, Sector 70, Gurugram"
             />
-            {/* Radial accent */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full bg-go-brand/15 blur-[80px]" />
-            
-            {/* Pin */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <AnimatedPin />
-            </div>
 
-            {/* Small satellite dots */}
-            {[
-              { x: "25%", y: "30%", size: 2, delay: 0 },
-              { x: "75%", y: "40%", size: 3, delay: 0.5 },
-              { x: "20%", y: "70%", size: 2, delay: 1 },
-              { x: "80%", y: "60%", size: 2.5, delay: 1.5 },
-              { x: "50%", y: "25%", size: 2, delay: 0.3 },
-              { x: "65%", y: "75%", size: 1.5, delay: 0.8 },
-            ].map((dot, i) => (
-              <motion.div
-                key={i}
-                className="absolute rounded-full bg-go-brand/40"
-                style={{ left: dot.x, top: dot.y, width: dot.size, height: dot.size }}
-                animate={{ opacity: [0.2, 0.8, 0.2], scale: [1, 1.5, 1] }}
-                transition={{ duration: 3, repeat: Infinity, delay: dot.delay, ease: "easeInOut" }}
-              />
-            ))}
+            {/* Floating venue chip overlay */}
+            <motion.div
+              className="absolute bottom-5 left-5 z-10 rounded-2xl px-4 py-3 max-w-[220px] bg-[rgba(14,17,22,0.88)] backdrop-blur-md border border-white/[0.08] shadow-xl"
+              initial={{ opacity: 0, y: 12 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.5, duration: 0.4 }}
+            >
+              <span className="block text-xs font-semibold text-go-white">GameOn Multi Sports</span>
+              <span className="block text-[10px] text-go-off/50 mt-0.5">Sector 70, Gurugram</span>
+            </motion.div>
           </div>
 
-          {/* Details */}
-          <div className="p-6 lg:p-8 flex flex-col justify-center">
-            <h3 className="text-xl font-display font-bold text-go-white mb-1">
-              GameOn Multi Sports
-            </h3>
-            <p className="text-sm text-go-off/50 mb-6">
-              Sports Cube Campus, Sector 70, Gurugram, Haryana 122101
-            </p>
-
-            {/* 3D distance badge */}
-            <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-go-brand/10 border border-go-brand/20 mb-6 w-fit"
-              initial={{ opacity: 0, x: -10 }}
-              animate={inView ? { opacity: 1, x: 0 } : {}}
-              transition={{ delay: 0.3 }}
-            >
-              <LocateFixed className="w-3.5 h-3.5 text-go-brand" />
-              <span className="text-[10px] tracking-wider uppercase text-go-brand font-medium">Off SPR Road • Near Dwarka Expressway</span>
-            </motion.div>
-
-            <div className="space-y-4 mb-6">
+            {/* ─── Info Panel ─── */}
+            <div className="p-6 lg:p-8 flex flex-col justify-center">
+              {/* Heading */}
               <motion.div
-                className="flex items-start gap-3 p-3 rounded-2xl hover:bg-go-white-glass transition-colors"
                 initial={{ opacity: 0, x: -10 }}
                 animate={inView ? { opacity: 1, x: 0 } : {}}
                 transition={{ delay: 0.15 }}
               >
-                <Car className="w-4 h-4 text-go-brand mt-0.5 shrink-0" />
-                <div>
-                  <span className="text-sm text-go-off/80 font-medium">Dwarka Expressway & SPR Road</span>
-                  <p className="text-xs text-go-off/40 mt-0.5">10 min from Cyber City</p>
-                </div>
+                <h3 className="text-xl font-display font-bold text-go-white mb-1">
+                  GameOn Multi Sports
+                </h3>
+                <p className="text-sm text-go-off/50 mb-5">
+                  Sports Cube Campus, Sector 70, Gurugram, Haryana 122101
+                </p>
               </motion.div>
+
+              {/* Connectivity chips */}
               <motion.div
-                className="flex items-start gap-3 p-3 rounded-2xl hover:bg-go-white-glass transition-colors"
+                className="mb-6"
                 initial={{ opacity: 0, x: -10 }}
                 animate={inView ? { opacity: 1, x: 0 } : {}}
                 transition={{ delay: 0.25 }}
               >
-                <Building2 className="w-4 h-4 text-go-brand mt-0.5 shrink-0" />
-                <div>
-                  <span className="text-sm text-go-off/80 font-medium">Business Park Corridor</span>
-                  <p className="text-xs text-go-off/40 mt-0.5">Surrounded by major corporate hubs</p>
+                <p className="text-[10px] tracking-wider uppercase text-go-off/40 font-medium mb-2 flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3 text-go-brand" />
+                  Fast Connectivity
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {connectivity.map((road) => (
+                    <span
+                      key={road}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-go-brand/10 border border-go-brand/20 text-[10px] font-semibold uppercase tracking-wider text-go-brand"
+                    >
+                      <LocateFixed className="w-3 h-3" />
+                      {road}
+                    </span>
+                  ))}
                 </div>
               </motion.div>
-              <motion.div
-                className="flex items-start gap-3 p-3 rounded-2xl hover:bg-go-white-glass transition-colors"
-                initial={{ opacity: 0, x: -10 }}
-                animate={inView ? { opacity: 1, x: 0 } : {}}
-                transition={{ delay: 0.35 }}
-              >
-                <Clock className="w-4 h-4 text-go-brand mt-0.5 shrink-0" />
-                <div>
-                  <span className="text-sm text-go-off/80 font-medium">Open Daily</span>
-                  <p className="text-xs text-go-off/40 mt-0.5">6:00 AM – 11:00 PM</p>
-                </div>
-              </motion.div>
-            </div>
 
-            <motion.a
-              href="https://www.google.com/maps/search/?api=1&query=GameOn+Multi+Sports+Sector+70+Gurugram+Haryana+122101"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-go-brand text-go-white text-sm font-semibold tracking-wider uppercase rounded-full py-3 px-6 hover:bg-go-brand/90 transition-all duration-300 w-fit group"
-              whileHover={{ scale: 1.02, x: 2 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Navigation className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              Get Directions
-            </motion.a>
+              {/* Location benefits */}
+              <div className="space-y-4 mb-6">
+                {highlights.map((h, i) => (
+                  <motion.div
+                    key={h.title}
+                    className="flex items-start gap-3 p-3 rounded-2xl hover:bg-go-white-glass transition-colors"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={inView ? { opacity: 1, x: 0 } : {}}
+                    transition={{ delay: 0.35 + i * 0.1 }}
+                  >
+                    <h.icon className="w-4 h-4 text-go-brand mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-sm text-go-off/80 font-medium">{h.title}</span>
+                      <p className="text-xs text-go-off/40 mt-0.5">{h.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Proximity stats */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {proximity.map((s, i) => (
+                  <motion.div
+                    key={s.label}
+                    className="rounded-2xl p-3 bg-go-white-glass border border-white/[0.06] text-center"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={inView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ delay: 0.6 + i * 0.1 }}
+                  >
+                    <span className="block text-base font-display font-bold text-go-brand leading-none">
+                      {s.value}
+                    </span>
+                    <span className="block text-[9px] uppercase tracking-wider text-go-off/40 mt-1.5">
+                      {s.label}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <motion.a
+                href="https://www.google.com/maps/dir/?api=1&amp;destination=28.394899,77.014454"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-go-brand text-go-white text-sm font-semibold tracking-wider uppercase rounded-full py-3 px-6 hover:bg-go-brand/90 transition-all duration-300 w-fit group"
+                initial={{ opacity: 0, y: 10 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.75 }}
+                whileHover={{ scale: 1.02, x: 2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Navigation className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                Get Directions
+              </motion.a>
+            </div>
           </div>
-        </div>
       </motion.div>
     </section>
   );
