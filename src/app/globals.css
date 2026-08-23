@@ -26,6 +26,11 @@
   --go-glow: color-mix(in srgb, var(--go-brand) 25%, transparent);
   --go-shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.20);
   --go-shadow-glass: 0 4px 24px rgba(0, 0, 0, 0.12);
+
+  /* ── Typography — self-hosted via next/font (Anton / Space Grotesk / JetBrains Mono) ── */
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-anton), "Anton", sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 @theme inline {
@@ -38,9 +43,9 @@
   --color-go-navy-glass: rgba(26, 29, 35, 0.80);
   --color-go-white-glass: rgba(255, 255, 255, 0.06);
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Clash Display", "General Sans", "Satoshi", "Anton", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-anton), "Anton", sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   --radius-glass: 28px;
   --radius-glass-sm: 20px;
@@ -60,6 +65,8 @@
 html {
   height: 100%;
   scroll-behavior: smooth;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -67,10 +74,27 @@ body {
   background: #FFFFFF;
   color: var(--go-off);
   font-family: var(--font-sans);
+  overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
   overflow-x: hidden;
+}
+
+/* Anton is a single-weight display face — render at its native weight everywhere
+   (prevents browsers from synthesizing fake bolds on top of it). */
+.font-display {
+  font-weight: 400;
+}
+
+/* ─── Mobile: subtle global zoom-out so text never overflows on small screens ───
+   Scales the rem-based design down slightly (fonts, spacing, widths) below the
+   `sm` breakpoint. Combined with text-size-adjust it renders consistently on
+   every device. */
+@media (max-width: 640px) {
+  html {
+    font-size: 93%;
+  }
 }
 
 /* ─── Ambient background glow that follows the hero brand color ─── */

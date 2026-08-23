@@ -64,20 +64,37 @@ const sportsRotator = [
   { text: "Football", icon: "⚽" },
 ];
 
-const taglineWords = [
-  { text: "Spin", emojis: ["🎾", "🏓", "⚾", "🥎"] },
-  { text: "Smash", emojis: ["🏸", "🏓", "🎾", "🏐"] },
-  { text: "Socialize", emojis: ["☕️", "🥤", "🍕", "🎉"] },
+type TaglineIcon = { emoji: string } | { src: string; alt: string };
+
+const taglineWords: { text: string; icons: TaglineIcon[] }[] = [
+  {
+    text: "Spin",
+    icons: [
+      { emoji: "🎾" },
+      { emoji: "🏓" },
+      { src: "/pickleball.png", alt: "Pickleball" },
+      { src: "/cricket.png", alt: "Cricket" },
+    ],
+  },
+  {
+    text: "Smash",
+    icons: [{ emoji: "🏸" }, { src: "/badminton.png", alt: "Badminton" }],
+  },
+  {
+    text: "Socialize",
+    icons: [{ emoji: "☕️" }, { emoji: "🥤" }, { emoji: "🍕" }, { emoji: "🎉" }],
+  },
 ];
 
 // ─── Rotating emoji — alternates icons for the tagline ───
-function RotatingEmoji({ emojis, interval = 2200 }: { emojis: string[]; interval?: number }) {
+function RotatingEmoji({ icons, interval = 2200 }: { icons: TaglineIcon[]; interval?: number }) {
   const [index, setIndex] = useState(0);
+  const icon = icons[index];
 
   useEffect(() => {
-    const timer = setInterval(() => setIndex((prev) => (prev + 1) % emojis.length), interval);
+    const timer = setInterval(() => setIndex((prev) => (prev + 1) % icons.length), interval);
     return () => clearInterval(timer);
-  }, [emojis.length, interval]);
+  }, [icons.length, interval]);
 
   return (
     <span className="inline-flex items-center justify-center w-7 h-7 overflow-hidden shrink-0">
@@ -90,7 +107,17 @@ function RotatingEmoji({ emojis, interval = 2200 }: { emojis: string[]; interval
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="inline-block"
         >
-          {emojis[index]}
+          {"src" in icon ? (
+            <Image
+              src={icon.src}
+              alt={icon.alt}
+              width={512}
+              height={512}
+              className="w-5 h-5 object-contain"
+            />
+          ) : (
+            icon.emoji
+          )}
         </motion.span>
       </AnimatePresence>
     </span>
@@ -359,10 +386,10 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-[10px] tracking-[0.18em] uppercase text-go-off/50 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-go-brand animate-pulse" />
-              Where the City Unplugs &{" "}
-              <span className="text-go-brand font-bold">GameOn</span> Begins
+            <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full glass text-[8px] sm:text-[10px] tracking-[0.14em] sm:tracking-[0.18em] uppercase text-go-off/50 font-medium whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-go-brand animate-pulse shrink-0" />
+              <span className="hidden sm:inline">Where the City Unplugs&nbsp;&amp;&nbsp;</span>
+              <span className="text-go-brand font-bold">GameOn</span>&nbsp;Begins
             </span>
           </motion.div>
 
@@ -420,7 +447,7 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
                 transition={{ delay: 0.7 + i * 0.12, type: "spring", stiffness: 200, damping: 20 }}
               >
                 <span>{word.text}</span>
-                <RotatingEmoji emojis={word.emojis} />
+                <RotatingEmoji icons={word.icons} />
               </motion.span>
             ))}
           </motion.div>

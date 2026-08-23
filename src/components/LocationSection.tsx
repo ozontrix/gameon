@@ -8,13 +8,7 @@ export function LocationSection() {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
-  const connectivity = ["SPR Road", "Dwarka Expressway", "NH-48"];
-
-  const proximity = [
-    { value: "10 min", label: "Cyber City" },
-    { value: "Minutes", label: "Dwarka Expressway" },
-    { value: "Direct", label: "NH-48 Access" },
-  ];
+  const connectivity = ["100m from SPR Road", "5min from Dwarka Expressway", "NH-48 access"];
 
   const highlights = [
     {
@@ -141,26 +135,6 @@ export function LocationSection() {
                       <span className="text-sm text-go-off/80 font-medium">{h.title}</span>
                       <p className="text-xs text-go-off/40 mt-0.5">{h.desc}</p>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Proximity stats */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                {proximity.map((s, i) => (
-                  <motion.div
-                    key={s.label}
-                    className="rounded-2xl p-3 bg-go-white-glass border border-white/[0.06] text-center"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={inView ? { opacity: 1, y: 0 } : {}}
-                    transition={{ delay: 0.6 + i * 0.1 }}
-                  >
-                    <span className="block text-base font-display font-bold text-go-brand leading-none">
-                      {s.value}
-                    </span>
-                    <span className="block text-[9px] uppercase tracking-wider text-go-off/40 mt-1.5">
-                      {s.label}
-                    </span>
                   </motion.div>
                 ))}
               </div>

@@ -1,10 +1,13 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import useEmblaCarousel from "embla-carousel-react";
+import type { EmblaCarouselType } from "embla-carousel";
 import { Heart, MessageCircle, Share2, Camera, ChevronRight } from "lucide-react";
 import { FaInstagram } from "react-icons/fa";
+import { useEmblaAutoplay } from "@/lib/useEmblaAutoplay";
 
 interface Post {
   image: string;
@@ -204,6 +207,73 @@ function PostCard({ post, index, inView }: { post: Post; index: number; inView: 
   );
 }
 
+// ─── Mobile Posts Carousel: horizontal auto-slider (mobile only) ───
+function MobilePostsCarousel({ inView }: { inView: boolean }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    loop: true,
+    containScroll: "trimSnaps",
+  });
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+
+  // Auto-slide every 2 seconds
+  useEmblaAutoplay(emblaApi, 2000);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const onInit = (api: EmblaCarouselType) => setScrollSnaps(api.scrollSnapList());
+    const onSelect = (api: EmblaCarouselType) => setSelectedIndex(api.selectedScrollSnap());
+
+    onInit(emblaApi);
+    onSelect(emblaApi);
+    emblaApi.on("reInit", onInit);
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+
+    return () => {
+      emblaApi.off("reInit", onInit);
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi]);
+
+  return (
+    <div className="relative">
+      {/* Viewport — bleeds out to the section edges so the next card peeks in */}
+      <div className="-mx-6 sm:-mx-8 overflow-hidden" ref={emblaRef}>
+        <div className="flex gap-4 sm:gap-5">
+          {communityPosts.map((post, i) => (
+            <div key={i} className="flex-[0_0_85%] min-w-0">
+              <PostCard post={post} index={i} inView={inView} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right-edge fade hint */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-12 z-10 bg-gradient-to-l from-[#0E0E18] to-transparent" />
+
+      {/* Slide dots */}
+      <div className="flex justify-center gap-2 mt-5">
+        {scrollSnaps.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => emblaApi?.scrollTo(i)}
+            aria-label={`Go to slide ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+              i === selectedIndex ? "w-6 bg-go-brand" : "w-1.5 bg-white/20"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CommunitySection() {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
@@ -228,8 +298,13 @@ export function CommunitySection() {
         </p>
       </motion.div>
 
-      {/* Posts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+      {/* ─── Mobile: horizontal auto-slider (swipeable, auto-advances) ─── */}
+      <div className="lg:hidden">
+        <MobilePostsCarousel inView={inView} />
+      </div>
+
+      {/* ─── Desktop: 3-col grid ─── */}
+      <div className="hidden lg:grid grid-cols-3 gap-4 lg:gap-5">
         {communityPosts.map((post, i) => (
           <PostCard key={i} post={post} index={i} inView={inView} />
         ))}

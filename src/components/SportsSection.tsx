@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, useInView, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
   X,
@@ -15,6 +15,10 @@ import {
   Zap,
   Shield,
 } from "lucide-react";
+import Image from "next/image";
+import useEmblaCarousel from "embla-carousel-react";
+import type { EmblaCarouselType } from "embla-carousel";
+import { useEmblaAutoplay } from "@/lib/useEmblaAutoplay";
 import { cn } from "@/lib/utils";
 
 // ─── Each sport gets its own unique identity ───
@@ -26,7 +30,7 @@ const sports = [
     description: "2 premium indoor AC courts & 2 outdoor courts with professional-grade equipment",
     courts: 4,
     ac: true,
-    icon: <span className="text-3xl leading-none">🏓</span>,
+    icon: "/pickleball.png",
     emoji: "🏓",
     gradient: "linear-gradient(145deg, #1A1A2E 0%, #16213E 40%, #0F3460 100%)",
     accentColor: "#F5D000",
@@ -43,7 +47,7 @@ const sports = [
     description: "5 synthetic courts — 2 air-conditioned & 3 indoor for year-round play",
     courts: 5,
     ac: true,
-    icon: <span className="text-3xl leading-none">🏸</span>,
+    icon: "/badminton.png",
     emoji: "⚾",
     gradient: "linear-gradient(145deg, #1B1B2F 0%, #1A1A3E 40%, #2D1B69 100%)",
     accentColor: "#A855F7",
@@ -60,7 +64,7 @@ const sports = [
     description: "One 100×60 ft astroturf arena for Box Cricket & Football — floodlights & digital scoreboard",
     courts: 1,
     ac: false,
-    icon: <span className="text-xl leading-none">🏏⚽</span>,
+    icon: "/cricket.png",
     emoji: "🏏",
     gradient: "linear-gradient(145deg, #0F2027 0%, #203A43 40%, #2C5364 100%)",
     accentColor: "#34D399",
@@ -77,7 +81,7 @@ const sports = [
     description: "2 indoor + 3 outdoor nets with bowling machines & expert coaching",
     courts: 5,
     ac: false,
-    icon: <span className="text-3xl leading-none">🎯</span>,
+    icon: "/cricket-stump.png",
     emoji: "🎯",
     gradient: "linear-gradient(145deg, #1A1A2E 0%, #16213E 40%, #0F3460 100%)",
     accentColor: "#F59E0B",
@@ -370,7 +374,15 @@ function SportCard({
                 whileHover={{ scale: 1.08, rotate: [0, -5, 5, 0] }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="scale-110 sm:scale-125">{sport.icon}</div>
+                <div className="scale-110 sm:scale-125">
+                  <Image
+                    src={sport.icon}
+                    alt={sport.title}
+                    width={512}
+                    height={512}
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+                  />
+                </div>
               </motion.div>
 
               <div className="flex items-center gap-2">
@@ -514,7 +526,13 @@ function SportCard({
                       }}
                       whileHover={{ rotate: [0, -10, 10, 0], transition: { duration: 0.4 } }}
                     >
-                      {sport.emoji}
+                      <Image
+                        src={sport.icon}
+                        alt={sport.title}
+                        width={512}
+                        height={512}
+                        className="w-12 h-12 object-contain"
+                      />
                     </motion.div>
                     <div>
                       <h3 className="text-2xl font-display font-bold text-white">{sport.title}</h3>
@@ -605,6 +623,73 @@ function SportCard({
   );
 }
 
+// ─── Mobile Sports Carousel: horizontal auto-slider (mobile only) ───
+function MobileSportsCarousel({ inView, onReserve }: { inView: boolean; onReserve?: () => void }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    loop: true,
+    containScroll: "trimSnaps",
+  });
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+
+  // Auto-slide every 2 seconds
+  useEmblaAutoplay(emblaApi, 2000);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const onInit = (api: EmblaCarouselType) => setScrollSnaps(api.scrollSnapList());
+    const onSelect = (api: EmblaCarouselType) => setSelectedIndex(api.selectedScrollSnap());
+
+    onInit(emblaApi);
+    onSelect(emblaApi);
+    emblaApi.on("reInit", onInit);
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+
+    return () => {
+      emblaApi.off("reInit", onInit);
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi]);
+
+  return (
+    <div className="relative">
+      {/* Viewport — bleeds out to the section edges so the next card peeks in */}
+      <div className="-mx-5 sm:-mx-8 overflow-hidden" ref={emblaRef}>
+        <div className="flex gap-4 sm:gap-5">
+          {sports.map((sport, i) => (
+            <div key={sport.id} className="flex-[0_0_85%] min-w-0">
+              <SportCard sport={sport} index={i} inView={inView} onReserve={onReserve} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right-edge fade hint */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-12 z-10 bg-gradient-to-l from-[#0E0E18] to-transparent" />
+
+      {/* Slide dots */}
+      <div className="flex justify-center gap-2 mt-5">
+        {scrollSnaps.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => emblaApi?.scrollTo(i)}
+            aria-label={`Go to slide ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+              i === selectedIndex ? "w-6 bg-go-brand" : "w-1.5 bg-white/20"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Section ───
 export function SportsSection({ onReserve }: SportsSectionProps) {
   const ref = useRef<HTMLElement>(null);
@@ -686,7 +771,7 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
               animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             />
-            View All Sports
+            Book Your Slot Now
             <motion.span
               className="inline-block"
               animate={{ x: [0, 4, 0] }}
@@ -710,8 +795,13 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
         />
       </motion.div>
 
-      {/* ─── Sports Grid: 2×2 on desktop, 1-col on mobile ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 relative z-10">
+      {/* ─── Mobile: horizontal auto-slider (swipeable, auto-advances) ─── */}
+      <div className="lg:hidden relative z-10">
+        <MobileSportsCarousel inView={inView} onReserve={onReserve} />
+      </div>
+
+      {/* ─── Desktop: 2×2 grid ─── */}
+      <div className="hidden lg:grid grid-cols-2 gap-5 lg:gap-6 relative z-10">
         {sports.map((sport, i) => (
           <SportCard
             key={sport.id}
@@ -748,7 +838,7 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
             animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           />
-          View All Sports
+          Book Your Slot Now
           <motion.span
             className="inline-block"
             animate={{ x: [0, 4, 0] }}
