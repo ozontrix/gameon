@@ -72,7 +72,7 @@ export function FooterSection() {
   const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "error" | "success">("idle");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleNewsletterSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleNewsletterSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (submitting || newsletterStatus === "success") return;
 
@@ -86,12 +86,30 @@ export function FooterSection() {
     setSubmitting(true);
     setNewsletterStatus("idle");
 
-    // Simulate a short async subscribe, then celebrate 🎉
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      // Give the spinner a brief moment, then send the notification email
+      const [res] = await Promise.all([
+        fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "newsletter", email }),
+        }),
+        new Promise((r) => setTimeout(r, 700)),
+      ]);
+
+      if (!res.ok) {
+        toast.error("Couldn't subscribe right now. Please try again.");
+        return;
+      }
+
+      setNewsletterEmail("");
       setNewsletterStatus("success");
       fireNewsletterConfetti();
-    }, 900);
+    } catch {
+      toast.error("Couldn't subscribe right now. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

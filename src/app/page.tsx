@@ -84,6 +84,23 @@ function NotifyModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           created_at: new Date().toISOString(),
         });
       }
+
+      // Notify the Game On team by email (non-blocking — never blocks the success flow)
+      try {
+        await fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "early-access",
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+          }),
+        });
+      } catch {
+        // ignore — the waitlist is saved, email delivery is best-effort
+      }
+
       fireConfetti();
       setSubmitted(true);
       setStep("slide");
