@@ -59,7 +59,7 @@ export function LocationSection() {
           {/* ─── Map Panel — live Google Maps embed ─── */}
           <div className="relative min-h-[320px] lg:min-h-[460px] bg-go-navy/20 overflow-hidden">
             <iframe
-              src="https://maps.google.com/maps?q=28.4012787087,77.0126389197&amp;z=16&amp;output=embed"
+              src="https://maps.google.com/maps?q=28.394516,77.0126389&amp;z=17&amp;output=embed"
               className="absolute inset-0 w-full h-full"
               style={{ border: 0, filter: "saturate(0.9) contrast(1.05)" }}
               allowFullScreen
@@ -92,7 +92,7 @@ export function LocationSection() {
                   GameOn Multi Sports
                 </h3>
                 <p className="text-sm text-go-off/50 mb-5">
-                  Darbaripur Rd, Darbaripur, Sector 70, Gurugram, Haryana 122101
+                  Sector 70, Gurugram, Haryana 122101
                 </p>
               </motion.div>
 
@@ -141,7 +141,7 @@ export function LocationSection() {
 
               {/* CTA */}
               <motion.a
-                href="https://www.google.com/maps/dir/?api=1&amp;destination=28.4012787087,77.0126389197"
+                href="https://www.google.com/maps/dir/?api=1&amp;destination=28.394516,77.0126389"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-go-brand text-go-white text-sm font-semibold tracking-wider uppercase rounded-full py-3 px-6 hover:bg-go-brand/90 transition-all duration-300 w-fit group"
