@@ -388,7 +388,7 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
           >
             <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full glass text-[8px] sm:text-[10px] tracking-[0.1em] sm:tracking-[0.18em] uppercase text-go-off/50 font-medium whitespace-nowrap">
               <span className="w-1.5 h-1.5 rounded-full bg-go-brand animate-pulse shrink-0" />
-              Where the City Unplugs&nbsp;&amp;&nbsp;
+              Where the City Unplugs,&nbsp;
               <span className="text-go-brand font-bold">GameOn</span>&nbsp;Begins
             </span>
           </motion.div>
