@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ComponentType } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
+import Image from "next/image";
 import {
   Home,
   LayoutGrid,
@@ -10,7 +11,6 @@ import {
   Users,
   Sparkles,
   MapPin,
-  MoreHorizontal,
   ArrowUp,
   Bell,
 } from "lucide-react";
@@ -28,12 +28,19 @@ const desktopSections = [
 ];
 
 // Primary tabs always visible in the mobile bottom bar
-const mobileTabs = [
+type MobileTab = {
+  id: string;
+  label: string;
+  icon?: ComponentType<{ className?: string }>;
+  image?: string;
+};
+
+const mobileTabs: MobileTab[] = [
   { id: "hero", label: "Home", icon: Home },
   { id: "sports", label: "Sports", icon: LayoutGrid },
   { id: "zones", label: "Zones", icon: Building },
   { id: "booking", label: "Book", icon: Calendar },
-  { id: "more", label: "More", icon: MoreHorizontal },
+  { id: "more", label: "More", image: "/game_on_favicon.png" },
 ];
 
 // Secondary sections tucked behind the "More" sheet
@@ -212,7 +219,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
       >
         <div className="pointer-events-auto mx-auto max-w-md px-3 pb-[max(env(safe-area-inset-bottom),10px)]">
           <div className="flex items-center justify-between gap-0.5 rounded-[28px] border border-white/[0.08] bg-[rgba(14,17,22,0.82)] backdrop-blur-[24px] saturate-[160%] px-2 py-1.5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-            {mobileTabs.map(({ id, label, icon: Icon }) => {
+            {mobileTabs.map(({ id, label, icon: Icon, image }) => {
               const isActive = activeSection === id || (id === "more" && mobileMoreOpen);
               return (
                 <button
@@ -235,7 +242,17 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                       transition={spring}
                     />
                   )}
-                  <Icon className={cn("w-5 h-5 relative z-10 transition-transform", isActive && "scale-110")} />
+                  {image ? (
+                    <Image
+                      src={image}
+                      alt={label}
+                      width={150}
+                      height={150}
+                      className={cn("w-5 h-5 relative z-10 object-contain transition-transform", isActive && "scale-110")}
+                    />
+                  ) : (
+                    Icon && <Icon className={cn("w-5 h-5 relative z-10 transition-transform", isActive && "scale-110")} />
+                  )}
                   <span className="relative z-10 text-[9px] font-semibold uppercase tracking-wider">{label}</span>
                 </button>
               );

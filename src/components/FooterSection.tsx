@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion, useInView } from "framer-motion";
+import { useRef, useState, type ComponentType, type FormEvent } from "react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   Mail,
@@ -13,32 +13,86 @@ import {
   MessageCircle,
   Sparkles,
   Send,
+  Check,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
 import { FaInstagram } from "react-icons/fa";
 
-const settingsRows = [
+type FooterLink = {
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  href?: string;
+  desc?: string;
+  comingSoon?: boolean;
+};
+
+const settingsRows: FooterLink[][] = [
   [
     { label: "Contact Us", icon: Mail, href: "mailto:info@gameonmultisports.com", desc: "We respond within 4 hours" },
     { label: "Call Us", icon: Phone, href: "tel:+919034844654", desc: "Mon–Sat, 9 AM – 8 PM" },
   ],
   [
     { label: "WhatsApp", icon: MessageCircle, href: "https://wa.me/919034844654", desc: "Quickest way to reach us" },
-    { label: "Partnerships", icon: Building2, href: "#", desc: "Brands, sponsors, events" },
+    { label: "Partnerships", icon: Building2, desc: "Brands, sponsors, events", comingSoon: true },
   ],
   [
-    { label: "Careers", icon: Briefcase, href: "#", desc: "Join the Game On team" },
-    { label: "Terms of Use", icon: Shield, href: "#", desc: "Policies & guidelines" },
+    { label: "Careers", icon: Briefcase, desc: "Join the Game On team", comingSoon: true },
+    { label: "Terms of Use", icon: Shield, href: "/terms", desc: "Policies & guidelines" },
   ],
   [
-    { label: "Privacy Policy", icon: Heart, href: "#", desc: "How we handle your data" },
+    { label: "Privacy Policy", icon: Heart, href: "/privacy", desc: "How we handle your data" },
   ],
 ];
+
+// ─── Newsletter confetti ───
+function fireNewsletterConfetti() {
+  const defaults = {
+    spread: 60,
+    ticks: 100,
+    gravity: 0.8,
+    decay: 0.94,
+    startVelocity: 30,
+    colors: ["#F5A623", "#F5D000", "#F7F5F2"],
+  };
+  confetti({ ...defaults, particleCount: 40, angle: 60, origin: { x: 0, y: 0.8 } });
+  confetti({ ...defaults, particleCount: 40, angle: 120, origin: { x: 1, y: 0.8 } });
+}
+
+// Re-used for the invalid-email shake
+const shakeAnimation = { x: [0, -8, 8, -5, 5, 0] };
 
 export function FooterSection() {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
   const [emailFocused, setEmailFocused] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "error" | "success">("idle");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleNewsletterSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (submitting || newsletterStatus === "success") return;
+
+    const email = newsletterEmail.trim();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailValid) {
+      setNewsletterStatus("error");
+      return;
+    }
+
+    setSubmitting(true);
+    setNewsletterStatus("idle");
+
+    // Simulate a short async subscribe, then celebrate 🎉
+    setTimeout(() => {
+      setSubmitting(false);
+      setNewsletterStatus("success");
+      fireNewsletterConfetti();
+    }, 900);
+  };
 
   return (
     <section id="more" ref={ref} className="relative">
@@ -64,20 +118,112 @@ export function FooterSection() {
                 <Sparkles className="w-3 h-3 text-go-brand" />
                 Stay in the loop
               </p>
-              <div className={`flex items-center gap-2 p-1.5 rounded-2xl transition-all duration-300 border ${
-                emailFocused ? "border-go-brand/40 bg-go-brand/5" : "border-go-border-subtle bg-go-white-glass"
-              }`}>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                  className="flex-1 bg-transparent text-xs text-go-off/80 placeholder:text-go-off/30 px-3 py-2 focus:outline-none"
-                />
-                <button className="shrink-0 w-8 h-8 rounded-full bg-go-brand flex items-center justify-center hover:bg-go-brand/90 transition-colors cursor-pointer">
-                  <Send className="w-3.5 h-3.5 text-go-black" />
-                </button>
-              </div>
+
+              <AnimatePresence mode="wait" initial={false}>
+                {newsletterStatus === "success" ? (
+                  /* ─── Success state ─── */
+                  <motion.div
+                    key="success"
+                    role="status"
+                    aria-live="polite"
+                    initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                    className="flex items-center gap-3 p-3 rounded-2xl border border-go-brand/25 bg-go-brand/10"
+                  >
+                    <motion.div
+                      className="relative shrink-0 w-10 h-10 rounded-full bg-go-brand/15 flex items-center justify-center"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 16, delay: 0.05 }}
+                    >
+                      <motion.span
+                        className="flex"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 18, delay: 0.15 }}
+                      >
+                        <Check className="w-5 h-5 text-go-brand" strokeWidth={3} />
+                      </motion.span>
+                      <span className="absolute inset-0 rounded-full border-2 border-go-brand/25 animate-ping opacity-40" />
+                    </motion.div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-go-white">You&apos;re in! 🎉</p>
+                      <p className="text-[10px] text-go-off/40 mt-0.5">
+                        We&apos;ll ping you the moment we open our doors.
+                      </p>
+                    </div>
+                  </motion.div>
+                ) : (
+                  /* ─── Form state ─── */
+                  <motion.form
+                    key="form"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    onSubmit={handleNewsletterSubmit}
+                    noValidate
+                  >
+                    <motion.div
+                      animate={newsletterStatus === "error" ? shakeAnimation : { x: 0 }}
+                      transition={{ duration: 0.45, ease: "easeInOut" }}
+                      className={`flex items-center gap-2 p-1.5 rounded-2xl transition-all duration-300 border ${
+                        newsletterStatus === "error"
+                          ? "border-red-400/60 bg-red-400/5"
+                          : emailFocused
+                          ? "border-go-brand/40 bg-go-brand/5"
+                          : "border-go-border-subtle bg-go-white-glass"
+                      }`}
+                    >
+                      <input
+                        type="email"
+                        value={newsletterEmail}
+                        onChange={(e) => {
+                          setNewsletterEmail(e.target.value);
+                          if (newsletterStatus === "error") setNewsletterStatus("idle");
+                        }}
+                        placeholder="Enter your email"
+                        onFocus={() => setEmailFocused(true)}
+                        onBlur={() => setEmailFocused(false)}
+                        disabled={submitting}
+                        aria-label="Email for newsletter"
+                        aria-invalid={newsletterStatus === "error"}
+                        className="flex-1 bg-transparent text-xs text-go-off/80 placeholder:text-go-off/30 px-3 py-2 focus:outline-none disabled:opacity-60"
+                      />
+                      <motion.button
+                        type="submit"
+                        whileTap={{ scale: 0.9 }}
+                        disabled={submitting}
+                        aria-label="Subscribe to newsletter"
+                        className="shrink-0 w-8 h-8 rounded-full bg-go-brand flex items-center justify-center hover:bg-go-brand/90 transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+                      >
+                        {submitting ? (
+                          <Loader2 className="w-3.5 h-3.5 text-go-black animate-spin" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5 text-go-black" />
+                        )}
+                      </motion.button>
+                    </motion.div>
+
+                    <AnimatePresence>
+                      {newsletterStatus === "error" && (
+                        <motion.p
+                          role="alert"
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          className="text-[10px] text-red-400 mt-1.5 px-1"
+                        >
+                          Please enter a valid email address
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+
               <p className="text-[9px] text-go-off/30 mt-1.5 px-1">
                 Be the first to know about launches & offers
               </p>
@@ -93,24 +239,49 @@ export function FooterSection() {
           >
             {settingsRows.map((group, gi) => (
               <div key={gi} className="glass-navy rounded-[20px] overflow-hidden divide-y divide-go-border-subtle/50">
-                {group.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    className="flex items-center justify-between px-5 py-4 hover:bg-go-white-glass transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4 text-go-brand" />
-                      <div>
-                        <span className="text-sm font-medium text-go-off/80">{item.label}</span>
-                        {item.desc && (
-                          <p className="text-[10px] text-go-off/30 mt-0.5">{item.desc}</p>
-                        )}
+                {group.map((item) => {
+                  const content = (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <item.icon className="w-4 h-4 text-go-brand" />
+                        <div>
+                          <span className="text-sm font-medium text-go-off/80">{item.label}</span>
+                          {item.desc && (
+                            <p className="text-[10px] text-go-off/30 mt-0.5">{item.desc}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-go-off/30 group-hover:text-go-off/50 transition-colors" />
-                  </a>
-                ))}
+                      <ChevronRight className="w-4 h-4 text-go-off/30 group-hover:text-go-off/50 transition-colors" />
+                    </>
+                  );
+
+                  if (item.comingSoon) {
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() =>
+                          toast("Coming Soon", {
+                            description: `${item.label} is on its way — stay tuned!`,
+                          })
+                        }
+                        className="flex w-full items-center justify-between px-5 py-4 hover:bg-go-white-glass transition-colors group text-left cursor-pointer"
+                      >
+                        {content}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      className="flex items-center justify-between px-5 py-4 hover:bg-go-white-glass transition-colors group"
+                    >
+                      {content}
+                    </a>
+                  );
+                })}
               </div>
             ))}
           </motion.div>

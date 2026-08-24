@@ -41,6 +41,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   icons: {
+    icon: "/game_on_favicon.png",
     apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
