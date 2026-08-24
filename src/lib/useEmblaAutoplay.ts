@@ -5,7 +5,7 @@ import type { EmblaCarouselType } from "embla-carousel";
 
 // Auto-advance a horizontal embla carousel.
 // Pauses while the user is dragging and resumes once a slide settles.
-export function useEmblaAutoplay(emblaApi: EmblaCarouselType | undefined, delay = 2000) {
+export function useEmblaAutoplay(emblaApi: EmblaCarouselType | undefined, delay = 3500) {
   useEffect(() => {
     if (!emblaApi) return;
 

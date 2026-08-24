@@ -218,8 +218,8 @@ function MobilePostsCarousel({ inView }: { inView: boolean }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
 
-  // Auto-slide every 2 seconds
-  useEmblaAutoplay(emblaApi, 2000);
+  // Auto-slide every 3.5 seconds
+  useEmblaAutoplay(emblaApi, 3500);
 
   useEffect(() => {
     if (!emblaApi) return;
