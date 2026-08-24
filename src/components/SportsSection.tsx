@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, useInView, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
   X,
@@ -301,6 +302,23 @@ function SportCard({
 }) {
   const [expanded, setExpanded] = useState(false);
 
+  // Lock body scroll & close on Escape while the modal is open
+  useEffect(() => {
+    if (!expanded) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [expanded]);
+
   return (
     <>
       <motion.button
@@ -482,30 +500,32 @@ function SportCard({
         </div>
       </motion.button>
 
-      {/* ─── Expanded Overlay ─── */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-            style={{
-              background: "rgba(0,0,0,0.85)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-            }}
-            onClick={() => setExpanded(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 30 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              transition={spring}
-              className="relative w-full max-w-lg rounded-[32px] overflow-hidden"
-              style={{ background: sport.gradient }}
-              onClick={(e) => e.stopPropagation()}
-            >
+      {/* ─── Expanded Overlay — portaled to <body> so no card transform/overflow can clip it ─── */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {expanded && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+                style={{
+                  background: "rgba(0,0,0,0.85)",
+                  backdropFilter: "blur(24px)",
+                  WebkitBackdropFilter: "blur(24px)",
+                }}
+                onClick={() => setExpanded(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 30 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 30 }}
+                  transition={spring}
+                  className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain rounded-[32px]"
+                  style={{ background: sport.gradient }}
+                  onClick={(e) => e.stopPropagation()}
+                >
               {/* Decorative bg */}
               <div
                 className="absolute inset-0 opacity-[0.05]"
@@ -615,10 +635,12 @@ function SportCard({
                   Reserve a Slot
                 </motion.button>
               </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </>
   );
 }
