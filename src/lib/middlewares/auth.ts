@@ -1,13 +1,33 @@
 import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '../db/supabase';
+import * as admin from 'firebase-admin';
 
-export interface AuthenticatedUser {
-  id: string;
-  role: 'USER' | 'ADMIN' | 'STAFF';
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  try {
+    // Requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
+    // to be set in .env.local for production. For dev, you can sometimes just 
+    // provide the project ID if running locally with ADC.
+    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (serviceAccountStr) {
+      const serviceAccount = JSON.parse(serviceAccountStr);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } else {
+      console.warn('FIREBASE_SERVICE_ACCOUNT not found in environment. Phone auth verification will fail if used.');
+      admin.initializeApp();
+    }
+  } catch (error) {
+    console.error('Firebase Admin Initialization Error', error);
+  }
 }
 
-// In a real application, you would use something like `jose` to verify JWTs,
-// or Supabase's `auth.getUser()` if you're using Supabase Auth.
-// This is a placeholder structure to represent the middleware logic.
+export interface AuthenticatedUser {
+  id: string; // The UUID from Supabase or UID from Firebase
+  role: 'USER' | 'ADMIN' | 'STAFF';
+  provider: 'email' | 'phone';
+}
 
 export async function withAuth(
   request: Request,
@@ -21,16 +41,54 @@ export async function withAuth(
   }
 
   const token = authHeader.split(' ')[1];
+  let user: AuthenticatedUser | null = null;
 
   try {
-    // TODO: Verify token and extract user information.
-    // Example: const user = await verifyToken(token);
-    
-    // Placeholder user for demonstration:
-    const user: AuthenticatedUser = {
-      id: 'placeholder-uuid',
-      role: 'ADMIN', // Hardcoded for demo purposes
-    };
+    // 1. First, decode the token payload to determine the issuer (Firebase vs Supabase)
+    const payloadBase64 = token.split('.')[1];
+    const decodedPayload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
+
+    // Firebase tokens have 'iss' containing 'securetoken.google.com'
+    const isFirebase = decodedPayload.iss?.includes('securetoken.google.com');
+
+    if (isFirebase) {
+      // --- Verify Firebase Token ---
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      
+      // Firebase users are always standard users in this app (unless custom claims are set)
+      // Since they aren't in Supabase auth, we'd normally sync their profiles. 
+      // Assuming 'USER' role for all phone logins for now.
+      user = {
+        id: decodedToken.uid,
+        role: 'USER',
+        provider: 'phone',
+      };
+    } else {
+      // --- Verify Supabase Token ---
+      // We use supabaseAdmin to get the user based on the passed JWT
+      const { data: { user: sbUser }, error } = await supabaseAdmin.auth.getUser(token);
+      
+      if (error || !sbUser) {
+        throw new Error(error?.message || 'Invalid Supabase token');
+      }
+
+      // Check role from public.users table or metadata
+      const { data: dbUser } = await supabaseAdmin
+        .from('users')
+        .select('role')
+        .eq('id', sbUser.id)
+        .single();
+
+      user = {
+        id: sbUser.id,
+        role: (dbUser?.role as 'USER' | 'ADMIN' | 'STAFF') || 'USER',
+        provider: 'email',
+      };
+    }
+
+    if (!user) {
+       return NextResponse.json({ success: false, error: 'Unauthorized: Invalid token' }, { status: 401 });
+    }
 
     if (!allowedRoles.includes(user.role)) {
       return NextResponse.json({ success: false, error: 'Forbidden: Insufficient permissions' }, { status: 403 });

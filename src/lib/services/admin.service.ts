@@ -1,4 +1,4 @@
-import { supabase } from '../db/supabase';
+import { supabaseAdmin } from '../db/supabase';
 import { Database } from '@/types/database.types';
 
 type VenueInsert = Database['public']['Tables']['venues']['Insert'];
@@ -78,7 +78,7 @@ export class AdminService {
   }
 
   static async getFacilities(venueId?: string) {
-    let query = supabase.from('facilities').select('*');
+    let query = supabaseAdmin.from('facilities').select('*');
     
     if (venueId) {
       query = query.eq('venue_id', venueId);

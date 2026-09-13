@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/db/supabase';
+import { supabaseAdmin } from '@/lib/db/supabase';
 
 // This endpoint should be protected in production (e.g., using a CRON_SECRET)
 export async function POST(request: Request) {

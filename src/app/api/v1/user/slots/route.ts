@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { SlotService } from '@/lib/services/slot.service';
+import { withRateLimit } from '@/lib/middlewares/rate-limiter';
 
 // Input validation schema
 const querySchema = z.object({
@@ -9,41 +10,44 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  try {
-    // 1. Extract and validate query parameters
-    const { searchParams } = new URL(request.url);
-    const facilityId = searchParams.get('facilityId');
-    const date = searchParams.get('date');
+  // Apply a rate limit: 30 requests per 1 minute per IP
+  return withRateLimit(request, { limit: 30, windowMs: 60000 }, async (req) => {
+    try {
+      // 1. Extract and validate query parameters
+      const { searchParams } = new URL(req.url);
+      const facilityId = searchParams.get('facilityId');
+      const date = searchParams.get('date');
 
-    const validationResult = querySchema.safeParse({ facilityId, date });
+      const validationResult = querySchema.safeParse({ facilityId, date });
 
-    if (!validationResult.success) {
+      if (!validationResult.success) {
+        return NextResponse.json(
+          { error: 'Invalid parameters', details: validationResult.error.format() },
+          { status: 400 }
+        );
+      }
+
+      const { facilityId: validFacilityId, date: validDate } = validationResult.data;
+
+      // 2. Call our Business Logic Service
+      const availableSlots = await SlotService.getAvailableSlots(validFacilityId, validDate);
+
+      // 3. Return the response to the mobile app
+      return NextResponse.json({
+        success: true,
+        data: {
+          facilityId: validFacilityId,
+          date: validDate,
+          slots: availableSlots,
+        },
+      });
+      
+    } catch (error: any) {
+      console.error('Slot API Error:', error);
       return NextResponse.json(
-        { error: 'Invalid parameters', details: validationResult.error.format() },
-        { status: 400 }
+        { success: false, error: error.message || 'Internal Server Error' },
+        { status: 500 }
       );
     }
-
-    const { facilityId: validFacilityId, date: validDate } = validationResult.data;
-
-    // 2. Call our Business Logic Service
-    const availableSlots = await SlotService.getAvailableSlots(validFacilityId, validDate);
-
-    // 3. Return the response to the mobile app
-    return NextResponse.json({
-      success: true,
-      data: {
-        facilityId: validFacilityId,
-        date: validDate,
-        slots: availableSlots,
-      },
-    });
-    
-  } catch (error: any) {
-    console.error('Slot API Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
-  }
+  });
 }
