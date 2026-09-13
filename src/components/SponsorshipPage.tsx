@@ -19,16 +19,16 @@ export function SponsorshipPage() {
     <>
       <Navigation onNotifyClick={() => setModalOpen(true)} />
 
-      <main className="relative min-h-screen pt-28 lg:pt-36">
+      <main className="relative min-h-screen pt-6 lg:pt-36">
         {/* ─── Page intro — sits in a dark card like the rest of the site ─── */}
         <motion.header
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mx-auto max-w-6xl px-6 pb-10 sm:px-8 lg:px-10 lg:pb-14"
+          className="mx-auto max-w-6xl px-3 pb-6 sm:px-4 lg:px-5 lg:pb-14"
         >
           <div
-            className="relative overflow-hidden rounded-[28px] border border-white/[0.08] px-6 py-8 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.95)] sm:px-8 sm:py-10 lg:px-12 lg:py-14"
+            className="relative overflow-hidden rounded-[28px] border border-white/[0.08] px-5 py-8 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.95)] sm:px-6 sm:py-10 lg:px-8 lg:py-14"
             style={{
               background:
                 "linear-gradient(170deg, #0E0E18 0%, #0A0A12 30%, #080810 60%, #06060A 100%)",

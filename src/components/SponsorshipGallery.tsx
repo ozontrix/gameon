@@ -59,7 +59,7 @@ export function SponsorshipGallery() {
   return (
     <>
       {/* ─── Cards — one per slide, in serial order, image only ─── */}
-      <ul className="mx-auto flex max-w-6xl flex-col gap-5 px-6 sm:px-8 lg:gap-7 lg:px-10">
+      <ul className="mx-auto flex max-w-6xl flex-col gap-4 px-3 sm:px-4 lg:gap-7 lg:px-5">
         {slides.map((slide, i) => (
           <motion.li
             key={slide.id}
