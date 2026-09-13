@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, type ComponentType } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import Image from "next/image";
 import {
@@ -10,19 +12,32 @@ import {
   Calendar,
   Users,
   Sparkles,
+  Handshake,
   MapPin,
   ArrowUp,
   Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// ─── Every item that can appear in the nav ───
+// Items without `href` scroll to a section on the home page.
+// Items with `href` open an internal route (e.g. /sponsorship).
+type NavItem = {
+  id: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  href?: string;
+  desc?: string;
+};
+
 // ─── All the sections that exist on the site (in page order) ───
-const desktopSections = [
+const desktopSections: NavItem[] = [
   { id: "hero", label: "Home", icon: Home },
   { id: "sports", label: "Sports", icon: LayoutGrid },
   { id: "zones", label: "Zones", icon: Building },
   { id: "audience", label: "For You", icon: Users },
   { id: "community", label: "Community", icon: Sparkles },
+  { id: "sponsorship", label: "Sponsorship", icon: Handshake, href: "/sponsorship" },
   { id: "booking", label: "Book", icon: Calendar },
   { id: "location", label: "Location", icon: MapPin },
 ];
@@ -43,10 +58,11 @@ const mobileTabs: MobileTab[] = [
   { id: "more", label: "More", image: "/game_on_favicon.png" },
 ];
 
-// Secondary sections tucked behind the "More" sheet
-const moreItems = [
+// Secondary items tucked behind the "More" sheet
+const moreItems: NavItem[] = [
   { id: "audience", label: "For You", icon: Users, desc: "Built for every kind of player" },
   { id: "community", label: "Community", icon: Sparkles, desc: "Real moments from Game On" },
+  { id: "sponsorship", label: "Sponsorship", icon: Handshake, href: "/sponsorship", desc: "Partner your brand with Game On" },
   { id: "location", label: "Location", icon: MapPin, desc: "Sector 70, Gurugram" },
 ];
 
@@ -62,16 +78,29 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
+  const pathname = usePathname();
+  const router = useRouter();
+  const onHome = pathname === "/";
+
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
+
+  // The nav item that owns the current route (e.g. "Sponsorship" on /sponsorship)
+  const routeSection = desktopSections.find((s) => s.href === pathname);
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 60);
       setShowBackToTop(window.scrollY > 600);
 
-      // Determine the active section by scroll position
-      const sections = desktopSections.map((s) => s.id);
+      // On an inner page, highlight the nav item that matches that route
+      if (routeSection) {
+        setActiveSection(routeSection.id);
+        return;
+      }
+
+      // Otherwise determine the active section by scroll position
+      const sections = desktopSections.filter((s) => !s.href).map((s) => s.id);
       const scrollPos = window.scrollY + 120;
 
       for (let i = sections.length - 1; i >= 0; i--) {
@@ -86,19 +115,42 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [routeSection]);
+
+  // Coming back from an inner page (e.g. /#sports) — land on the section asked for
+  useEffect(() => {
+    if (!onHome) return;
+    const hash = window.location.hash.replace("#", "");
+    if (!hash) return;
+
+    const timer = setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [onHome, pathname]);
 
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const scrollTo = (id: string) => {
-    setMobileMoreOpen(false);
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
+  // Section links scroll on the home page and navigate back to it from inner pages
+  const goTo = useCallback(
+    (id: string) => {
+      setMobileMoreOpen(false);
+
+      if (!onHome) {
+        router.push(id === "hero" ? "/" : `/#${id}`);
+        return;
+      }
+
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
+    [onHome, router]
+  );
 
   const closeMore = useCallback(() => setMobileMoreOpen(false), []);
 
@@ -149,7 +201,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
           >
             {/* Brand */}
             <button
-              onClick={() => scrollTo("hero")}
+              onClick={() => goTo("hero")}
               className="flex items-center gap-2 shrink-0 cursor-pointer group"
               aria-label="Game On — go to home"
             >
@@ -165,15 +217,12 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
             <div className="flex items-center gap-0.5">
               {desktopSections.map((section) => {
                 const isActive = activeSection === section.id;
-                return (
-                  <button
-                    key={section.id}
-                    onClick={() => scrollTo(section.id)}
-                    className={cn(
-                      "relative flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wider uppercase transition-colors cursor-pointer",
-                      isActive ? "text-go-black" : "text-go-off/50 hover:text-go-white"
-                    )}
-                  >
+                const itemClass = cn(
+                  "relative flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wider uppercase transition-colors cursor-pointer",
+                  isActive ? "text-go-black" : "text-go-off/50 hover:text-go-white"
+                );
+                const itemContent = (
+                  <>
                     {isActive && (
                       <motion.div
                         layoutId="nav-pill"
@@ -189,6 +238,26 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                       )}
                     />
                     <span className="relative z-10">{section.label}</span>
+                  </>
+                );
+
+                // Route items (e.g. Sponsorship) open a page; section items scroll
+                return section.href ? (
+                  <Link
+                    key={section.id}
+                    href={section.href}
+                    aria-current={isActive ? "page" : undefined}
+                    className={itemClass}
+                  >
+                    {itemContent}
+                  </Link>
+                ) : (
+                  <button
+                    key={section.id}
+                    onClick={() => goTo(section.id)}
+                    className={itemClass}
+                  >
+                    {itemContent}
                   </button>
                 );
               })}
@@ -226,7 +295,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                   key={id}
                   onClick={() => {
                     if (id === "more") setMobileMoreOpen((v) => !v);
-                    else scrollTo(id);
+                    else goTo(id);
                   }}
                   className={cn(
                     "relative flex flex-1 flex-col items-center justify-center gap-1 py-2 rounded-2xl transition-colors cursor-pointer select-none",
@@ -289,21 +358,32 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
               </p>
 
               <div className="flex flex-col gap-1">
-                {moreItems.map(({ id, label, icon: Icon, desc }) => (
-                  <button
-                    key={id}
-                    onClick={() => scrollTo(id)}
-                    className="flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-go-white-glass transition-colors text-left cursor-pointer"
-                  >
-                    <span className="w-9 h-9 rounded-xl bg-go-brand/10 border border-go-brand/15 flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-go-brand" />
-                    </span>
-                    <span className="flex-1">
-                      <span className="block text-sm font-medium text-go-off/80">{label}</span>
-                      {desc && <span className="block text-[10px] text-go-off/40 mt-0.5">{desc}</span>}
-                    </span>
-                  </button>
-                ))}
+                {moreItems.map(({ id, label, icon: Icon, desc, href }) => {
+                  const itemClass =
+                    "flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-go-white-glass transition-colors text-left cursor-pointer";
+                  const itemContent = (
+                    <>
+                      <span className="w-9 h-9 rounded-xl bg-go-brand/10 border border-go-brand/15 flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4 text-go-brand" />
+                      </span>
+                      <span className="flex-1">
+                        <span className="block text-sm font-medium text-go-off/80">{label}</span>
+                        {desc && <span className="block text-[10px] text-go-off/40 mt-0.5">{desc}</span>}
+                      </span>
+                    </>
+                  );
+
+                  // Route items (e.g. Sponsorship) open a page; section items scroll
+                  return href ? (
+                    <Link key={id} href={href} onClick={closeMore} className={itemClass}>
+                      {itemContent}
+                    </Link>
+                  ) : (
+                    <button key={id} onClick={() => goTo(id)} className={itemClass}>
+                      {itemContent}
+                    </button>
+                  );
+                })}
               </div>
 
               {onNotifyClick && (

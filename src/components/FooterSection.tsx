@@ -36,7 +36,7 @@ const settingsRows: FooterLink[][] = [
   ],
   [
     { label: "WhatsApp", icon: MessageCircle, href: "https://wa.me/919034844654", desc: "Quickest way to reach us" },
-    { label: "Partnerships", icon: Building2, desc: "Brands, sponsors, events", comingSoon: true },
+    { label: "Sponsorship", icon: Building2, href: "/sponsorship", desc: "Brands, sponsors, events" },
   ],
   [
     { label: "Careers", icon: Briefcase, desc: "Join the Game On team", comingSoon: true },
