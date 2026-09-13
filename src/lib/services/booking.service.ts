@@ -27,12 +27,16 @@ export class BookingService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
-    // 3. Insert PENDING booking
+    // 3. Check if userId is a valid UUID (Firebase UIDs are not)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
+    const validUserId = isUUID ? userId : null;
+
+    // 4. Insert PENDING booking
     // The DB Unique Constraint will block this if someone else JUST booked it
     const { data: booking, error } = await supabaseAdmin
       .from('bookings')
       .insert({
-        user_id: userId,
+        user_id: validUserId,
         facility_id: facilityId,
         booking_date: date,
         start_time: startTime,
@@ -133,5 +137,48 @@ export class BookingService {
       userName: user.name,
       userPhone: user.phone,
     };
+  }
+
+  static async getUserBookings(userId: string) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
+    const validUserId = isUUID ? userId : null;
+
+    if (!validUserId) {
+       // Mock Firebase user workaround: return all bookings for this fake user session?
+       // Let's query by user_id IS NULL to show the ones they just created.
+       const { data, error } = await supabaseAdmin
+        .from('bookings')
+        .select(`
+          id, booking_date, start_time, end_time, amount_paid, status, payment_status,
+          facilities (
+            id, name,
+            venues ( name, address ),
+            sports ( name )
+          )
+        `)
+        .is('user_id', null)
+        .order('booking_date', { ascending: false })
+        .order('start_time', { ascending: false });
+
+       if (error) throw error;
+       return data;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('bookings')
+      .select(`
+        id, booking_date, start_time, end_time, amount_paid, status, payment_status,
+        facilities (
+          id, name,
+          venues ( name, address ),
+          sports ( name )
+        )
+      `)
+      .eq('user_id', validUserId)
+      .order('booking_date', { ascending: false })
+      .order('start_time', { ascending: false });
+
+    if (error) throw error;
+    return data;
   }
 }

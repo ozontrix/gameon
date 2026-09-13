@@ -8,7 +8,7 @@ const createBookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD format required"),
   startTime: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, "HH:MM:SS format required"),
   endTime: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, "HH:MM:SS format required"),
-  amount: z.number().positive(),
+  amount: z.number().min(0),
 });
 
 export async function POST(request: Request) {
@@ -54,6 +54,62 @@ export async function POST(request: Request) {
         { success: false, error: 'Internal Server Error' },
         { status: 500 }
       );
+    }
+  });
+}
+
+export async function GET(request: Request) {
+  return withAuth(request, ['USER', 'ADMIN', 'STAFF'], async (req, user) => {
+    try {
+      const bookings = await BookingService.getUserBookings(user.id);
+
+      // Map backend bookings to the frontend structure
+      const mappedBookings = bookings.map((b: any) => {
+        const facility = b.facilities;
+        const venue = facility?.venues || { name: 'Unknown', address: 'Unknown' };
+        
+        // Convert status (PENDING/CONFIRMED/CANCELLED) to frontend status (upcoming/ongoing/past)
+        let status = 'upcoming'; // naive default
+        const today = new Date().toISOString().split('T')[0];
+        if (b.status === 'CANCELLED') status = 'past';
+        else if (b.booking_date < today) status = 'past';
+        else if (b.booking_date === today) status = 'ongoing'; // For today, mark as ongoing for now
+
+        // Extract date format
+        const dateObj = new Date(b.booking_date);
+        const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const dayStr = dateObj.toLocaleDateString('en-GB', { weekday: 'short' });
+        
+        // Extract time format (06:00:00 -> 6:00 AM)
+        const formatTime = (t: string) => {
+          const [h, m] = t.split(':');
+          let hour = parseInt(h);
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          hour = hour % 12 || 12;
+          return `${hour}:${m} ${ampm}`;
+        };
+
+        return {
+          key: b.id,
+          bookingId: b.id.substring(0,8).toUpperCase(),
+          sport: facility?.sports?.name?.toLowerCase() || 'badminton',
+          status,
+          venue: facility?.name || 'Unknown Facility',
+          location: venue.name + ', ' + venue.address,
+          date: `${dateStr} (${dayStr})`,
+          time: `${formatTime(b.start_time)} - ${formatTime(b.end_time)}`,
+          tags: [facility?.sports?.name, 'Court'].filter(Boolean),
+          paid: parseFloat(b.amount_paid || '0'),
+          image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea', // fallback mock image
+          detailTitle: facility?.name,
+        };
+      });
+
+      return NextResponse.json({ success: true, data: mappedBookings }, { status: 200 });
+
+    } catch (error: any) {
+      console.error('Fetch Bookings Error:', error);
+      return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
   });
 }

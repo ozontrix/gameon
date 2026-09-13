@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
     if (sportId) query = query.eq('sport_id', sportId);
     if (venueId) query = query.eq('venue_id', venueId);
-    if (sportName) query = query.ilike('sports.name', sportName);
+    if (sportName) query = query.ilike('sports.name', `%${sportName}%`);
 
     const { data, error } = await query.order('name');
 
