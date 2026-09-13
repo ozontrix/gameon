@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     // Clear expired PENDING bookings
     // In PostgreSQL/Supabase, we delete or update the status of bookings where
     // status is 'PENDING' and expires_at is less than NOW()
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('bookings')
       .update({ status: 'CANCELLED' }) // Or simply delete them
       .eq('status', 'PENDING')

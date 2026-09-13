@@ -16,6 +16,10 @@ export class SlotService {
     if (facError || !facility) throw new Error('Facility not found');
     if (!facility.is_active) return []; // Court is deactivated/maintenance
 
+    // Operating hours live on the venue, so a facility with no venue has no slots
+    const venueId = facility.venue_id;
+    if (!venueId) return [];
+
     // 2. Get Day of Week (0 = Sunday, 1 = Monday, etc.)
     const dateObj = new Date(targetDate);
     const dayOfWeek = dateObj.getDay();
@@ -24,7 +28,7 @@ export class SlotService {
     const { data: opHours, error: opError } = await supabaseAdmin
       .from('operating_hours')
       .select('open_time, close_time, slot_duration_minutes')
-      .eq('venue_id', facility.venue_id)
+      .eq('venue_id', venueId)
       .eq('day_of_week', dayOfWeek)
       .single();
 
@@ -35,7 +39,7 @@ export class SlotService {
     let possibleSlots = generateTimeSlots(
       opHours.open_time, 
       opHours.close_time, 
-      opHours.slot_duration_minutes
+      opHours.slot_duration_minutes ?? 60
     );
 
     // 5. Fetch Holidays / Closures for this date
@@ -43,7 +47,7 @@ export class SlotService {
     const { data: closures } = await supabaseAdmin
       .from('holidays_and_closures')
       .select('start_time, end_time')
-      .eq('venue_id', facility.venue_id)
+      .eq('venue_id', venueId)
       .eq('date', targetDate)
       .or(`facility_id.is.null,facility_id.eq.${facilityId}`);
 

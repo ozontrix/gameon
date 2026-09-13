@@ -10,7 +10,7 @@ export class AdminService {
   // --- Venues ---
 
   static async createVenue(venueData: VenueInsert) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('venues')
       .insert(venueData)
       .select()
@@ -23,7 +23,7 @@ export class AdminService {
   }
 
   static async updateVenue(id: string, venueData: VenueUpdate) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('venues')
       .update(venueData)
       .eq('id', id)
@@ -37,7 +37,7 @@ export class AdminService {
   }
 
   static async getVenues() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('venues')
       .select('*')
       .order('name');
@@ -51,7 +51,7 @@ export class AdminService {
   // --- Facilities ---
 
   static async createFacility(facilityData: FacilityInsert) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('facilities')
       .insert(facilityData)
       .select()
@@ -64,7 +64,7 @@ export class AdminService {
   }
 
   static async updateFacility(id: string, facilityData: FacilityUpdate) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('facilities')
       .update(facilityData)
       .eq('id', id)

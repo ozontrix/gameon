@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../db/supabase';
-import * as admin from 'firebase-admin';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
 
-// Check for default export in case of ESM/CJS interop issues
-const firebaseAdmin = admin.apps ? admin : (admin as any).default || admin;
+// firebase-admin v14 exposes only the modular API (getApps / initializeApp / cert)
 
 // Initialize Firebase Admin if not already initialized
-if (!firebaseAdmin?.apps?.length) {
+if (!getApps().length) {
   try {
     // Requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
     // to be set in .env.local for production. For dev, you can sometimes just 
@@ -14,12 +13,12 @@ if (!firebaseAdmin?.apps?.length) {
     const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (serviceAccountStr) {
       const serviceAccount = JSON.parse(serviceAccountStr);
-      firebaseAdmin.initializeApp({
-        credential: firebaseAdmin.credential.cert(serviceAccount),
+      initializeApp({
+        credential: cert(serviceAccount),
       });
     } else {
       console.warn('FIREBASE_SERVICE_ACCOUNT not found in environment. Phone auth verification will fail if used.');
-      firebaseAdmin.initializeApp();
+      initializeApp();
     }
   } catch (error) {
     console.error('Firebase Admin Initialization Error', error);
