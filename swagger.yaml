@@ -1,0 +1,170 @@
+openapi: 3.0.0
+info:
+  title: GameOn Multi-Sports API
+  description: Backend APIs for the GameOn facility booking system, consumed by the React Native app and Staff Admin portal.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Development Server
+paths:
+  /user/slots:
+    get:
+      summary: Get Available Slots
+      description: Fetches dynamically generated 1-hour available time slots for a specific facility on a given date.
+      tags:
+        - User Booking Flow
+      parameters:
+        - in: query
+          name: facilityId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the sports facility/court.
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2024-11-20"
+          description: The target date in YYYY-MM-DD format.
+      responses:
+        '200':
+          description: Successfully fetched available slots.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      facilityId:
+                        type: string
+                        format: uuid
+                      date:
+                        type: string
+                        format: date
+                      slots:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            start_time:
+                              type: string
+                              example: "06:00:00"
+                            end_time:
+                              type: string
+                              example: "07:00:00"
+        '400':
+          description: Invalid input parameters.
+
+  /user/bookings:
+    post:
+      summary: Create a Booking
+      description: Locks a time slot temporarily (10 mins) with a PENDING status prior to payment.
+      tags:
+        - User Booking Flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - facilityId
+                - date
+                - startTime
+                - endTime
+                - amount
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                facilityId:
+                  type: string
+                  format: uuid
+                date:
+                  type: string
+                  format: date
+                  example: "2024-11-20"
+                startTime:
+                  type: string
+                  example: "06:00:00"
+                endTime:
+                  type: string
+                  example: "07:00:00"
+                amount:
+                  type: number
+                  example: 500.00
+      responses:
+        '201':
+          description: Slot locked successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Slot locked successfully for 10 minutes. Proceed to payment."
+                  bookingId:
+                    type: string
+                    format: uuid
+        '409':
+          description: Conflict - Double Booking. Slot was just taken.
+        '400':
+          description: Invalid JSON payload.
+
+  /admin/bookings/verify-qr:
+    post:
+      summary: Verify QR Code
+      description: Staff endpoint to scan a QR code (booking UUID) and grant entry. Verifies date, status, and single-use.
+      tags:
+        - Admin & Staff Operations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bookingId
+              properties:
+                bookingId:
+                  type: string
+                  format: uuid
+                  description: The UUID read from the user's QR code.
+      responses:
+        '200':
+          description: Access Granted. Returns user details for visual confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Access Granted"
+                  facilityName:
+                    type: string
+                    example: "Badminton Court 1"
+                  userName:
+                    type: string
+                    example: "Rahul Sharma"
+                  userPhone:
+                    type: string
+                    example: "+919876543210"
+        '400':
+          description: Access Denied (Already scanned, wrong date, or invalid QR).

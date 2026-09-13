@@ -1,0 +1,49 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { SlotService } from '@/lib/services/slot.service';
+
+// Input validation schema
+const querySchema = z.object({
+  facilityId: z.string().uuid("Invalid Facility ID format"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+});
+
+export async function GET(request: Request) {
+  try {
+    // 1. Extract and validate query parameters
+    const { searchParams } = new URL(request.url);
+    const facilityId = searchParams.get('facilityId');
+    const date = searchParams.get('date');
+
+    const validationResult = querySchema.safeParse({ facilityId, date });
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid parameters', details: validationResult.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { facilityId: validFacilityId, date: validDate } = validationResult.data;
+
+    // 2. Call our Business Logic Service
+    const availableSlots = await SlotService.getAvailableSlots(validFacilityId, validDate);
+
+    // 3. Return the response to the mobile app
+    return NextResponse.json({
+      success: true,
+      data: {
+        facilityId: validFacilityId,
+        date: validDate,
+        slots: availableSlots,
+      },
+    });
+    
+  } catch (error: any) {
+    console.error('Slot API Error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
