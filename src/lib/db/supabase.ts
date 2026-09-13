@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
 
 if (!supabaseUrl) {
   console.warn('Missing NEXT_PUBLIC_SUPABASE_URL environment variable.');
