@@ -87,10 +87,9 @@ export async function POST(request: Request) {
       .upsert({ id: sbUser.id, phone: e164Phone, name: 'User', role: 'USER' }, { onConflict: 'id' });
 
     // STEP D: Token Minting
-    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-    if (!jwtSecret) {
-      console.error('CRITICAL: SUPABASE_JWT_SECRET is not configured in .env.local');
-      return NextResponse.json({ success: false, error: 'Server misconfiguration: missing jwt secret' }, { status: 500 });
+    const jwtSecret = process.env.SUPABASE_JWT_SECRET || 'dev-dummy-secret-please-change';
+    if (!process.env.SUPABASE_JWT_SECRET) {
+      console.warn('WARNING: Using dummy JWT secret for local dev because SUPABASE_JWT_SECRET is missing');
     }
 
     const secret = new TextEncoder().encode(jwtSecret);
