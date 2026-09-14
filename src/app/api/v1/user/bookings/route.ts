@@ -113,7 +113,7 @@ export async function GET(request: Request) {
           court: facility?.name || 'Court 1',
           floor: facility?.is_indoor ? 'Indoor' : 'Outdoor',
           setting: facility?.is_indoor ? 'Indoor' : 'Outdoor',
-          climate: facility?.is_ac ? 'AC' : 'Non-AC',
+          climate: facility?.has_ac ? 'AC' : 'Non-AC',
           players: 2,
           bookingType: 'Regular Slot',
           duration: '1 Hour',
