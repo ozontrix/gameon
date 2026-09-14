@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
       // 2. Create the Razorpay Order
       // Amount must be in paise (₹1 = 100 paise)
-      const amountInPaise = Math.round(parseFloat(booking.amount_paid) * 100);
+      const amountInPaise = Math.round(Number(booking.amount_paid || 0) * 100);
 
       if (amountInPaise === 0) {
         return NextResponse.json({ success: false, error: 'Booking is free, no payment needed' }, { status: 400 });

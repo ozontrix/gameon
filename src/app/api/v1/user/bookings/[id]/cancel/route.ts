@@ -4,11 +4,11 @@ import { supabaseAdmin } from '@/lib/db/supabase';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withAuth(request, ['USER', 'ADMIN', 'STAFF'], async (req, user) => {
     try {
-      const bookingId = params.id;
+      const bookingId = (await params).id;
 
       // Ensure the booking belongs to this user (or mock user)
       const { data: booking, error: fetchError } = await supabaseAdmin
