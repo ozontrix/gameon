@@ -41,23 +41,25 @@ export async function withAuth(
   const token = authHeader.split(' ')[1];
 
   try {
-    // ONLY Accept Supabase JWTs. We strictly verify them against our environment keys.
-    const { data: { user: sbUser }, error } = await supabaseAdmin.auth.getUser(token);
-    
-    if (error || !sbUser) {
-      throw new Error(error?.message || 'Invalid token');
-    }
+    // Verify the JWT locally using jose (avoids network call to Supabase and works with dev secrets)
+    const { jwtVerify } = require('jose');
+    const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET || 'dev-dummy-secret-please-change');
+    const { payload } = await jwtVerify(token, secret);
 
+    const userId = payload.sub as string;
+    if (!userId) throw new Error('Invalid token: missing sub');
+
+    // Fetch the user's role from the public schema
     const { data: dbUser } = await supabaseAdmin
       .from('users')
       .select('role')
-      .eq('id', sbUser.id)
+      .eq('id', userId)
       .single();
 
     const user: AuthenticatedUser = {
-      id: sbUser.id,
+      id: userId,
       role: (dbUser?.role as 'USER' | 'ADMIN' | 'STAFF') || 'USER',
-      provider: sbUser.app_metadata?.provider === 'phone' ? 'phone' : 'email',
+      provider: (payload.app_metadata as any)?.provider === 'phone' ? 'phone' : 'email',
     };
 
     if (!allowedRoles.includes(user.role)) {
