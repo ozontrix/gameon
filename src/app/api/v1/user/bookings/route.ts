@@ -89,6 +89,12 @@ export async function GET(request: Request) {
           return `${hour}:${m} ${ampm}`;
         };
 
+        // Calculate hours until slot starts
+        const slotStart = new Date(`${b.booking_date}T${b.start_time}+05:30`);
+        const now = new Date();
+        const diffMs = slotStart.getTime() - now.getTime();
+        const hoursUntilSlot = Math.floor(diffMs / (1000 * 60 * 60));
+
         return {
           key: b.id,
           bookingId: b.id.substring(0,8).toUpperCase(),
@@ -102,6 +108,22 @@ export async function GET(request: Request) {
           paid: parseFloat(b.amount_paid || '0'),
           image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea', // fallback mock image
           detailTitle: facility?.name,
+          // ── Booking Detail (Screen 12) Fields ──
+          bookedOn: `Booked on ${dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`,
+          court: facility?.name || 'Court 1',
+          floor: facility?.is_indoor ? 'Indoor' : 'Outdoor',
+          setting: facility?.is_indoor ? 'Indoor' : 'Outdoor',
+          climate: facility?.is_ac ? 'AC' : 'Non-AC',
+          players: 2,
+          bookingType: 'Regular Slot',
+          duration: '1 Hour',
+          qrValidTill: `${dateStr}, ${formatTime(b.end_time)}`,
+          invoice: {
+            orderId: `INV-${b.id.substring(0, 8).toUpperCase()}`,
+            paymentMethod: b.payment_status === 'PAID' ? 'Online' : 'Pending',
+            amountPaid: parseFloat(b.amount_paid || '0')
+          },
+          hoursUntilSlot
         };
       });
 

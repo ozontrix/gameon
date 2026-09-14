@@ -151,7 +151,7 @@ export class BookingService {
         .select(`
           id, booking_date, start_time, end_time, amount_paid, status, payment_status,
           facilities (
-            id, name,
+            id, name, is_indoor, is_ac,
             venues ( name, address ),
             sports ( name )
           )
@@ -169,7 +169,7 @@ export class BookingService {
       .select(`
         id, booking_date, start_time, end_time, amount_paid, status, payment_status,
         facilities (
-          id, name,
+          id, name, is_indoor, is_ac,
           venues ( name, address ),
           sports ( name )
         )
