@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { BookingService } from '@/lib/services/booking.service';
+import { BookingError, BookingService } from '@/lib/services/booking.service';
 import { withAuth, AuthenticatedUser } from '@/lib/middlewares/auth';
+import { DEFAULT_TIMEZONE, minutesBetween, zonedTimeToUtc } from '@/lib/utils/date-helpers';
 
 const createBookingSchema = z.object({
   facilityId: z.string().uuid("Invalid Facility ID"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD format required"),
   startTime: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, "HH:MM:SS format required"),
   endTime: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, "HH:MM:SS format required"),
-  amount: z.number().min(0),
+  // The price is computed on the server; an `amount` sent by older app builds is ignored.
+  players: z.number().int().min(1).max(50).optional(),
+  contactName: z.string().trim().max(100).optional(),
+  contactPhone: z.string().trim().max(20).optional(),
+  notes: z.string().trim().max(200).optional(),
 });
 
 export async function POST(request: Request) {
@@ -24,32 +29,23 @@ export async function POST(request: Request) {
         );
       }
 
-      const { facilityId, date, startTime, endTime, amount } = validation.data;
-
       // Call service to lock the slot using the authenticated user's ID
-      const booking = await BookingService.createBooking(
-        user.id,
-        facilityId,
-        date,
-        startTime,
-        endTime,
-        amount
-      );
+      const booking = await BookingService.createBooking(user.id, validation.data);
 
       return NextResponse.json({
         success: true,
         message: 'Slot locked successfully for 10 minutes. Proceed to payment.',
         bookingId: booking.id, // Mobile app will use this to initialize payment
+        amount: Number(booking.amount_paid),
+        expiresAt: booking.expires_at,
       }, { status: 201 });
 
-    } catch (error: any) {
-      console.error('Create Booking Error:', error);
-      
-      // Check if it's our custom double-booking error
-      if (error.message.includes('no longer available') || error.message.includes('booked by someone else')) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 409 });
+    } catch (error) {
+      if (error instanceof BookingError) {
+        return NextResponse.json({ success: false, error: error.message }, { status: error.status });
       }
 
+      console.error('Create Booking Error:', error);
       return NextResponse.json(
         { success: false, error: 'Internal Server Error' },
         { status: 500 }
@@ -58,78 +54,107 @@ export async function POST(request: Request) {
   });
 }
 
+type UserBooking = Awaited<ReturnType<typeof BookingService.getUserBookings>>[number];
+
+/** The app's sport keys: badminton, pickleball, cricket, football. */
+function sportKey(name: string | undefined): string {
+  const lower = (name ?? '').toLowerCase();
+  if (lower.includes('badminton')) return 'badminton';
+  if (lower.includes('pickleball')) return 'pickleball';
+  if (lower.includes('football')) return 'football';
+  if (lower.includes('cricket')) return 'cricket';
+  return 'badminton';
+}
+
+function capitalize(value: string): string {
+  return value ? value[0].toUpperCase() + value.slice(1) : value;
+}
+
+/** 06:00:00 → 6:00 AM */
+function formatTime(time: string): string {
+  const [h, m] = time.split(':');
+  const hour = parseInt(h, 10);
+  return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+}
+
+/** 2026-09-17 → { date: "17 Sep 2026", weekday: "Thu" }, without the server's timezone leaking in. */
+function formatDate(date: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  return {
+    date: utc.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
+    weekday: utc.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }),
+  };
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes % 60 !== 0) return `${minutes} Minutes`;
+  const hours = minutes / 60;
+  return hours === 1 ? '1 Hour' : `${hours} Hours`;
+}
+
+/** Maps a booking row to the shape the app's booking cards and detail screen render. */
+function toAppBooking(b: UserBooking, now: Date) {
+  const facility = b.facilities;
+  const venue = facility?.venues;
+  const timeZone = venue?.timezone || DEFAULT_TIMEZONE;
+
+  const startsAt = zonedTimeToUtc(b.booking_date, b.start_time, timeZone);
+  const endsAt = zonedTimeToUtc(b.booking_date, b.end_time, timeZone);
+  const status = now >= endsAt ? 'past' : now >= startsAt ? 'ongoing' : 'upcoming';
+
+  const { date, weekday } = formatDate(b.booking_date);
+  const bookedAt = new Date(b.paid_at ?? b.created_at ?? Date.now());
+  const sportName = facility?.sports?.name ?? 'Sport';
+  const setting = facility?.is_indoor ? 'Indoor' : 'Outdoor';
+  const climate = facility?.has_ac ? 'AC' : 'Non-AC';
+  const surface = capitalize(facility?.surface_type ?? '');
+  const amount = Number(b.amount_paid ?? 0);
+
+  return {
+    key: b.id, // Full booking UUID — also the check-in QR payload
+    bookingId: `#${b.id.substring(0, 8).toUpperCase()}`,
+    sport: sportKey(sportName),
+    status,
+    venue: facility?.name || 'Unknown Facility',
+    location: [venue?.name, venue?.address].filter(Boolean).join(', '),
+    date: `${date} (${weekday})`,
+    time: `${formatTime(b.start_time)} – ${formatTime(b.end_time)}`,
+    tags: [surface, setting, climate].filter(Boolean),
+    paid: amount,
+    image: null, // The app picks a photo for the sport
+    detailTitle: `${sportName} – ${facility?.name ?? 'Court'}`,
+    // ── Booking Detail (Screen 12) Fields ──
+    bookedOn: bookedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone }),
+    court: facility?.name || '—',
+    floor: surface || '—',
+    setting,
+    climate,
+    players: b.players ?? null,
+    bookingType: 'Regular Slot',
+    duration: formatDuration(minutesBetween(b.start_time, b.end_time)),
+    qrValidTill: `${date}, ${formatTime(b.end_time)}`,
+    invoice: {
+      orderId: b.razorpay_order_id ?? `INV-${b.id.substring(0, 8).toUpperCase()}`,
+      paymentMethod: 'Razorpay',
+      amountPaid: amount,
+    },
+    hoursUntilSlot: Math.floor((startsAt.getTime() - now.getTime()) / (1000 * 60 * 60)),
+  };
+}
+
 export async function GET(request: Request) {
   return withAuth(request, ['USER', 'ADMIN', 'STAFF'], async (req, user) => {
     try {
       const bookings = await BookingService.getUserBookings(user.id);
+      const now = new Date();
 
-      // Map backend bookings to the frontend structure
-      const mappedBookings = bookings.map((b: any) => {
-        const facility = b.facilities;
-        const venue = facility?.venues || { name: 'Unknown', address: 'Unknown' };
-        
-        // Convert status (PENDING/CONFIRMED/CANCELLED) to frontend status (upcoming/ongoing/past)
-        let status = 'upcoming'; // naive default
-        const today = new Date().toISOString().split('T')[0];
-        if (b.status === 'CANCELLED') status = 'past';
-        else if (b.booking_date < today) status = 'past';
-        else if (b.booking_date === today) status = 'ongoing'; // For today, mark as ongoing for now
+      return NextResponse.json(
+        { success: true, data: bookings.map((booking) => toAppBooking(booking, now)) },
+        { status: 200 }
+      );
 
-        // Extract date format
-        const dateObj = new Date(b.booking_date);
-        const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        const dayStr = dateObj.toLocaleDateString('en-GB', { weekday: 'short' });
-        
-        // Extract time format (06:00:00 -> 6:00 AM)
-        const formatTime = (t: string) => {
-          const [h, m] = t.split(':');
-          let hour = parseInt(h);
-          const ampm = hour >= 12 ? 'PM' : 'AM';
-          hour = hour % 12 || 12;
-          return `${hour}:${m} ${ampm}`;
-        };
-
-        // Calculate hours until slot starts
-        const slotStart = new Date(`${b.booking_date}T${b.start_time}+05:30`);
-        const now = new Date();
-        const diffMs = slotStart.getTime() - now.getTime();
-        const hoursUntilSlot = Math.floor(diffMs / (1000 * 60 * 60));
-
-        return {
-          key: b.id,
-          bookingId: b.id.substring(0,8).toUpperCase(),
-          sport: facility?.sports?.name?.toLowerCase() || 'badminton',
-          status,
-          venue: facility?.name || 'Unknown Facility',
-          location: venue.name + ', ' + venue.address,
-          date: `${dateStr} (${dayStr})`,
-          time: `${formatTime(b.start_time)} - ${formatTime(b.end_time)}`,
-          tags: [facility?.sports?.name, 'Court'].filter(Boolean),
-          paid: parseFloat(b.amount_paid || '0'),
-          image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea', // fallback mock image
-          detailTitle: facility?.name,
-          // ── Booking Detail (Screen 12) Fields ──
-          bookedOn: `Booked on ${dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`,
-          court: facility?.name || 'Court 1',
-          floor: facility?.is_indoor ? 'Indoor' : 'Outdoor',
-          setting: facility?.is_indoor ? 'Indoor' : 'Outdoor',
-          climate: facility?.has_ac ? 'AC' : 'Non-AC',
-          players: 2,
-          bookingType: 'Regular Slot',
-          duration: '1 Hour',
-          qrValidTill: `${dateStr}, ${formatTime(b.end_time)}`,
-          invoice: {
-            orderId: `INV-${b.id.substring(0, 8).toUpperCase()}`,
-            paymentMethod: b.payment_status === 'PAID' ? 'Online' : 'Pending',
-            amountPaid: parseFloat(b.amount_paid || '0')
-          },
-          hoursUntilSlot
-        };
-      });
-
-      return NextResponse.json({ success: true, data: mappedBookings }, { status: 200 });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error('Fetch Bookings Error:', error);
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }

@@ -10,8 +10,16 @@ Before testing or deploying the APIs, ensure you have configured your environmen
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"   # required — there is no fallback
+SUPABASE_JWT_SECRET="..."                           # signs phone-login tokens
+FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}'  # required for phone login
+RAZORPAY_KEY_ID="rzp_..."
+RAZORPAY_KEY_SECRET="..."
+RAZORPAY_WEBHOOK_SECRET="..."   # Razorpay Dashboard → Webhooks
+CRON_SECRET="..."               # Vercel sends it to /api/cron/clear-expired
 ```
+
+Apply `supabase/migrations/20260917000000_booking_payment_hardening.sql` in the Supabase SQL Editor before deploying this API version.
 
 To run the Next.js server on a custom port (e.g., 3001) to avoid conflicts:
 ```bash
@@ -22,8 +30,8 @@ npm run dev -- -p 3001
 
 ## 📱 User APIs (React Native App)
 
-### 1. Fetch Available Time Slots
-Dynamically calculates available 1-hour slots for a specific court on a given date. It automatically removes times that are booked by others, outside operating hours, or blocked due to holidays.
+### 1. Fetch Time Slots
+Returns every slot a court has on a date (from the venue's operating hours), each flagged `available`. A slot is unavailable when it is booked, held by an unexpired checkout, inside a partial closure, or has already started (venue timezone). An empty list means the court is closed that day.
 
 * **Endpoint:** `GET /api/v1/user/slots`
 * **Query Parameters:**
@@ -43,8 +51,8 @@ curl "http://localhost:3001/api/v1/user/slots?facilityId=123e4567-e89b-12d3-a456
     "facilityId": "123e4567-e89b-12d3-a456-426614174000",
     "date": "2024-11-20",
     "slots": [
-      { "start_time": "06:00:00", "end_time": "07:00:00" },
-      { "start_time": "07:00:00", "end_time": "08:00:00" }
+      { "start_time": "06:00:00", "end_time": "07:00:00", "available": false },
+      { "start_time": "07:00:00", "end_time": "08:00:00", "available": true }
     ]
   }
 }
@@ -61,32 +69,37 @@ curl "http://localhost:3001/api/v1/user/slots?facilityId=123e4567-e89b-12d3-a456
 ---
 
 ### 2. Create a Booking (Lock Slot)
-Creates a `PENDING` booking, temporarily locking the slot for 10 minutes so the user can complete payment via Razorpay/Stripe.
+Creates a `PENDING` booking for the signed-in user, holding the slot for 10 minutes while they pay. The price is computed on the server (court hourly rate × slot length); any `amount` in the body is ignored.
 
 * **Endpoint:** `POST /api/v1/user/bookings`
-* **Headers:** `Content-Type: application/json`
+* **Headers:** `Content-Type: application/json`, `Authorization: Bearer <supabase access token>`
 
 **Request Body:**
 ```json
 {
-  "userId": "uuid-of-the-user",
   "facilityId": "uuid-of-the-court",
   "date": "2024-11-20",
   "startTime": "06:00:00",
   "endTime": "07:00:00",
-  "amount": 500.00
+  "players": 4,
+  "contactName": "Rahul Sharma",
+  "contactPhone": "9876543210",
+  "notes": "optional"
 }
 ```
+`startTime`/`endTime` must match a slot returned by the slots endpoint. `players`, `contactName`, `contactPhone` and `notes` are optional.
 
 **Success Response (201 Created):**
 ```json
 {
   "success": true,
   "message": "Slot locked successfully for 10 minutes. Proceed to payment.",
-  "bookingId": "987e6543-e21b-12d3-a456-426614174000"
+  "bookingId": "987e6543-e21b-12d3-a456-426614174000",
+  "amount": 400,
+  "expiresAt": "2024-11-20T00:40:00.000Z"
 }
 ```
-> *Note: The React Native app should encode this returned `bookingId` into the QR code after payment is confirmed.*
+> *Note: After payment, the app encodes the full `bookingId` (UUID) into the check-in QR code.*
 
 **Error Response (409 Conflict) - Double Booking:**
 ```json
@@ -98,14 +111,30 @@ Creates a `PENDING` booking, temporarily locking the slot for 10 minutes so the 
 
 ---
 
+### 3. Pay for a Booking (Razorpay)
+
+1. `POST /api/v1/user/payments/create-order` with `{ "bookingId" }` — only for the caller's own unexpired `PENDING` booking. Returns `{ orderId, amount (paise), currency, keyId }`. Calling it again for the same booking returns the same order.
+2. Open Razorpay Checkout with that order.
+3. `POST /api/v1/user/payments/verify` with `{ bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature }`. The order must be the one created for that booking. Returns `200` once the booking is `CONFIRMED`, or `409` with `code: "SLOT_TAKEN"` if the hold lapsed and someone else booked the slot before the payment landed (the booking is then kept as `CANCELLED` + `PAID` for a manual refund).
+4. If checkout is closed without paying, `POST /api/v1/user/bookings/{id}/cancel` releases the hold. It only works on the caller's own unpaid `PENDING` booking — paid bookings cannot be cancelled in the app yet.
+
+`GET /api/v1/user/bookings` lists the caller's `CONFIRMED` bookings.
+
+### 4. Razorpay Webhook
+* **Endpoint:** `POST /api/v1/webhooks/razorpay`
+* Configure in Razorpay Dashboard → Settings → Webhooks with the events `payment.captured` and `order.paid`, and the same secret as `RAZORPAY_WEBHOOK_SECRET`.
+* Confirms the booking even when the app never calls `verify` (app closed, network lost). Safe to receive alongside `verify`.
+
+---
+
 ## 🛡️ Admin & Staff APIs (QR Scanner App)
 
-### 3. Verify QR Code (Entry System)
+### 5. Verify QR Code (Entry System)
 Used by venue staff scanning a user's digital QR code. Validates if the code is authentic, paid, for today, and hasn't been scanned already.
 
 * **Endpoint:** `POST /api/v1/admin/bookings/verify-qr`
-* **Headers:** `Content-Type: application/json`
-> *Security Note: In production, ensure this route requires an Admin JWT Token.*
+* **Headers:** `Content-Type: application/json`, `Authorization: Bearer <token of an ADMIN or STAFF user>`
+> *Roles are read from the user's Supabase `app_metadata.role` (`ADMIN` / `STAFF`). "Today" is judged in the venue's timezone.*
 
 **Request Body:**
 ```json
