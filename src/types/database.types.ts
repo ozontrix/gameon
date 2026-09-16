@@ -14,13 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string
+          id: number
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type: string
+          id?: never
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string
+          id?: never
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           amount_paid: number | null
           booking_date: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           contact_name: string | null
           contact_phone: string | null
           created_at: string | null
+          created_by: string | null
           end_time: string
           expires_at: string | null
           facility_id: string | null
@@ -28,11 +65,15 @@ export type Database = {
           is_scanned: boolean | null
           notes: string | null
           paid_at: string | null
+          payment_method: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
           players: number | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
+          refund_reference: string | null
+          refunded_at: string | null
           scanned_at: string | null
+          source: string
           start_time: string
           status: Database["public"]["Enums"]["booking_status"]
           user_id: string | null
@@ -40,9 +81,13 @@ export type Database = {
         Insert: {
           amount_paid?: number | null
           booking_date: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          created_by?: string | null
           end_time: string
           expires_at?: string | null
           facility_id?: string | null
@@ -50,11 +95,15 @@ export type Database = {
           is_scanned?: boolean | null
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           players?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          refund_reference?: string | null
+          refunded_at?: string | null
           scanned_at?: string | null
+          source?: string
           start_time: string
           status?: Database["public"]["Enums"]["booking_status"]
           user_id?: string | null
@@ -62,9 +111,13 @@ export type Database = {
         Update: {
           amount_paid?: number | null
           booking_date?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          created_by?: string | null
           end_time?: string
           expires_at?: string | null
           facility_id?: string | null
@@ -72,11 +125,15 @@ export type Database = {
           is_scanned?: boolean | null
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           players?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          refund_reference?: string | null
+          refunded_at?: string | null
           scanned_at?: string | null
+          source?: string
           start_time?: string
           status?: Database["public"]["Enums"]["booking_status"]
           user_id?: string | null
@@ -357,6 +414,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_team_members: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          last_sign_in_at: string
+          phone: string
+          role: string
+        }[]
+      }
+      auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       auth_user_id_by_phone: { Args: { p_phone: string }; Returns: string }
     }
     Enums: {
