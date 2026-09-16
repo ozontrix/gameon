@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '../db/supabase';
 import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn } from '../utils/date-helpers';
-import { SlotService } from './slot.service';
+import { SlotService, type SlotOptions } from './slot.service';
 
 /** How long a checkout holds a slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -24,6 +24,17 @@ export type NewBooking = {
   notes?: string;
 };
 
+/** A booking taken at the front desk (walk-in or phone), confirmed on creation. */
+export type AdminBooking = NewBooking & {
+  createdBy: string;
+  /** Links the booking to a customer's app account when their phone number matches. */
+  userId?: string | null;
+  paymentStatus: 'PAID' | 'UNPAID';
+  paymentMethod?: 'CASH' | 'UPI' | 'CARD' | 'COMPLIMENTARY';
+  /** Overrides the court's price, e.g. a discount. Defaults to rate × slot length. */
+  amount?: number;
+};
+
 /**
  * How a paid order ended up:
  * - `confirmed`  the booking is CONFIRMED (now, or already before this call)
@@ -43,34 +54,14 @@ export class BookingService {
     const { facilityId, date, startTime, endTime } = input;
 
     // 1. The slot must exist and still be free
-    const slots = await SlotService.getSlots(facilityId, date);
-    const slot = slots.find((entry) => entry.start_time === startTime && entry.end_time === endTime);
-
-    if (!slot || !slot.available) {
-      throw new BookingError('This slot is no longer available. Please select another time.', 409);
-    }
+    await BookingService.assertSlotFree(input);
 
     // 2. Price
-    const { data: facility, error: facilityError } = await supabaseAdmin
-      .from('facilities')
-      .select('price_per_hour')
-      .eq('id', facilityId)
-      .single();
-
-    if (facilityError || !facility) throw new BookingError('Facility not found', 404);
-
-    const amount = Math.round(Number(facility.price_per_hour) * (minutesBetween(startTime, endTime) / 60) * 100) / 100;
+    const amount = await BookingService.priceFor(facilityId, startTime, endTime);
     if (!(amount > 0)) throw new BookingError('This court has no price set.', 409);
 
     // 3. A lapsed checkout on this exact slot would still trip the unique index
-    await supabaseAdmin
-      .from('bookings')
-      .update({ status: 'CANCELLED' })
-      .eq('facility_id', facilityId)
-      .eq('booking_date', date)
-      .eq('start_time', startTime)
-      .eq('status', 'PENDING')
-      .lt('expires_at', new Date().toISOString());
+    await BookingService.releaseLapsedHold(facilityId, date, startTime);
 
     // 4. Insert PENDING booking
     // The DB Unique Constraint will block this if someone else JUST booked it
@@ -106,6 +97,87 @@ export class BookingService {
   }
 
   /**
+   * Books a slot from the admin panel. The booking is CONFIRMED straight away;
+   * payment is either already taken at the desk or recorded later.
+   */
+  static async createAdminBooking(input: AdminBooking) {
+    const { facilityId, date, startTime, endTime } = input;
+
+    await BookingService.assertSlotFree(input, { allowStarted: true });
+
+    const amount = input.paymentMethod === 'COMPLIMENTARY'
+      ? 0
+      : input.amount ?? (await BookingService.priceFor(facilityId, startTime, endTime));
+
+    await BookingService.releaseLapsedHold(facilityId, date, startTime);
+
+    const paid = input.paymentStatus === 'PAID';
+    const { data: booking, error } = await supabaseAdmin
+      .from('bookings')
+      .insert({
+        user_id: input.userId ?? null,
+        facility_id: facilityId,
+        booking_date: date,
+        start_time: startTime,
+        end_time: endTime,
+        amount_paid: amount,
+        status: 'CONFIRMED',
+        payment_status: paid ? 'PAID' : 'UNPAID',
+        payment_method: paid ? (input.paymentMethod ?? 'CASH') : null,
+        paid_at: paid ? new Date().toISOString() : null,
+        source: 'ADMIN',
+        created_by: input.createdBy,
+        players: input.players ?? null,
+        contact_name: input.contactName || null,
+        contact_phone: input.contactPhone || null,
+        notes: input.notes || null,
+      })
+      .select('id, amount_paid')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') throw new BookingError('Slot was just booked by someone else.', 409);
+      throw new Error('Failed to create booking: ' + error.message);
+    }
+
+    return booking;
+  }
+
+  /** Throws a 409 unless `startTime`–`endTime` is one of the facility's free slots on `date`. */
+  private static async assertSlotFree(input: NewBooking, options?: SlotOptions) {
+    const slots = await SlotService.getSlots(input.facilityId, input.date, options);
+    const slot = slots.find((entry) => entry.start_time === input.startTime && entry.end_time === input.endTime);
+
+    if (!slot || !slot.available) {
+      throw new BookingError('This slot is no longer available. Please select another time.', 409);
+    }
+  }
+
+  /** The court's hourly rate × the slot's length, rounded to paise. */
+  static async priceFor(facilityId: string, startTime: string, endTime: string): Promise<number> {
+    const { data: facility, error } = await supabaseAdmin
+      .from('facilities')
+      .select('price_per_hour')
+      .eq('id', facilityId)
+      .single();
+
+    if (error || !facility) throw new BookingError('Facility not found', 404);
+    return Math.round(Number(facility.price_per_hour) * (minutesBetween(startTime, endTime) / 60) * 100) / 100;
+  }
+
+  /** A lapsed checkout on this exact slot would still trip the unique index. */
+  private static async releaseLapsedHold(facilityId: string, date: string, startTime: string) {
+    await supabaseAdmin
+      .from('bookings')
+      .update({ status: 'CANCELLED' })
+      .eq('facility_id', facilityId)
+      .eq('booking_date', date)
+      .eq('start_time', startTime)
+      .eq('status', 'PENDING')
+      .lt('expires_at', new Date().toISOString());
+  }
+
+  /**
    * Confirms the booking a paid Razorpay order belongs to. Safe to call more than
    * once for the same order: the app's verify call and the webhook both land here.
    */
@@ -125,6 +197,7 @@ export class BookingService {
 
     const paid = {
       payment_status: 'PAID' as const,
+      payment_method: 'RAZORPAY',
       razorpay_payment_id: paymentId,
       paid_at: new Date().toISOString(),
       expires_at: null,

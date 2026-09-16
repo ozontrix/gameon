@@ -10,8 +10,9 @@ export async function GET(request: Request) {
 
     let query = supabaseAdmin
       .from('facilities')
-      .select('id, venue_id, sport_id, name, is_indoor, has_ac, surface_type, price_per_hour, sports!inner(name)')
-      .eq('is_active', true);
+      .select('id, venue_id, sport_id, name, is_indoor, has_ac, surface_type, price_per_hour, sports!inner(name), venues!inner(is_active)')
+      .eq('is_active', true)
+      .eq('venues.is_active', true);
 
     if (sportId) query = query.eq('sport_id', sportId);
     if (venueId) query = query.eq('venue_id', venueId);
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     if (error) throw error;
     
     return NextResponse.json({ success: true, data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Get Public Facilities Error:', error);
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
