@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 firbase.json
+
+# Local key exports — never commit
+API KEYS RAZORPAY.csv

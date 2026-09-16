@@ -1,42 +1,84 @@
 import { supabaseAdmin } from '../db/supabase';
+import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn } from '../utils/date-helpers';
 import { SlotService } from './slot.service';
+
+/** How long a checkout holds a slot before someone else may take it. */
+const HOLD_MINUTES = 10;
+
+/** A failure the API can report as-is, with the HTTP status that fits it. */
+export class BookingError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message);
+    this.name = 'BookingError';
+  }
+}
+
+export type NewBooking = {
+  facilityId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  players?: number;
+  contactName?: string;
+  contactPhone?: string;
+  notes?: string;
+};
+
+/**
+ * How a paid order ended up:
+ * - `confirmed`  the booking is CONFIRMED (now, or already before this call)
+ * - `slot-lost`  the hold lapsed and someone else booked the slot before the
+ *                payment arrived; the booking stays CANCELLED but is marked
+ *                PAID so the team can refund it
+ */
+export type PaidOrderOutcome = 'confirmed' | 'slot-lost';
 
 export class BookingService {
   /**
-   * Creates a PENDING booking, temporarily locking the slot for 10 minutes.
+   * Creates a PENDING booking that holds the slot for {@link HOLD_MINUTES}.
+   * The price is always worked out here from the facility's hourly rate — never
+   * taken from the client.
    */
-  static async createBooking(
-    userId: string,
-    facilityId: string,
-    date: string,
-    startTime: string,
-    endTime: string,
-    amount: number
-  ) {
-    // 1. Double check slot availability right before booking
-    const availableSlots = await SlotService.getAvailableSlots(facilityId, date);
-    const isAvailable = availableSlots.some(
-      (slot) => slot.start_time === startTime && slot.end_time === endTime
-    );
+  static async createBooking(userId: string, input: NewBooking) {
+    const { facilityId, date, startTime, endTime } = input;
 
-    if (!isAvailable) {
-      throw new Error('This slot is no longer available. Please select another time.');
+    // 1. The slot must exist and still be free
+    const slots = await SlotService.getSlots(facilityId, date);
+    const slot = slots.find((entry) => entry.start_time === startTime && entry.end_time === endTime);
+
+    if (!slot || !slot.available) {
+      throw new BookingError('This slot is no longer available. Please select another time.', 409);
     }
 
-    // 2. Calculate Expiration (10 minutes from now)
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+    // 2. Price
+    const { data: facility, error: facilityError } = await supabaseAdmin
+      .from('facilities')
+      .select('price_per_hour')
+      .eq('id', facilityId)
+      .single();
 
-    // 3. Check if userId is a valid UUID (Firebase UIDs are not)
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
-    const validUserId = isUUID ? userId : null;
+    if (facilityError || !facility) throw new BookingError('Facility not found', 404);
+
+    const amount = Math.round(Number(facility.price_per_hour) * (minutesBetween(startTime, endTime) / 60) * 100) / 100;
+    if (!(amount > 0)) throw new BookingError('This court has no price set.', 409);
+
+    // 3. A lapsed checkout on this exact slot would still trip the unique index
+    await supabaseAdmin
+      .from('bookings')
+      .update({ status: 'CANCELLED' })
+      .eq('facility_id', facilityId)
+      .eq('booking_date', date)
+      .eq('start_time', startTime)
+      .eq('status', 'PENDING')
+      .lt('expires_at', new Date().toISOString());
 
     // 4. Insert PENDING booking
     // The DB Unique Constraint will block this if someone else JUST booked it
+    const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString();
     const { data: booking, error } = await supabaseAdmin
       .from('bookings')
       .insert({
-        user_id: validUserId,
+        user_id: userId,
         facility_id: facilityId,
         booking_date: date,
         start_time: startTime,
@@ -44,14 +86,18 @@ export class BookingService {
         amount_paid: amount,
         status: 'PENDING',
         payment_status: 'UNPAID',
-        expires_at: expiresAt.toISOString(),
+        expires_at: expiresAt,
+        players: input.players ?? null,
+        contact_name: input.contactName || null,
+        contact_phone: input.contactPhone || null,
+        notes: input.notes || null,
       })
-      .select('id')
+      .select('id, amount_paid, expires_at')
       .single();
 
     if (error) {
       if (error.code === '23505') { // Postgres Unique Violation code
-        throw new Error('Slot was just booked by someone else.');
+        throw new BookingError('Slot was just booked by someone else.', 409);
       }
       throw new Error('Failed to create booking: ' + error.message);
     }
@@ -60,121 +106,146 @@ export class BookingService {
   }
 
   /**
-   * Called by your Payment Gateway Webhook (e.g. Razorpay/Stripe) to confirm payment
+   * Confirms the booking a paid Razorpay order belongs to. Safe to call more than
+   * once for the same order: the app's verify call and the webhook both land here.
    */
-  static async confirmBooking(bookingId: string) {
-    const { data, error } = await supabaseAdmin
+  static async confirmPaidOrder(orderId: string, paymentId: string) {
+    const { data: booking, error: fetchError } = await supabaseAdmin
       .from('bookings')
-      .update({
-        status: 'CONFIRMED',
-        payment_status: 'PAID',
-        expires_at: null, // Clear expiration since it's paid
-      })
-      .eq('id', bookingId)
-      .select('id, booking_date, start_time')
+      .select('id, status')
+      .eq('razorpay_order_id', orderId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!booking) throw new BookingError('No booking found for this payment order.', 404);
+
+    if (booking.status === 'CONFIRMED') {
+      return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
+    }
+
+    const paid = {
+      payment_status: 'PAID' as const,
+      razorpay_payment_id: paymentId,
+      paid_at: new Date().toISOString(),
+      expires_at: null,
+    };
+
+    // PENDING, or CANCELLED because the hold lapsed (or checkout was closed) before the payment landed
+    const { data: confirmed, error } = await supabaseAdmin
+      .from('bookings')
+      .update({ ...paid, status: 'CONFIRMED' })
+      .eq('id', booking.id)
+      .in('status', ['PENDING', 'CANCELLED'])
+      .select('id')
+      .maybeSingle();
+
+    if (confirmed) return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
+
+    if (error?.code === '23505') {
+      // Someone else holds the slot now. Keep the payment on record for a manual refund.
+      const { error: recordError } = await supabaseAdmin
+        .from('bookings')
+        .update({ ...paid, status: 'CANCELLED' })
+        .eq('id', booking.id);
+      if (recordError) throw recordError;
+
+      console.error(
+        `[payments] Paid booking ${booking.id} lost its slot (order ${orderId}, payment ${paymentId}) — refund needed.`
+      );
+      return { bookingId: booking.id, outcome: 'slot-lost' as PaidOrderOutcome };
+    }
+
+    if (error) throw error;
+
+    // Nothing matched: another call confirmed it in the meantime
+    const { data: latest } = await supabaseAdmin
+      .from('bookings')
+      .select('status')
+      .eq('id', booking.id)
       .single();
 
-    if (error) throw new Error('Failed to confirm booking');
-    
-    // The `data.id` (UUID) returned here will be used by the app to generate the QR code
-    return data;
+    if (latest?.status === 'CONFIRMED') {
+      return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
+    }
+    throw new Error(`Could not confirm booking ${booking.id} for order ${orderId}`);
   }
 
   /**
    * Admin Function: Verifies a QR Code (Booking UUID) scanned at the venue
    */
   static async verifyQRCode(bookingId: string) {
-    // 1. Fetch booking with user details
+    // 1. Fetch booking with facility details
     const { data: booking, error } = await supabaseAdmin
       .from('bookings')
       .select(`
-        id, status, is_scanned, booking_date, start_time, 
-        users (name, phone),
-        facilities (name)
+        id, user_id, status, is_scanned, booking_date, contact_name, contact_phone,
+        facilities ( name, venues ( timezone ) )
       `)
       .eq('id', bookingId)
       .single();
 
-    if (error || !booking) throw new Error('Invalid QR Code. Booking not found.');
+    if (error || !booking) throw new BookingError('Invalid QR Code. Booking not found.', 400);
 
     // 2. Validate Status
     if (booking.status !== 'CONFIRMED') {
-      throw new Error(`Booking is not confirmed. Current status: ${booking.status}`);
+      throw new BookingError(`Booking is not confirmed. Current status: ${booking.status}`, 400);
     }
 
     // 3. Validate if already scanned (Screenshot Prevention)
     if (booking.is_scanned) {
-      throw new Error('QR Code has already been used for entry!');
+      throw new BookingError('QR Code has already been used for entry!', 400);
     }
 
-    // 4. Validate Date (Must be today)
-    const today = new Date().toISOString().split('T')[0];
+    // 4. Validate Date (Must be today, on the venue's clock)
+    const today = wallClockIn(booking.facilities?.venues?.timezone || DEFAULT_TIMEZONE).date;
     if (booking.booking_date !== today) {
-      throw new Error(`Invalid Date! This booking is for ${booking.booking_date}.`);
+      throw new BookingError(`Invalid Date! This booking is for ${booking.booking_date}.`, 400);
     }
 
-    // 5. Update to Scanned
-    const { error: updateError } = await supabaseAdmin
+    // 5. Mark as scanned — only if no other scanner got there first
+    const { data: scanned, error: updateError } = await supabaseAdmin
       .from('bookings')
       .update({
         is_scanned: true,
         scanned_at: new Date().toISOString(),
       })
-      .eq('id', bookingId);
+      .eq('id', bookingId)
+      .or('is_scanned.is.null,is_scanned.eq.false')
+      .select('id')
+      .maybeSingle();
 
     if (updateError) throw new Error('Failed to update scan status');
+    if (!scanned) throw new BookingError('QR Code has already been used for entry!', 400);
 
     // 6. Return success with User Info for verbal check
-    // @ts-ignore - Supabase type joins can be tricky, casting safely
-    const user = booking.users as unknown as { name: string, phone: string };
-    // @ts-ignore
-    const facility = booking.facilities as unknown as { name: string };
+    const { data: profile } = booking.user_id
+      ? await supabaseAdmin.from('profiles').select('full_name, phone').eq('id', booking.user_id).maybeSingle()
+      : { data: null };
 
     return {
       success: true,
       message: 'Access Granted',
-      facilityName: facility.name,
-      userName: user.name,
-      userPhone: user.phone,
+      facilityName: booking.facilities?.name ?? 'Unknown facility',
+      userName: booking.contact_name || profile?.full_name || 'Unknown',
+      userPhone: booking.contact_phone || profile?.phone || null,
     };
   }
 
+  /** The player's confirmed bookings, newest first. */
   static async getUserBookings(userId: string) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
-    const validUserId = isUUID ? userId : null;
-
-    if (!validUserId) {
-       // Mock Firebase user workaround: return all bookings for this fake user session?
-       // Let's query by user_id IS NULL to show the ones they just created.
-       const { data, error } = await supabaseAdmin
-        .from('bookings')
-        .select(`
-          id, booking_date, start_time, end_time, amount_paid, status, payment_status,
-          facilities (
-            id, name, is_indoor, has_ac,
-            venues ( name, address ),
-            sports ( name )
-          )
-        `)
-        .is('user_id', null)
-        .order('booking_date', { ascending: false })
-        .order('start_time', { ascending: false });
-
-       if (error) throw error;
-       return data;
-    }
-
     const { data, error } = await supabaseAdmin
       .from('bookings')
       .select(`
         id, booking_date, start_time, end_time, amount_paid, status, payment_status,
+        players, razorpay_order_id, paid_at, created_at,
         facilities (
-          id, name, is_indoor, has_ac,
-          venues ( name, address ),
+          id, name, is_indoor, has_ac, surface_type,
+          venues ( name, address, timezone ),
           sports ( name )
         )
       `)
-      .eq('user_id', validUserId)
+      .eq('user_id', userId)
+      .eq('status', 'CONFIRMED')
       .order('booking_date', { ascending: false })
       .order('start_time', { ascending: false });
 

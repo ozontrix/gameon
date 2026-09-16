@@ -8,5 +8,11 @@
       "source": "/(.*)",
       "destination": "/$1"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/clear-expired",
+      "schedule": "0 0 * * *"
+    }
   ]
 }
