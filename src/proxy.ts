@@ -4,7 +4,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 const LOGIN_PATH = '/admin/login';
 
 /** Sections only admins may open. Pages check this again on the server. */
-const ADMIN_ONLY = ['/admin/refunds', '/admin/venues', '/admin/courts', '/admin/sports', '/admin/closures', '/admin/team', '/admin/activity'];
+const ADMIN_ONLY = [
+  '/admin/refunds',
+  '/admin/venues',
+  '/admin/courts',
+  '/admin/sports',
+  '/admin/closures',
+  '/admin/banners',
+  '/admin/notifications',
+  '/admin/team',
+  '/admin/activity',
+];
 
 /**
  * Admin panel gatekeeper.

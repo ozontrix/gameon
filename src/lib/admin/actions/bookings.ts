@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { BookingError, BookingService } from '@/lib/services/booking.service';
+import { NotificationService } from '@/lib/services/notification.service';
 import { NOT_ALLOWED, formValues, invalid, type ActionState } from '../action-result';
 import { recordAudit } from '../audit';
 import { COUNTER_PAYMENT_METHODS, DEFAULT_COUNTRY_CODE } from '../constants';
@@ -62,6 +63,7 @@ export async function createFrontDeskBooking(_state: ActionState, formData: Form
 
   let bookingId: string;
   try {
+    const customerId = await findCustomerByPhone(input.contactPhone);
     const booking = await BookingService.createAdminBooking({
       facilityId: input.facilityId,
       date: input.date,
@@ -72,7 +74,7 @@ export async function createFrontDeskBooking(_state: ActionState, formData: Form
       players: input.players,
       notes: input.notes,
       createdBy: actor.id,
-      userId: await findCustomerByPhone(input.contactPhone),
+      userId: customerId,
       paymentStatus: complimentary ? 'PAID' : input.paymentStatus,
       paymentMethod: input.paymentStatus === 'PAID' || complimentary ? input.paymentMethod : undefined,
       amount: input.amount,
@@ -88,6 +90,7 @@ export async function createFrontDeskBooking(_state: ActionState, formData: Form
       payment_method: input.paymentMethod ?? null,
       price_overridden: input.amount !== undefined,
     });
+    if (customerId) await NotificationService.notifyBooking(booking.id, { type: 'confirmed' });
   } catch (error) {
     if (error instanceof BookingError) return { ok: false, message: error.message };
     console.error('[admin] create booking failed', error);
@@ -181,6 +184,7 @@ export async function cancelBooking(_state: ActionState, formData: FormData): Pr
     payment_status: data.payment_status,
     amount: data.amount_paid,
   });
+  await NotificationService.notifyBooking(bookingId, { type: 'cancelled', reason });
   refreshBookingViews(bookingId);
 
   return {
@@ -224,6 +228,7 @@ export async function markRefunded(_state: ActionState, formData: FormData): Pro
   if (!data) return { ok: false, message: 'Only cancelled bookings that were paid can be marked as refunded.' };
 
   await recordAudit(actor, 'booking.refund_recorded', 'booking', bookingId, { reference, amount: data.amount_paid });
+  await NotificationService.notifyBooking(bookingId, { type: 'refunded', reference });
   refreshBookingViews(bookingId);
   return { ok: true, message: 'Refund recorded.' };
 }

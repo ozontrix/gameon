@@ -39,6 +39,7 @@ role can write. Removing the role takes effect on the next page load.
 | Customers and their history | ✓ | ✓ |
 | Cancel a booking, refund queue, record a refund | | ✓ |
 | Venues & opening hours, courts & pricing, sports, closures | | ✓ |
+| Home banners, broadcast notifications, sport photos | | ✓ |
 | Team & roles (add, change role, reset password), activity log | | ✓ |
 
 ## What each page does
@@ -60,8 +61,16 @@ role can write. Removing the role takes effect on the next page load.
 - **Refunds** — paid bookings that were cancelled, including payments that
   arrived after the customer's slot was taken. The panel **does not move
   money**: refund in the Razorpay dashboard or in cash, then record the reference.
+- **Home banners** — the hero carousel and promo card on the app's Home screen:
+  image upload, headline, link, order, active, and an optional show-from/until
+  window. Changes reach the app within about a minute.
+- **Notifications** — what is in the app's notification bell. Booking updates
+  (confirmed, cancelled, refunded, closures) and the morning reminder are sent
+  automatically; this page sends broadcasts to every app user and lists what was
+  sent, with how many people have read it. In-app only: no push or SMS yet.
 - **Venues & hours / Courts / Sports / Closures** — the catalogue the app and
-  slot engine read. Changing hours or prices never alters existing bookings;
+  slot engine read. Sports also carry the photo used on Home's "Trending now"
+  cards. Changing hours or prices never alters existing bookings;
   deactivating a venue or court stops new bookings only. Adding a closure warns
   about confirmed bookings that fall inside it.
 - **Activity log** — every change made from the panel, with who and when.
@@ -81,8 +90,8 @@ role can write. Removing the role takes effect on the next page load.
 
 ## Not in this version
 
-- Customers are not notified (SMS/email/push) when a booking is created,
-  cancelled or refunded from the panel.
+- Customers see booking changes in the app's notifications, but nothing is sent
+  by push, SMS or email.
 - Refunds are recorded, not executed through the Razorpay API.
 - Rescheduling a booking — cancel and rebook instead.
 - Tournament and event management; wallet and promo codes.

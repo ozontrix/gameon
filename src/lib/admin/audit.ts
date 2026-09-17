@@ -4,7 +4,16 @@ import { supabaseAdmin } from '@/lib/db/supabase';
 import type { Json } from '@/types/database.types';
 import type { StaffSession } from './session';
 
-export type AuditEntity = 'booking' | 'venue' | 'court' | 'sport' | 'operating_hours' | 'closure' | 'team_member';
+export type AuditEntity =
+  | 'booking'
+  | 'venue'
+  | 'court'
+  | 'sport'
+  | 'operating_hours'
+  | 'closure'
+  | 'team_member'
+  | 'banner'
+  | 'notification';
 
 /**
  * Records a change made from the admin panel. Never throws: a failed audit

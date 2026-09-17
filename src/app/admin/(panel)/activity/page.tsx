@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Activity log' };
 
-const ENTITY_TYPES = ['booking', 'venue', 'court', 'sport', 'operating_hours', 'closure', 'team_member'] as const;
+const ENTITY_TYPES = ['booking', 'venue', 'court', 'sport', 'operating_hours', 'closure', 'banner', 'notification', 'team_member'] as const;
 
 /** Where an audit entry's subject can be opened in the panel. */
 function entityHref(entityType: string, entityId: string | null): string | null {
@@ -30,6 +30,10 @@ function entityHref(entityType: string, entityId: string | null): string | null 
       return '/admin/sports';
     case 'team_member':
       return '/admin/team';
+    case 'banner':
+      return `/admin/banners/${entityId}`;
+    case 'notification':
+      return '/admin/notifications';
     default:
       return null;
   }

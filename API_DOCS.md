@@ -127,9 +127,34 @@ Creates a `PENDING` booking for the signed-in user, holding the slot for 10 minu
 
 ---
 
+### 6. Home Screen Content
+* **Endpoint:** `GET /api/v1/public/home` (no auth)
+* Returns the venue, the active banners (`hero`, `promo`) written in the admin panel, and a
+  per-sport summary: `courtCount`, `priceFrom`, `bookingsLast30Days` (ranked, most booked first)
+  and `imageUrl`. Cached for a minute at the edge.
+
+### 7. Search
+* **Endpoint:** `GET /api/v1/public/search?q=` (no auth, min 2 characters)
+* Matches sports and courts by name or surface. The words `indoor`, `outdoor` and `ac` match
+  court attributes instead of names.
+
+### 8. Notifications
+* `GET /api/v1/user/notifications` — the caller's notifications, newest first, with `unread`.
+  `?countOnly=1` returns just the unread count (for the bell); `?limit=` and `?before=` page back.
+* `POST /api/v1/user/notifications/read` — `{ "ids": ["uuid"] }`, or `{}` to mark all read.
+* Sent automatically: booking confirmed, payment received but slot taken, admin cancellation,
+  refund recorded, and a closure that affects a booking. Broadcasts come from the admin panel.
+
+### 9. Cron
+* `GET /api/cron/clear-expired` — releases lapsed checkout holds (daily).
+* `GET /api/cron/booking-reminders` — a morning reminder for each of today's bookings (daily).
+* Both require `Authorization: Bearer $CRON_SECRET`, which Vercel Cron sends automatically.
+
+---
+
 ## 🛡️ Admin & Staff APIs (QR Scanner App)
 
-### 5. Verify QR Code (Entry System)
+### 10. Verify QR Code (Entry System)
 Used by venue staff scanning a user's digital QR code. Validates if the code is authentic, paid, for today, and hasn't been scanned already.
 
 * **Endpoint:** `POST /api/v1/admin/bookings/verify-qr`

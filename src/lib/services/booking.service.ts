@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../db/supabase';
 import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn } from '../utils/date-helpers';
+import { NotificationService } from './notification.service';
 import { SlotService, type SlotOptions } from './slot.service';
 
 /** How long a checkout holds a slot before someone else may take it. */
@@ -192,6 +193,7 @@ export class BookingService {
     if (!booking) throw new BookingError('No booking found for this payment order.', 404);
 
     if (booking.status === 'CONFIRMED') {
+      // Already confirmed by the other caller (app verify or webhook); its notice is already out.
       return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
     }
 
@@ -212,7 +214,10 @@ export class BookingService {
       .select('id')
       .maybeSingle();
 
-    if (confirmed) return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
+    if (confirmed) {
+      await NotificationService.notifyBooking(booking.id, { type: 'confirmed' });
+      return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
+    }
 
     if (error?.code === '23505') {
       // Someone else holds the slot now. Keep the payment on record for a manual refund.
@@ -225,6 +230,7 @@ export class BookingService {
       console.error(
         `[payments] Paid booking ${booking.id} lost its slot (order ${orderId}, payment ${paymentId}) — refund needed.`
       );
+      await NotificationService.notifyBooking(booking.id, { type: 'slot-lost' });
       return { bookingId: booking.id, outcome: 'slot-lost' as PaidOrderOutcome };
     }
 

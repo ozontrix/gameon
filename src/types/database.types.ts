@@ -257,6 +257,147 @@ export type Database = {
           },
         ]
       }
+      home_banners: {
+        Row: {
+          badge: string | null
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          link: string | null
+          placement: string
+          sort_order: number
+          starts_at: string | null
+          subtitle: string | null
+          title: string
+          title_accent: string | null
+          updated_at: string
+        }
+        Insert: {
+          badge?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link?: string | null
+          placement: string
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title: string
+          title_accent?: string | null
+          updated_at?: string
+        }
+        Update: {
+          badge?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link?: string | null
+          placement?: string
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string
+          title_accent?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_reads: {
+        Row: {
+          notification_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          notification_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          notification_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          booking_id: string | null
+          created_at: string
+          created_by: string | null
+          dedupe_key: string | null
+          id: string
+          kind: string
+          link: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          body: string
+          booking_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dedupe_key?: string | null
+          id?: string
+          kind: string
+          link?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string
+          booking_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dedupe_key?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operating_hours: {
         Row: {
           close_time: string
@@ -338,18 +479,21 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          image_url: string | null
           is_active: boolean | null
           name: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           name: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           name?: string
         }
@@ -428,6 +572,28 @@ export type Database = {
       }
       auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       auth_user_id_by_phone: { Args: { p_phone: string }; Returns: string }
+      mark_notifications_read: {
+        Args: { p_ids?: string[]; p_user_id: string }
+        Returns: number
+      }
+      user_notifications: {
+        Args: { p_before?: string; p_limit?: number; p_user_id: string }
+        Returns: {
+          body: string
+          booking_id: string
+          created_at: string
+          id: string
+          is_broadcast: boolean
+          is_read: boolean
+          kind: string
+          link: string
+          title: string
+        }[]
+      }
+      user_unread_notification_count: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       booking_status: "PENDING" | "CONFIRMED" | "CANCELLED"

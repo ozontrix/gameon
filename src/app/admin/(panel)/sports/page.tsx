@@ -5,6 +5,7 @@ import { Card, CardBody, CardHeader, EmptyState, PageHeader, checkboxClass, inpu
 import { saveSport } from '@/lib/admin/actions/catalog';
 import { listSports } from '@/lib/admin/queries/catalog';
 import { requireAdmin } from '@/lib/admin/session';
+import { SportImageForm } from './sport-image-form';
 
 export const metadata: Metadata = { title: 'Sports' };
 
@@ -62,6 +63,9 @@ export default async function SportsPage() {
                       Save
                     </SubmitButton>
                   </ActionForm>
+                  <div className="mt-2">
+                    <SportImageForm sportId={sport.id} sportName={sport.name} imageUrl={sport.image_url} />
+                  </div>
                 </li>
               ))}
             </ul>

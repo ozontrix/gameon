@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
+import { NotificationService } from '@/lib/services/notification.service';
 import { NOT_ALLOWED, formValues, invalid, type ActionState } from '../action-result';
 import { recordAudit } from '../audit';
 import { SLOT_DURATIONS, SURFACE_TYPES, WEEKDAYS } from '../constants';
@@ -343,13 +344,26 @@ export async function createClosure(_state: ActionState, formData: FormData): Pr
   const { data: bookings } = await clashes;
   const overlapping = (bookings ?? []).filter(
     (b) => !values.start_time || (b.start_time < values.end_time! && b.end_time > values.start_time)
-  ).length;
+  );
+
+  // Customers with an app account hear about it straight away.
+  for (const booking of overlapping) {
+    await NotificationService.notifyBooking(booking.id, {
+      type: 'closure',
+      closureId: data.id,
+      allDay: !values.start_time,
+      startTime: values.start_time,
+      endTime: values.end_time,
+      reason: input.reason,
+      wholeVenue: !input.facility_id,
+    });
+  }
 
   refreshCatalog();
   return {
     ok: true,
-    message: overlapping
-      ? `Closure added for ${formatDate(input.date)}. ${overlapping} confirmed booking(s) fall inside it — cancel or move them from Bookings.`
+    message: overlapping.length
+      ? `Closure added for ${formatDate(input.date)}. ${overlapping.length} confirmed booking(s) fall inside it — the customers were notified in the app; cancel or move the bookings from Bookings.`
       : `Closure added for ${formatDate(input.date)}.`,
   };
 }

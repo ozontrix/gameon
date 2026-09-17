@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { BookingError, BookingService } from '@/lib/services/booking.service';
 import { withAuth, AuthenticatedUser } from '@/lib/middlewares/auth';
 import { DEFAULT_TIMEZONE, minutesBetween, zonedTimeToUtc } from '@/lib/utils/date-helpers';
+import { sportKeyFor } from '@/lib/utils/sport-key';
 
 const createBookingSchema = z.object({
   facilityId: z.string().uuid("Invalid Facility ID"),
@@ -56,16 +57,6 @@ export async function POST(request: Request) {
 
 type UserBooking = Awaited<ReturnType<typeof BookingService.getUserBookings>>[number];
 
-/** The app's sport keys: badminton, pickleball, cricket, football. */
-function sportKey(name: string | undefined): string {
-  const lower = (name ?? '').toLowerCase();
-  if (lower.includes('badminton')) return 'badminton';
-  if (lower.includes('pickleball')) return 'pickleball';
-  if (lower.includes('football')) return 'football';
-  if (lower.includes('cricket')) return 'cricket';
-  return 'badminton';
-}
-
 function capitalize(value: string): string {
   return value ? value[0].toUpperCase() + value.slice(1) : value;
 }
@@ -114,7 +105,7 @@ function toAppBooking(b: UserBooking, now: Date) {
   return {
     key: b.id, // Full booking UUID — also the check-in QR payload
     bookingId: `#${b.id.substring(0, 8).toUpperCase()}`,
-    sport: sportKey(sportName),
+    sport: sportKeyFor(sportName) ?? 'badminton',
     status,
     venue: facility?.name || 'Unknown Facility',
     location: [venue?.name, venue?.address].filter(Boolean).join(', '),

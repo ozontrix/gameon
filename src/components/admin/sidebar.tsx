@@ -7,9 +7,11 @@ import {
   CirclePlus,
   ClipboardList,
   History,
+  Images,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
+  Megaphone,
   Menu,
   RotateCcw,
   ScanLine,
@@ -57,6 +59,13 @@ function navGroups(refundsPending: number): NavGroup[] {
         { href: '/admin/courts', label: 'Courts & pricing', icon: LayoutGrid, adminOnly: true },
         { href: '/admin/sports', label: 'Sports', icon: Trophy, adminOnly: true },
         { href: '/admin/closures', label: 'Closures', icon: CalendarX2, adminOnly: true },
+      ],
+    },
+    {
+      label: 'App content',
+      items: [
+        { href: '/admin/banners', label: 'Home banners', icon: Images, adminOnly: true },
+        { href: '/admin/notifications', label: 'Notifications', icon: Megaphone, adminOnly: true },
       ],
     },
     {

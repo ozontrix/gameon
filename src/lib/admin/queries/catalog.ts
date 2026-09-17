@@ -84,7 +84,7 @@ export async function listCatalogOptions() {
 export async function listSports() {
   const { data, error } = await supabaseAdmin
     .from('sports')
-    .select('id, name, is_active, facilities ( count )')
+    .select('id, name, is_active, image_url, facilities ( count )')
     .order('name');
   if (error) throw error;
   return data.map((sport) => ({ ...sport, courtCount: sport.facilities[0]?.count ?? 0 }));
