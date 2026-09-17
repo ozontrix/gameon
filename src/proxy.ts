@@ -3,6 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const LOGIN_PATH = '/admin/login';
 
+/** Sections only admins may open. Pages check this again on the server. */
+const ADMIN_ONLY = ['/admin/refunds', '/admin/venues', '/admin/courts', '/admin/sports', '/admin/closures', '/admin/team', '/admin/activity'];
+
 /**
  * Admin panel gatekeeper.
  *
@@ -53,6 +56,11 @@ export async function proxy(request: NextRequest) {
 
   if (isStaff && onLoginPage) {
     return redirectTo(new URL('/admin', request.url));
+  }
+
+  // Redirect before rendering starts, so staff never see an admin page's loading state.
+  if (role === 'STAFF' && ADMIN_ONLY.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return redirectTo(new URL('/admin?denied=1', request.url));
   }
 
   return response;
