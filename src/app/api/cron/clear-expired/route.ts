@@ -1,25 +1,32 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase';
 
-// This endpoint should be protected in production (e.g., using a CRON_SECRET)
-export async function POST(request: Request) {
+/**
+ * Marks lapsed checkout holds as CANCELLED.
+ *
+ * Housekeeping only: slot availability and new bookings already ignore expired
+ * holds, so nothing waits on this job. Vercel Cron calls it with GET and sends
+ * `Authorization: Bearer $CRON_SECRET`; POST is kept for manual runs.
+ */
+async function clearExpired(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error('CRON_SECRET is not configured; refusing to run clear-expired.');
+      return NextResponse.json({ success: false, error: 'Cron not configured' }, { status: 503 });
+    }
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Clear expired PENDING bookings
-    // In PostgreSQL/Supabase, we delete or update the status of bookings where
-    // status is 'PENDING' and expires_at is less than NOW()
     const { data, error } = await supabaseAdmin
       .from('bookings')
-      .update({ status: 'CANCELLED' }) // Or simply delete them
+      .update({ status: 'CANCELLED' })
       .eq('status', 'PENDING')
+      .eq('payment_status', 'UNPAID')
       .lt('expires_at', new Date().toISOString())
-      .select();
+      .select('id');
 
     if (error) {
       throw error;
@@ -31,8 +38,16 @@ export async function POST(request: Request) {
       clearedCount: data.length,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Clear Expired Bookings Cron Error:', error);
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+export async function GET(request: Request) {
+  return clearExpired(request);
+}
+
+export async function POST(request: Request) {
+  return clearExpired(request);
 }

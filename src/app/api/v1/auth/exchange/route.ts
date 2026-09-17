@@ -1,126 +1,122 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { supabaseAdmin } from '@/lib/db/supabase';
 import { SignJWT } from 'jose';
+import { z } from 'zod';
+import { supabaseAdmin } from '@/lib/db/supabase';
+import { getFirebaseAdminAuth } from '@/lib/firebase-admin';
+import { withRateLimit } from '@/lib/middlewares/rate-limiter';
+
+const exchangeSchema = z.object({
+  firebaseToken: z.string().min(1),
+});
+
+/** The auth user registered with this phone number, if any. */
+async function findUserIdByPhone(phone: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.rpc('auth_user_id_by_phone', { p_phone: phone });
+  if (error) throw error;
+  return data;
+}
+
+async function findOrCreatePhoneUser(phone: string): Promise<string> {
+  const existing = await findUserIdByPhone(phone);
+  if (existing) return existing;
+
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    phone,
+    phone_confirm: true, // Auto-confirm since Firebase verified it
+  });
+  if (data.user) return data.user.id;
+
+  // Created by a parallel request between the lookup and the insert
+  if (error?.code === 'phone_exists' || /already/i.test(error?.message ?? '')) {
+    const raced = await findUserIdByPhone(phone);
+    if (raced) return raced;
+  }
+  throw error ?? new Error('Failed to create user in Supabase');
+}
 
 export async function POST(request: Request) {
-  try {
-    const { firebaseToken } = await request.json();
-    
-    if (!firebaseToken) {
-      return NextResponse.json({ success: false, error: 'Missing firebaseToken' }, { status: 400 });
-    }
-
-    let uid: string;
-    let phoneNumber: string | undefined;
-
-    // STEP A: Verify Firebase Token
+  return withRateLimit(request, { limit: 10, windowMs: 60_000 }, async (req) => {
     try {
-      if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-        console.warn('FIREBASE_SERVICE_ACCOUNT is missing. Bypassing STRICT verification for local dev.');
-        // Unsafe manual decode for local dev only
-        const payloadBase64 = firebaseToken.split('.')[1];
-        const decoded = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
-        uid = decoded.user_id || decoded.uid;
-        phoneNumber = decoded.phone_number;
-      } else {
-        const decodedToken = await getAuth().verifyIdToken(firebaseToken);
-        uid = decodedToken.uid;
-        phoneNumber = decodedToken.phone_number;
+      const validation = exchangeSchema.safeParse(await req.json().catch(() => null));
+      if (!validation.success) {
+        return NextResponse.json({ success: false, error: 'Missing firebaseToken' }, { status: 400 });
       }
-    } catch (e: any) {
-      return NextResponse.json({ success: false, error: 'Invalid Firebase token: ' + e.message }, { status: 401 });
-    }
 
-    if (!phoneNumber) {
-      return NextResponse.json({ success: false, error: 'Token missing phone_number' }, { status: 400 });
-    }
+      // STEP A: Verify Firebase Token — never trust one we could not verify
+      const firebaseAuth = getFirebaseAdminAuth();
+      if (!firebaseAuth) {
+        console.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT is not configured; refusing phone sign-in.');
+        return NextResponse.json(
+          { success: false, error: 'Phone sign-in is not available right now.' },
+          { status: 503 }
+        );
+      }
 
-    // Standardize to E.164 (ensure + prefix)
-    const e164Phone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
-
-    // STEP B: Supabase Identity Resolution
-    let sbUser: any = null;
-    
-    // First, look up the user by phone
-    try {
-      const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
-      if (error) throw error;
-      
-      sbUser = users.users.find(u => u.phone === e164Phone || u.phone === e164Phone.replace('+', ''));
-    } catch (e) {
-      console.error('Error fetching users:', e);
-    }
-
-    // If not found, create a new user
-    if (!sbUser) {
+      let phoneNumber: string | undefined;
       try {
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          phone: e164Phone,
-          phone_confirm: true, // Auto-confirm since Firebase verified it
-        });
-
-        if (createError) {
-          throw createError;
-        }
-        sbUser = newUser.user;
-      } catch (e: any) {
-        // Handle race conditions where user was created immediately between our check and create
-        console.error('Create User Error:', e);
-        if (e.message?.includes('already exists') || e.code === '23505') {
-           const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-           sbUser = users.users.find((u: any) => u.phone === e164Phone || u.phone === e164Phone.replace('+', ''));
-        } else {
-           return NextResponse.json({ success: false, error: 'Failed to create user in Supabase' }, { status: 500 });
-        }
+        const decodedToken = await firebaseAuth.verifyIdToken(validation.data.firebaseToken);
+        phoneNumber = decodedToken.phone_number;
+      } catch (e) {
+        console.warn('Firebase token rejected:', e);
+        return NextResponse.json(
+          { success: false, error: 'Phone verification failed or expired. Please try again.' },
+          { status: 401 }
+        );
       }
-    }
 
-    if (!sbUser) {
-       return NextResponse.json({ success: false, error: 'Identity resolution failed' }, { status: 500 });
-    }
-
-    // STEP C: Public Data Synchronization
-    // Make sure the user exists in public.users to satisfy foreign keys
-    await supabaseAdmin
-      .from('users')
-      .upsert({ id: sbUser.id, phone: e164Phone, name: 'User', role: 'USER' }, { onConflict: 'id' });
-
-        // STEP D: Token Minting
-    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-    if (!jwtSecret) {
-      console.error('CRITICAL: SUPABASE_JWT_SECRET is not configured in .env.local');
-      return NextResponse.json({ success: false, error: 'Server misconfiguration: missing jwt secret' }, { status: 500 });
-    }
-
-    const secret = new TextEncoder().encode(jwtSecret);
-    const alg = 'HS256';
-    
-    // Create a Supabase-compatible JWT
-    const accessToken = await new SignJWT({
-      aud: 'authenticated',
-      role: 'authenticated',
-      phone: e164Phone,
-      app_metadata: {
-        provider: 'phone',
-        providers: ['phone']
+      if (!phoneNumber) {
+        return NextResponse.json({ success: false, error: 'Token missing phone_number' }, { status: 400 });
       }
-    })
-      .setProtectedHeader({ alg, typ: 'JWT' })
-      .setSubject(sbUser.id)
-      .setIssuedAt()
-      .setExpirationTime('30d') // Hard expire in 30 days since we don't have refresh tokens
-      .sign(secret);
 
-    return NextResponse.json({
-      success: true,
-      access_token: accessToken,
-      user_id: sbUser.id,
-      phone: e164Phone
-    });
+      // Standardize to E.164 (ensure + prefix)
+      const e164Phone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
 
-  } catch (error: any) {
-    console.error('Exchange error:', error);
-    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
-  }
+      // STEP B: Supabase Identity Resolution
+      const userId = await findOrCreatePhoneUser(e164Phone);
+
+      // STEP C: The profile row bookings belong to. Only the verified phone is
+      // written, so a name the player chose is never overwritten.
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .upsert({ id: userId, phone: e164Phone }, { onConflict: 'id' });
+      if (profileError) throw profileError;
+
+      // STEP D: Token Minting
+      const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+      if (!jwtSecret) {
+        console.error('CRITICAL: SUPABASE_JWT_SECRET is not configured');
+        return NextResponse.json({ success: false, error: 'Server misconfiguration: missing jwt secret' }, { status: 500 });
+      }
+
+      const secret = new TextEncoder().encode(jwtSecret);
+      const alg = 'HS256';
+
+      // Create a Supabase-compatible JWT
+      const accessToken = await new SignJWT({
+        aud: 'authenticated',
+        role: 'authenticated',
+        phone: e164Phone,
+        app_metadata: {
+          provider: 'phone',
+          providers: ['phone']
+        }
+      })
+        .setProtectedHeader({ alg, typ: 'JWT' })
+        .setSubject(userId)
+        .setIssuedAt()
+        .setExpirationTime('30d') // Hard expire in 30 days since we don't have refresh tokens
+        .sign(secret);
+
+      return NextResponse.json({
+        success: true,
+        access_token: accessToken,
+        user_id: userId,
+        phone: e164Phone
+      });
+
+    } catch (error) {
+      console.error('Exchange error:', error);
+      return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+    }
+  });
 }

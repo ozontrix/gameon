@@ -63,7 +63,7 @@ paths:
   /user/bookings:
     post:
       summary: Create a Booking
-      description: Locks a time slot temporarily (10 mins) with a PENDING status prior to payment.
+      description: Locks a time slot temporarily (10 mins) with a PENDING status prior to payment. The price is computed by the server from the court's hourly rate.
       tags:
         - User Booking Flow
       requestBody:
@@ -73,16 +73,11 @@ paths:
             schema:
               type: object
               required:
-                - userId
                 - facilityId
                 - date
                 - startTime
                 - endTime
-                - amount
               properties:
-                userId:
-                  type: string
-                  format: uuid
                 facilityId:
                   type: string
                   format: uuid
@@ -96,9 +91,15 @@ paths:
                 endTime:
                   type: string
                   example: "07:00:00"
-                amount:
-                  type: number
-                  example: 500.00
+                players:
+                  type: integer
+                  example: 4
+                contactName:
+                  type: string
+                contactPhone:
+                  type: string
+                notes:
+                  type: string
       responses:
         '201':
           description: Slot locked successfully.

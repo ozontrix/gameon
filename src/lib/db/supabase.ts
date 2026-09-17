@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl) {
   console.warn('Missing NEXT_PUBLIC_SUPABASE_URL environment variable.');
@@ -12,7 +12,9 @@ if (!supabaseUrl) {
 // since our API layer (Services) handles authorization logic.
 // NEVER expose this client to the frontend/browser.
 function createSupabaseAdmin() {
-  if (!supabaseUrl) {
+  // The API authorises requests itself and relies on bypassing RLS, so a
+  // publishable key is never an acceptable stand-in for the service role key.
+  if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error(
       'Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
     );

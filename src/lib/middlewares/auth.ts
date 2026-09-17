@@ -1,39 +1,25 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../db/supabase';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
 
-if (!getApps().length) {
-  try {
-    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (serviceAccountStr) {
-      const serviceAccount = JSON.parse(serviceAccountStr);
-      initializeApp({
-        credential: cert(serviceAccount),
-      });
-    } else {
-      console.warn('FIREBASE_SERVICE_ACCOUNT not found. Firebase tokens will not be strictly verified.');
-      initializeApp();
-    }
-  } catch (error) {
-    console.error('Firebase Admin Initialization Error', error);
-  }
-}
+export type UserRole = 'USER' | 'ADMIN' | 'STAFF';
+
+const ROLES: readonly UserRole[] = ['USER', 'ADMIN', 'STAFF'];
 
 export interface AuthenticatedUser {
   id: string;
-  role: 'USER' | 'ADMIN' | 'STAFF';
+  role: UserRole;
   provider: 'email' | 'phone';
 }
 
 export async function withAuth(
   request: Request,
-  allowedRoles: ('USER' | 'ADMIN' | 'STAFF')[],
+  allowedRoles: UserRole[],
   handler: (request: Request, user: AuthenticatedUser) => Promise<NextResponse>
 ) {
   console.log(`[API CALL] ${request.method} ${new URL(request.url).pathname}`);
 
   const authHeader = request.headers.get('authorization');
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return NextResponse.json({ success: false, error: 'Unauthorized: Missing token' }, { status: 401 });
   }
@@ -43,20 +29,16 @@ export async function withAuth(
   try {
     // ONLY Accept Supabase JWTs. We strictly verify them against our environment keys.
     const { data: { user: sbUser }, error } = await supabaseAdmin.auth.getUser(token);
-    
+
     if (error || !sbUser) {
       throw new Error(error?.message || 'Invalid token');
     }
 
-    const { data: dbUser } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', sbUser.id)
-      .single();
-
+    // Roles live in app_metadata, which only the service role can write.
+    const role = sbUser.app_metadata?.role;
     const user: AuthenticatedUser = {
       id: sbUser.id,
-      role: (dbUser?.role as 'USER' | 'ADMIN' | 'STAFF') || 'USER',
+      role: ROLES.includes(role) ? role : 'USER',
       provider: sbUser.app_metadata?.provider === 'phone' ? 'phone' : 'email',
     };
 

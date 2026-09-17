@@ -30,7 +30,8 @@ export async function GET(request: Request) {
       const { facilityId: validFacilityId, date: validDate } = validationResult.data;
 
       // 2. Call our Business Logic Service
-      const availableSlots = await SlotService.getAvailableSlots(validFacilityId, validDate);
+      // Every slot of the day, each flagged `available`, so the app can grey out taken ones
+      const slots = await SlotService.getSlots(validFacilityId, validDate);
 
       // 3. Return the response to the mobile app
       return NextResponse.json({
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
         data: {
           facilityId: validFacilityId,
           date: validDate,
-          slots: availableSlots,
+          slots,
         },
       });
       
