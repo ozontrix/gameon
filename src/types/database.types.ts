@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      amenities: {
+        Row: {
+          created_at: string
+          icon_family: string
+          icon_name: string
+          id: string
+          label: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          icon_family: string
+          icon_name: string
+          id?: string
+          label: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          icon_family?: string
+          icon_name?: string
+          id?: string
+          label?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           amount_paid: number | null
@@ -155,50 +185,230 @@ export type Database = {
           },
         ]
       }
-      facilities: {
+      court_type_amenities: {
         Row: {
-          created_at: string | null
-          has_ac: boolean
-          id: string
-          is_active: boolean | null
-          is_indoor: boolean
-          name: string
-          price_per_hour: number
-          sport_id: string | null
-          surface_type: string
-          venue_id: string | null
+          amenity_id: string
+          court_type_id: string
         }
         Insert: {
-          created_at?: string | null
-          has_ac: boolean
-          id?: string
-          is_active?: boolean | null
-          is_indoor: boolean
-          name: string
-          price_per_hour: number
-          sport_id?: string | null
-          surface_type: string
-          venue_id?: string | null
+          amenity_id: string
+          court_type_id: string
         }
         Update: {
-          created_at?: string | null
-          has_ac?: boolean
-          id?: string
-          is_active?: boolean | null
-          is_indoor?: boolean
-          name?: string
-          price_per_hour?: number
-          sport_id?: string | null
-          surface_type?: string
-          venue_id?: string | null
+          amenity_id?: string
+          court_type_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "facilities_sport_id_fkey"
+            foreignKeyName: "court_type_amenities_amenity_id_fkey"
+            columns: ["amenity_id"]
+            isOneToOne: false
+            referencedRelation: "amenities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_type_amenities_court_type_id_fkey"
+            columns: ["court_type_id"]
+            isOneToOne: false
+            referencedRelation: "court_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_type_images: {
+        Row: {
+          court_type_id: string
+          created_at: string
+          id: string
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          court_type_id: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          court_type_id?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_type_images_court_type_id_fkey"
+            columns: ["court_type_id"]
+            isOneToOne: false
+            referencedRelation: "court_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_type_rules: {
+        Row: {
+          court_type_id: string
+          created_at: string
+          id: string
+          rule: string
+          sort_order: number
+        }
+        Insert: {
+          court_type_id: string
+          created_at?: string
+          id?: string
+          rule: string
+          sort_order?: number
+        }
+        Update: {
+          court_type_id?: string
+          created_at?: string
+          id?: string
+          rule?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_type_rules_court_type_id_fkey"
+            columns: ["court_type_id"]
+            isOneToOne: false
+            referencedRelation: "court_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_type_slot_options: {
+        Row: {
+          court_type_id: string
+          created_at: string
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          price: number
+        }
+        Insert: {
+          court_type_id: string
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          is_active?: boolean
+          price: number
+        }
+        Update: {
+          court_type_id?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_type_slot_options_court_type_id_fkey"
+            columns: ["court_type_id"]
+            isOneToOne: false
+            referencedRelation: "court_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          has_ac: boolean
+          id: string
+          is_active: boolean
+          is_indoor: boolean
+          name: string
+          slug: string
+          sort_order: number
+          sport_id: string
+          surface_type: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          has_ac: boolean
+          id?: string
+          is_active?: boolean
+          is_indoor: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          sport_id: string
+          surface_type: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          has_ac?: boolean
+          id?: string
+          is_active?: boolean
+          is_indoor?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          sport_id?: string
+          surface_type?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_types_sport_id_fkey"
             columns: ["sport_id"]
             isOneToOne: false
             referencedRelation: "sports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_types_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facilities: {
+        Row: {
+          court_type_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          venue_id: string
+        }
+        Insert: {
+          court_type_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          venue_id: string
+        }
+        Update: {
+          court_type_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilities_court_type_venue_fk"
+            columns: ["court_type_id", "venue_id"]
+            isOneToOne: false
+            referencedRelation: "court_types"
+            referencedColumns: ["id", "venue_id"]
           },
           {
             foreignKeyName: "facilities_venue_id_fkey"
@@ -405,7 +615,6 @@ export type Database = {
           day_of_week: number
           id: string
           open_time: string
-          slot_duration_minutes: number | null
           venue_id: string | null
         }
         Insert: {
@@ -414,7 +623,6 @@ export type Database = {
           day_of_week: number
           id?: string
           open_time: string
-          slot_duration_minutes?: number | null
           venue_id?: string | null
         }
         Update: {
@@ -423,7 +631,6 @@ export type Database = {
           day_of_week?: number
           id?: string
           open_time?: string
-          slot_duration_minutes?: number | null
           venue_id?: string | null
         }
         Relationships: [

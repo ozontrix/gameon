@@ -10,8 +10,6 @@ export type CounterPaymentMethod = (typeof COUNTER_PAYMENT_METHODS)[number];
 
 export const SURFACE_TYPES = ['synthetic', 'wooden', 'turf', 'acrylic', 'concrete', 'clay'] as const;
 
-export const SLOT_DURATIONS = [30, 45, 60, 90, 120] as const;
-
 export const TIMEZONES = [
   'Asia/Kolkata',
   'Asia/Dubai',

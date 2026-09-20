@@ -3,14 +3,13 @@ import { z } from 'zod';
 import { AdminService } from '@/lib/services/admin.service';
 import { withAuth, AuthenticatedUser } from '@/lib/middlewares/auth';
 
+/**
+ * A court is just a named unit of its type now: surface, AC, setting and
+ * price all belong to the court type it points at.
+ */
 const createFacilitySchema = z.object({
-  venue_id: z.string().uuid("Invalid Venue ID"),
-  sport_id: z.string().uuid("Invalid Sport ID"),
-  name: z.string().min(1, "Name is required"),
-  is_indoor: z.boolean().default(true),
-  has_ac: z.boolean().default(false),
-  surface_type: z.string().min(1, "Surface type is required"),
-  price_per_hour: z.number().positive(),
+  court_type_id: z.string().uuid('Invalid Court Type ID'),
+  name: z.string().min(1, 'Name is required'),
   is_active: z.boolean().default(true),
 });
 

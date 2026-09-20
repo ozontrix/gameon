@@ -16,6 +16,11 @@ export type Slot = {
 
 export type SlotOptions = {
   /**
+   * The slot length to lay the day out in. It must be one of the court type's
+   * active slot options; any other length gets no slots at all.
+   */
+  durationMinutes: number;
+  /**
    * Front desk only: a slot that has started but not yet ended can still be
    * booked for a walk-in. The app always needs the slot to be in the future.
    */
@@ -27,11 +32,11 @@ export class SlotService {
    * Every slot a facility has on a date, each flagged with whether it can still
    * be booked. An empty list means the facility is not open that day.
    */
-  static async getSlots(facilityId: string, targetDate: string, options: SlotOptions = {}): Promise<Slot[]> {
+  static async getSlots(facilityId: string, targetDate: string, options: SlotOptions): Promise<Slot[]> {
     // 1. Get facility and venue details
     const { data: facility, error: facError } = await supabaseAdmin
       .from('facilities')
-      .select('venue_id, is_active, venues ( timezone, is_active )')
+      .select('venue_id, court_type_id, is_active, venues ( timezone, is_active )')
       .eq('id', facilityId)
       .single();
 
@@ -43,10 +48,20 @@ export class SlotService {
     if (!venueId || facility.venues?.is_active === false) return [];
     const timeZone = facility.venues?.timezone || DEFAULT_TIMEZONE;
 
+    // Only a length this court's type actually sells lays out a day.
+    const { data: slotOption } = await supabaseAdmin
+      .from('court_type_slot_options')
+      .select('id')
+      .eq('court_type_id', facility.court_type_id)
+      .eq('duration_minutes', options.durationMinutes)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!slotOption) return [];
+
     // 2. Fetch Operating Hours for this day of the week (0 = Sunday)
     const { data: opHours, error: opError } = await supabaseAdmin
       .from('operating_hours')
-      .select('open_time, close_time, slot_duration_minutes')
+      .select('open_time, close_time')
       .eq('venue_id', venueId)
       .eq('day_of_week', dayOfWeek(targetDate))
       .maybeSingle();
@@ -54,12 +69,8 @@ export class SlotService {
     // If venue is closed on this day of week, return empty
     if (opError || !opHours) return [];
 
-    // 3. Generate all raw possible slots for the day
-    const possibleSlots = generateTimeSlots(
-      opHours.open_time,
-      opHours.close_time,
-      opHours.slot_duration_minutes ?? 60
-    );
+    // 3. Back-to-back slots of the chosen length, from opening time
+    const possibleSlots = generateTimeSlots(opHours.open_time, opHours.close_time, options.durationMinutes);
 
     // 4. Fetch Holidays / Closures for this date
     // We check if the WHOLE venue is closed (facility_id IS NULL) OR this specific court is closed

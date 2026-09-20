@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     b.end_time.slice(0, 5),
     b.facilities.venues?.name,
     b.facilities.name,
-    b.facilities.sports?.name,
+    b.facilities.court_types?.sports?.name,
     b.contact_name,
     b.contact_phone,
     b.players,

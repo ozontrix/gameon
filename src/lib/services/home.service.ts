@@ -22,50 +22,73 @@ export type HomeSport = {
   imageUrl: string | null;
 };
 
+/**
+ * A bookable court, flattened with the type it belongs to. The type carries
+ * the price and the attributes; the court is the individual unit.
+ */
 type CourtRow = {
   id: string;
   name: string;
-  price_per_hour: number;
-  is_indoor: boolean;
-  has_ac: boolean;
-  surface_type: string;
-  sport_id: string | null;
+  court_types: {
+    court_type_slot_options: { price: number; is_active: boolean }[];
+    is_indoor: boolean;
+    has_ac: boolean;
+    surface_type: string;
+    sport_id: string;
+    sports: { id: string; name: string; is_active: boolean | null; image_url: string | null } | null;
+  };
   venues: { name: string; is_active: boolean | null } | null;
-  sports: { id: string; name: string; is_active: boolean | null; image_url: string | null } | null;
 };
 
-/** Every court the app can book: active, at an active venue, with an active sport. */
+/** Every court the app can book: active, of an active type, at an active venue, with an active sport. */
 async function bookableCourts(): Promise<CourtRow[]> {
   const { data, error } = await supabaseAdmin
     .from('facilities')
     .select(
-      'id, name, price_per_hour, is_indoor, has_ac, surface_type, sport_id, venues!inner ( name, is_active ), sports!inner ( id, name, is_active, image_url )'
+      `id, name,
+       venues!inner ( name, is_active ),
+       court_types!inner (
+         is_indoor, has_ac, surface_type, sport_id, is_active,
+         court_type_slot_options ( price, is_active ),
+         sports!inner ( id, name, is_active, image_url )
+       )`
     )
     .eq('is_active', true)
     .eq('venues.is_active', true)
-    .eq('sports.is_active', true)
+    .eq('court_types.is_active', true)
+    .eq('court_types.sports.is_active', true)
     .order('name');
   if (error) throw error;
-  return data as CourtRow[];
+  // A court whose type sells no slot length can't be booked, so it isn't listed.
+  return (data as unknown as CourtRow[]).filter((court) => cheapestSlot(court) !== null);
 }
 
-/** Courts grouped per sport, with the cheapest hourly rate. */
+/** The cheapest active slot option on the court's type, or null when it sells none. */
+function cheapestSlot(court: CourtRow): number | null {
+  const prices = court.court_types.court_type_slot_options
+    .filter((option) => option.is_active)
+    .map((option) => Number(option.price));
+  return prices.length ? Math.min(...prices) : null;
+}
+
+/** Courts grouped per sport, with the cheapest slot price across its types. */
 function summariseSports(courts: CourtRow[], bookingsBySport: Map<string, number>): HomeSport[] {
   const bySport = new Map<string, HomeSport>();
   for (const court of courts) {
-    if (!court.sports) continue;
-    const entry = bySport.get(court.sports.id) ?? {
-      id: court.sports.id,
-      key: sportKeyFor(court.sports.name),
-      name: court.sports.name,
+    const sport = court.court_types.sports;
+    if (!sport) continue;
+    const entry = bySport.get(sport.id) ?? {
+      id: sport.id,
+      key: sportKeyFor(sport.name),
+      name: sport.name,
       courtCount: 0,
       priceFrom: Number.POSITIVE_INFINITY,
-      bookingsLast30Days: bookingsBySport.get(court.sports.id) ?? 0,
-      imageUrl: court.sports.image_url,
+      bookingsLast30Days: bookingsBySport.get(sport.id) ?? 0,
+      imageUrl: sport.image_url,
     };
     entry.courtCount += 1;
-    entry.priceFrom = Math.min(entry.priceFrom, Number(court.price_per_hour));
-    bySport.set(court.sports.id, entry);
+    entry.priceFrom = Math.min(entry.priceFrom, cheapestSlot(court) ?? Number.POSITIVE_INFINITY);
+    bySport.set(sport.id, entry);
   }
   return [...bySport.values()];
 }
@@ -86,7 +109,7 @@ export class HomeService {
         .order('created_at'),
       supabaseAdmin
         .from('bookings')
-        .select('facilities!inner ( sport_id )')
+        .select('facilities!inner ( court_types!inner ( sport_id ) )')
         .eq('status', 'CONFIRMED')
         .gte('booking_date', addDays(today, -30))
         .lte('booking_date', today),
@@ -97,7 +120,7 @@ export class HomeService {
 
     const bookingsBySport = new Map<string, number>();
     for (const row of recentBookings.data) {
-      const sportId = row.facilities.sport_id;
+      const sportId = row.facilities.court_types.sport_id;
       if (sportId) bookingsBySport.set(sportId, (bookingsBySport.get(sportId) ?? 0) + 1);
     }
 
@@ -150,21 +173,26 @@ export class HomeService {
     // A few words describe the court rather than name it; they are matched on
     // those attributes only, so "ac" does not also match "Practice".
     const keywords: Record<string, (court: CourtRow) => boolean> = {
-      indoor: (court) => court.is_indoor,
-      outdoor: (court) => !court.is_indoor,
-      ac: (court) => court.has_ac,
-      'air-conditioned': (court) => court.has_ac,
+      indoor: (court) => court.court_types.is_indoor,
+      outdoor: (court) => !court.court_types.is_indoor,
+      ac: (court) => court.court_types.has_ac,
+      'air-conditioned': (court) => court.court_types.has_ac,
     };
     const keyword: ((court: CourtRow) => boolean) | undefined = Object.hasOwn(keywords, needle) ? keywords[needle] : undefined;
 
     const matchedCourts = keyword
       ? courts.filter(keyword)
-      : courts.filter((court) => matches(court.name) || matches(court.sports?.name) || matches(court.surface_type));
+      : courts.filter(
+          (court) =>
+            matches(court.name) ||
+            matches(court.court_types.sports?.name) ||
+            matches(court.court_types.surface_type)
+        );
 
     const sports = keyword
       ? []
       : summariseSports(
-          courts.filter((court) => matches(court.sports?.name)),
+          courts.filter((court) => matches(court.court_types.sports?.name)),
           new Map()
         ).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -180,12 +208,12 @@ export class HomeService {
       courts: matchedCourts.slice(0, 30).map((court) => ({
         id: court.id,
         name: court.name,
-        sportName: court.sports?.name ?? null,
-        sportKey: sportKeyFor(court.sports?.name),
-        pricePerHour: Number(court.price_per_hour),
-        isIndoor: court.is_indoor,
-        hasAc: court.has_ac,
-        surface: court.surface_type,
+        sportName: court.court_types.sports?.name ?? null,
+        sportKey: sportKeyFor(court.court_types.sports?.name),
+        priceFrom: cheapestSlot(court) ?? 0,
+        isIndoor: court.court_types.is_indoor,
+        hasAc: court.court_types.has_ac,
+        surface: court.court_types.surface_type,
         venueName: court.venues?.name ?? null,
       })),
     };

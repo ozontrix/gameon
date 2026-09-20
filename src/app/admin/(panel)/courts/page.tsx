@@ -4,12 +4,12 @@ import Link from 'next/link';
 
 import { ActiveBadge } from '@/components/admin/status';
 import { Card, EmptyState, LinkButton, PageHeader, Table, Td, Th, buttonClass, inputClass } from '@/components/admin/ui';
-import { formatMoney, titleCase } from '@/lib/admin/format';
+import { titleCase } from '@/lib/admin/format';
 import { listCatalogOptions, listCourts } from '@/lib/admin/queries/catalog';
 import { requireAdmin } from '@/lib/admin/session';
 import { cn } from '@/lib/utils';
 
-export const metadata: Metadata = { title: 'Courts & pricing' };
+export const metadata: Metadata = { title: 'Courts' };
 
 export default async function CourtsPage({
   searchParams,
@@ -23,8 +23,8 @@ export default async function CourtsPage({
   return (
     <>
       <PageHeader
-        title="Courts & pricing"
-        description="Bookable courts, nets and turfs with their hourly price."
+        title="Courts"
+        description="The individual bookable courts, nets and turfs. Surface, climate, slot lengths and prices belong to their court type."
         actions={
           <LinkButton href="/admin/courts/new">
             <Plus className="size-4" aria-hidden /> Add court
@@ -65,8 +65,7 @@ export default async function CourtsPage({
               <tr>
                 <Th>Court</Th>
                 <Th>Venue</Th>
-                <Th>Type</Th>
-                <Th className="text-right">Per hour</Th>
+                <Th>Court type</Th>
                 <Th>Status</Th>
               </tr>
             </thead>
@@ -77,13 +76,21 @@ export default async function CourtsPage({
                     <Link href={`/admin/courts/${court.id}`} className="font-medium text-zinc-950 hover:underline">
                       {court.name}
                     </Link>
-                    <div className="text-xs text-zinc-500">{court.sports?.name}</div>
+                    <div className="text-xs text-zinc-500">{court.court_types.sports?.name}</div>
                   </Td>
                   <Td>{court.venues?.name ?? '—'}</Td>
                   <Td className="text-xs">
-                    {[titleCase(court.surface_type), court.is_indoor ? 'Indoor' : 'Outdoor', court.has_ac ? 'AC' : 'Non-AC'].join(' · ')}
+                    <Link href={`/admin/court-types/${court.court_type_id}`} className="text-zinc-900 hover:underline">
+                      {court.court_types.name}
+                    </Link>
+                    <div className="text-zinc-500">
+                      {[
+                        titleCase(court.court_types.surface_type),
+                        court.court_types.is_indoor ? 'Indoor' : 'Outdoor',
+                        court.court_types.has_ac ? 'AC' : 'Non-AC',
+                      ].join(' · ')}
+                    </div>
                   </Td>
-                  <Td className="text-right tabular-nums">{formatMoney(court.price_per_hour)}</Td>
                   <Td>
                     <ActiveBadge active={court.is_active} />
                   </Td>

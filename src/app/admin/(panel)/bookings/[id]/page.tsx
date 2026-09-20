@@ -102,10 +102,10 @@ export default async function BookingDetailPage({
                   {
                     label: 'Court type',
                     value: facility
-                      ? [titleCase(facility.surface_type), facility.is_indoor ? 'Indoor' : 'Outdoor', facility.has_ac ? 'AC' : 'Non-AC'].join(' · ')
+                      ? [titleCase(facility.court_types.surface_type), facility.court_types.is_indoor ? 'Indoor' : 'Outdoor', facility.court_types.has_ac ? 'AC' : 'Non-AC'].join(' · ')
                       : '—',
                   },
-                  { label: 'Sport', value: facility?.sports?.name ?? '—' },
+                  { label: 'Sport', value: facility?.court_types?.sports?.name ?? '—' },
                   { label: 'Venue', value: venue ? `${venue.name}${venue.address ? `, ${venue.address}` : ''}` : '—' },
                   { label: 'Players', value: booking.players ?? '—' },
                   { label: 'Notes', value: booking.notes || '—' },

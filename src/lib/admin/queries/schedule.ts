@@ -9,6 +9,9 @@ import {
   wallClockIn,
 } from '@/lib/utils/date-helpers';
 
+/** Width of one schedule column. */
+const SCHEDULE_COLUMN_MINUTES = 30;
+
 export type ScheduleCell =
   | { state: 'free'; start: string; end: string }
   | { state: 'past'; start: string; end: string }
@@ -36,13 +39,13 @@ export async function getSchedule(requestedVenueId: string | undefined, date: st
   const [{ data: courts }, { data: hours }, { data: closures }] = await Promise.all([
     supabaseAdmin
       .from('facilities')
-      .select('id, name, price_per_hour, sports ( name )')
+      .select('id, name, court_types!inner ( sports ( name ) )')
       .eq('venue_id', venue.id)
       .eq('is_active', true)
       .order('name'),
     supabaseAdmin
       .from('operating_hours')
-      .select('open_time, close_time, slot_duration_minutes')
+      .select('open_time, close_time')
       .eq('venue_id', venue.id)
       .eq('day_of_week', dayOfWeek(date))
       .maybeSingle(),
@@ -53,10 +56,16 @@ export async function getSchedule(requestedVenueId: string | undefined, date: st
       .eq('date', date),
   ]);
 
-  const courtList = (courts ?? []).sort(
-    (a, b) => (a.sports?.name ?? '').localeCompare(b.sports?.name ?? '') || a.name.localeCompare(b.name)
-  );
-  const slots = hours ? generateTimeSlots(hours.open_time, hours.close_time, hours.slot_duration_minutes ?? 60) : [];
+  const courtList = (courts ?? [])
+    .map((court) => ({
+      id: court.id,
+      name: court.name,
+      sportName: court.court_types.sports?.name ?? null,
+    }))
+    .sort((a, b) => (a.sportName ?? '').localeCompare(b.sportName ?? '') || a.name.localeCompare(b.name));
+  // Fixed columns: slot lengths differ per court type, so a booking of any
+  // length shows in every column it overlaps.
+  const slots = hours ? generateTimeSlots(hours.open_time, hours.close_time, SCHEDULE_COLUMN_MINUTES) : [];
 
   const { data: bookings } = courtList.length
     ? await supabaseAdmin

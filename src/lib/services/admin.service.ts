@@ -50,10 +50,23 @@ export class AdminService {
 
   // --- Facilities ---
 
-  static async createFacility(facilityData: FacilityInsert) {
+  /**
+   * A court's venue is its type's venue — the composite foreign key rejects
+   * any other pairing — so it is derived here rather than accepted as input.
+   */
+  static async createFacility(facilityData: Omit<FacilityInsert, 'venue_id'>) {
+    const { data: courtType, error: typeError } = await supabaseAdmin
+      .from('court_types')
+      .select('venue_id')
+      .eq('id', facilityData.court_type_id)
+      .maybeSingle();
+
+    if (typeError) throw new Error(`Failed to create facility: ${typeError.message}`);
+    if (!courtType) throw new Error('Failed to create facility: court type not found');
+
     const { data, error } = await supabaseAdmin
       .from('facilities')
-      .insert(facilityData)
+      .insert({ ...facilityData, venue_id: courtType.venue_id })
       .select()
       .single();
 

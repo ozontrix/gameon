@@ -5,7 +5,6 @@ import { formatDate, formatMoney, todayIn } from '@/lib/admin/format';
 import { requireStaff } from '@/lib/admin/session';
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { SlotService } from '@/lib/services/slot.service';
-import { minutesBetween } from '@/lib/utils/date-helpers';
 import { NewBookingForm } from './new-booking-form';
 
 export const metadata: Metadata = { title: 'New booking' };
@@ -15,14 +14,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function NewBookingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ facility?: string; date?: string; start?: string }>;
+  searchParams: Promise<{ facility?: string; date?: string; start?: string; duration?: string }>;
 }) {
   await requireStaff();
   const params = await searchParams;
 
   const { data: courts } = await supabaseAdmin
     .from('facilities')
-    .select('id, name, price_per_hour, venues!inner ( id, name, is_active, timezone ), sports ( name )')
+    .select('id, name, venues!inner ( id, name, is_active, timezone ), court_types!inner ( sports ( name ), court_type_slot_options ( duration_minutes, price, is_active ) )')
     .eq('is_active', true)
     .order('name');
 
@@ -39,8 +38,17 @@ export default async function NewBookingPage({
     byVenue.set(entry.venues.id, group);
   }
 
-  const slots = court ? await SlotService.getSlots(court.id, date, { allowStarted: true }) : [];
-  const rate = Number(court?.price_per_hour ?? 0);
+  // The slot lengths this court's type sells; the chosen one lays out the day and sets the price.
+  const lengths = (court?.court_types.court_type_slot_options ?? [])
+    .filter((option) => option.is_active)
+    .sort((a, b) => a.duration_minutes - b.duration_minutes);
+  const option = lengths.find((entry) => String(entry.duration_minutes) === params.duration) ?? lengths[0];
+  const price = Number(option?.price ?? 0);
+
+  const slots =
+    court && option
+      ? await SlotService.getSlots(court.id, date, { durationMinutes: option.duration_minutes, allowStarted: true })
+      : [];
 
   return (
     <>
@@ -68,7 +76,7 @@ export default async function NewBookingPage({
                       {group.courts.map((entry) => (
                         <option key={entry.id} value={entry.id}>
                           {entry.name}
-                          {entry.sports?.name ? ` · ${entry.sports.name}` : ''}
+                          {entry.court_types?.sports?.name ? ` · ${entry.court_types.sports.name}` : ''}
                         </option>
                       ))}
                     </optgroup>
@@ -81,6 +89,20 @@ export default async function NewBookingPage({
                 </label>
                 <input id="date" name="date" type="date" defaultValue={date} className={inputClass} required />
               </div>
+              {lengths.length > 1 ? (
+                <div className="space-y-1.5">
+                  <label htmlFor="duration" className="block text-sm font-medium text-zinc-800">
+                    Slot length
+                  </label>
+                  <select id="duration" name="duration" defaultValue={option?.duration_minutes} className={inputClass}>
+                    {lengths.map((entry) => (
+                      <option key={entry.duration_minutes} value={entry.duration_minutes}>
+                        {entry.duration_minutes} min · {formatMoney(entry.price)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
               <button type="submit" className={buttonClass('secondary', 'md', 'w-full')}>
                 Show slots
               </button>
@@ -91,10 +113,18 @@ export default async function NewBookingPage({
         <Card className="lg:col-span-2">
           <CardHeader
             title="2. Slot, customer & payment"
-            description={court ? `${court.name} · ${formatDate(date)} · ${formatMoney(rate)} per hour` : undefined}
+            description={
+              court && option
+                ? `${court.name} · ${formatDate(date)} · ${option.duration_minutes} min for ${formatMoney(price)}`
+                : undefined
+            }
           />
           {!court ? (
             <EmptyState title="Choose a court and date" description="Available slots appear here." />
+          ) : !option ? (
+            <CardBody>
+              <Notice tone="warning">This court&apos;s type has no slot lengths on sale. Add one under Court types &amp; pricing.</Notice>
+            </CardBody>
           ) : slots.length === 0 ? (
             <CardBody>
               <Notice tone="warning">This court is not open on {formatDate(date)} (closed day or holiday).</Notice>
@@ -108,10 +138,7 @@ export default async function NewBookingPage({
               facilityId={court.id}
               date={date}
               initialSlot={params.start}
-              slots={slots.map((slot) => ({
-                ...slot,
-                price: Math.round(rate * (minutesBetween(slot.start_time, slot.end_time) / 60) * 100) / 100,
-              }))}
+              slots={slots.map((slot) => ({ ...slot, price }))}
             />
           )}
         </Card>

@@ -7,6 +7,8 @@ import { withRateLimit } from '@/lib/middlewares/rate-limiter';
 const querySchema = z.object({
   facilityId: z.string().uuid("Invalid Facility ID format"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  // One of the court type's slot lengths, in minutes. The day is laid out in it.
+  duration: z.coerce.number().int().min(5).max(720),
 });
 
 export async function GET(request: Request) {
@@ -17,8 +19,9 @@ export async function GET(request: Request) {
       const { searchParams } = new URL(req.url);
       const facilityId = searchParams.get('facilityId');
       const date = searchParams.get('date');
+      const duration = searchParams.get('duration');
 
-      const validationResult = querySchema.safeParse({ facilityId, date });
+      const validationResult = querySchema.safeParse({ facilityId, date, duration });
 
       if (!validationResult.success) {
         return NextResponse.json(
@@ -27,11 +30,11 @@ export async function GET(request: Request) {
         );
       }
 
-      const { facilityId: validFacilityId, date: validDate } = validationResult.data;
+      const { facilityId: validFacilityId, date: validDate, duration: durationMinutes } = validationResult.data;
 
       // 2. Call our Business Logic Service
       // Every slot of the day, each flagged `available`, so the app can grey out taken ones
-      const slots = await SlotService.getSlots(validFacilityId, validDate);
+      const slots = await SlotService.getSlots(validFacilityId, validDate, { durationMinutes });
 
       // 3. Return the response to the mobile app
       return NextResponse.json({
@@ -39,6 +42,7 @@ export async function GET(request: Request) {
         data: {
           facilityId: validFacilityId,
           date: validDate,
+          durationMinutes,
           slots,
         },
       });

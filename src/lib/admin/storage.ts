@@ -40,7 +40,7 @@ export async function readImageField(
 }
 
 /** Stores an image in the public media bucket and returns its public URL. */
-export async function uploadImage(image: { bytes: Uint8Array; type: string }, folder: 'banners' | 'sports'): Promise<string> {
+export async function uploadImage(image: { bytes: Uint8Array; type: string }, folder: 'banners' | 'sports' | 'court-types'): Promise<string> {
   const path = `${folder}/${randomUUID()}.${EXTENSIONS[image.type]}`;
   const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, image.bytes, {
     contentType: image.type,

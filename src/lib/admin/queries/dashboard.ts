@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
-import { DEFAULT_TIMEZONE, dayOfWeek, generateTimeSlots, wallClockIn } from '@/lib/utils/date-helpers';
+import { DEFAULT_TIMEZONE, dayOfWeek, minutesBetween, wallClockIn } from '@/lib/utils/date-helpers';
 import { addDays } from '../format';
 
 export async function getDashboard() {
@@ -48,7 +48,7 @@ export async function getDashboard() {
       .eq('venues.is_active', true),
     supabaseAdmin
       .from('operating_hours')
-      .select('venue_id, open_time, close_time, slot_duration_minutes')
+      .select('venue_id, open_time, close_time')
       .eq('day_of_week', dayOfWeek(today)),
     supabaseAdmin
       .from('holidays_and_closures')
@@ -56,19 +56,22 @@ export async function getDashboard() {
       .eq('date', today),
   ]);
 
-  // Occupancy: confirmed bookings against every slot the open courts offer today.
-  // Courts closed for the whole day offer nothing; partial closures are ignored.
-  const slotsPerVenue = new Map(
-    (hours.data ?? []).map((h) => [h.venue_id, generateTimeSlots(h.open_time, h.close_time, h.slot_duration_minutes ?? 60).length])
+  // Occupancy: booked court time against every open court's opening hours today.
+  // Measured in minutes because slot lengths differ per court type. Courts
+  // closed for the whole day offer nothing; partial closures are ignored.
+  const openMinutesPerVenue = new Map(
+    (hours.data ?? []).map((h) => [h.venue_id, minutesBetween(h.open_time, h.close_time)])
   );
   const fullDay = (closures.data ?? []).filter((c) => !c.start_time || !c.end_time);
   const openCourts = (courts.data ?? []).filter(
     (court) => !fullDay.some((c) => c.venue_id === court.venue_id && (!c.facility_id || c.facility_id === court.id))
   );
-  const totalSlots = openCourts.reduce((sum, court) => sum + (slotsPerVenue.get(court.venue_id ?? '') ?? 0), 0);
+  const openMinutes = openCourts.reduce((sum, court) => sum + (openMinutesPerVenue.get(court.venue_id) ?? 0), 0);
   const openIds = new Set(openCourts.map((court) => court.id));
   const todaysBookings = todays.data ?? [];
-  const bookedSlots = todaysBookings.filter((b) => b.facility_id && openIds.has(b.facility_id)).length;
+  const bookedMinutes = todaysBookings
+    .filter((b) => b.facility_id && openIds.has(b.facility_id))
+    .reduce((sum, b) => sum + minutesBetween(b.start_time, b.end_time), 0);
 
   const revenueByDay = new Map<string, number>();
   for (const row of revenue.data ?? []) {
@@ -82,7 +85,7 @@ export async function getDashboard() {
     nowTime: now.time,
     todaysBookings,
     checkedIn: todaysBookings.filter((b) => b.is_scanned).length,
-    occupancy: { booked: bookedSlots, total: totalSlots },
+    occupancy: { bookedMinutes, openMinutes },
     revenueToday: revenueByDay.get(today) ?? 0,
     revenueLast7: sumFrom(addDays(today, -6)),
     revenueMonth: sumFrom(monthStart),

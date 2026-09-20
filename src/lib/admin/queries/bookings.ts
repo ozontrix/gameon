@@ -59,7 +59,7 @@ const LIST_SELECT = `
   id, booking_date, start_time, end_time, status, payment_status, payment_method, source,
   amount_paid, contact_name, contact_phone, players, notes, is_scanned, scanned_at, created_at, paid_at,
   user_id, razorpay_order_id, razorpay_payment_id, cancel_reason, refund_reference,
-  facilities!inner ( id, name, venue_id, venues ( name ), sports ( name ) )
+  facilities!inner ( id, name, venue_id, venues ( name ), court_types!inner ( sport_id, sports ( name ) ) )
 ` as const;
 
 function bookingsQuery(filters: BookingFilters) {
@@ -117,8 +117,9 @@ export async function getBooking(id: string) {
   const { data: booking, error } = await supabaseAdmin
     .from('bookings')
     .select(
-      `*, facilities ( id, name, surface_type, is_indoor, has_ac, price_per_hour,
-        venues ( id, name, address, timezone ), sports ( name ) )`
+      `*, facilities ( id, name,
+        venues ( id, name, address, timezone ),
+        court_types ( name, surface_type, is_indoor, has_ac, sports ( name ) ) )`
     )
     .eq('id', id)
     .maybeSingle();

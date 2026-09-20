@@ -170,7 +170,7 @@ export default async function SchedulePage({
                   <tr key={court.id}>
                     <th scope="row" className="sticky left-0 z-10 bg-white px-2 text-left align-middle">
                       <div className="font-medium text-zinc-900">{court.name}</div>
-                      <div className="text-xs font-normal text-zinc-500">{court.sports?.name}</div>
+                      <div className="text-xs font-normal text-zinc-500">{court.sportName}</div>
                     </th>
                     {cells.map((cell) => (
                       <td key={cell.start} className="p-0">

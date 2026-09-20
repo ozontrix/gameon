@@ -43,7 +43,7 @@ export default async function CourtPage({
       ) : null}
       <Card className="max-w-3xl">
         <CardBody>
-          <CourtForm court={court} venues={options.venues} sports={options.sports} />
+          <CourtForm court={court} courtTypes={options.courtTypes} />
         </CardBody>
       </Card>
     </>

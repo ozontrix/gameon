@@ -1,7 +1,7 @@
 import { ActionForm, FieldError, FormMessage, SubmitButton } from '@/components/admin/action-form';
 import { checkboxClass, inputClass } from '@/components/admin/ui';
-import { saveCourt, saveOperatingHours, saveVenue } from '@/lib/admin/actions/catalog';
-import { SLOT_DURATIONS, SURFACE_TYPES, TIMEZONES, WEEKDAYS } from '@/lib/admin/constants';
+import { saveCourt, saveCourtType, saveOperatingHours, saveVenue } from '@/lib/admin/actions/catalog';
+import { SURFACE_TYPES, TIMEZONES, WEEKDAYS } from '@/lib/admin/constants';
 import { titleCase } from '@/lib/admin/format';
 
 function Label({ htmlFor, children, required }: { htmlFor: string; children: React.ReactNode; required?: boolean }) {
@@ -85,7 +85,7 @@ export function OperatingHoursForm({
   hours,
 }: {
   venueId: string;
-  hours: { day_of_week: number; open_time: string; close_time: string; slot_duration_minutes: number | null }[];
+  hours: { day_of_week: number; open_time: string; close_time: string }[];
 }) {
   return (
     <ActionForm action={saveOperatingHours} className="space-y-4">
@@ -98,7 +98,6 @@ export function OperatingHoursForm({
               <th className="py-2 pr-3 font-medium">Day</th>
               <th className="py-2 pr-3 font-medium">Opens</th>
               <th className="py-2 pr-3 font-medium">Closes</th>
-              <th className="py-2 pr-3 font-medium">Slot length</th>
               <th className="py-2 font-medium">Closed</th>
             </tr>
           </thead>
@@ -129,20 +128,6 @@ export function OperatingHoursForm({
                       aria-label={`${dayName} closing time`}
                     />
                   </td>
-                  <td className="py-2 pr-3">
-                    <select
-                      name={`duration_${day}`}
-                      defaultValue={String(row?.slot_duration_minutes ?? 60)}
-                      className={inputClass}
-                      aria-label={`${dayName} slot length`}
-                    >
-                      {SLOT_DURATIONS.map((minutes) => (
-                        <option key={minutes} value={minutes}>
-                          {minutes} min
-                        </option>
-                      ))}
-                    </select>
-                  </td>
                   <td className="py-2 align-middle">
                     <input
                       type="checkbox"
@@ -160,6 +145,7 @@ export function OperatingHoursForm({
       </div>
       <p className="text-xs text-zinc-500">
         Changes apply to slots offered from now on. Existing bookings keep their times — check the schedule after changing hours.
+        Slot lengths and prices are set on each court type.
       </p>
       <div className="flex justify-end">
         <SubmitButton>Save hours</SubmitButton>
@@ -168,46 +154,69 @@ export function OperatingHoursForm({
   );
 }
 
-/* ─── Court ──────────────────────────────────────────────────────────────── */
+/* ─── Court type (the priced product) ────────────────────────────────────── */
 
-export function CourtForm({
-  court,
+export function CourtTypeForm({
+  courtType,
   venues,
   sports,
   defaultVenueId,
 }: {
-  court?: {
+  courtType?: {
     id: string;
+    slug: string;
     name: string;
-    venue_id: string | null;
-    sport_id: string | null;
+    description: string | null;
+    venue_id: string;
+    sport_id: string;
     surface_type: string;
     is_indoor: boolean;
     has_ac: boolean;
-    price_per_hour: number;
-    is_active: boolean | null;
+    sort_order: number;
+    is_active: boolean;
   };
   venues: { id: string; name: string }[];
   sports: { id: string; name: string; is_active: boolean | null }[];
   defaultVenueId?: string;
 }) {
   return (
-    <ActionForm action={saveCourt} className="space-y-4">
-      {court ? <input type="hidden" name="id" value={court.id} /> : null}
+    <ActionForm action={saveCourtType} className="space-y-4">
+      {courtType ? <input type="hidden" name="id" value={courtType.id} /> : null}
       <FormMessage />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5 sm:col-span-2">
+        <div className="space-y-1.5">
           <Label htmlFor="name" required>
-            Court name
+            Name
           </Label>
-          <input id="name" name="name" defaultValue={court?.name} placeholder="Badminton Court 1" className={inputClass} />
+          <input id="name" name="name" defaultValue={courtType?.name} placeholder="Badminton – Indoor Wooden (AC)" className={inputClass} />
+          <p className="text-xs text-zinc-500">Shown as the card title in the app.</p>
           <FieldError name="name" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="slug" required>
+            Slug
+          </Label>
+          <input id="slug" name="slug" defaultValue={courtType?.slug} placeholder="badminton-wooden-ac" className={inputClass} />
+          <p className="text-xs text-zinc-500">Lowercase, hyphenated, unique within the venue.</p>
+          <FieldError name="slug" />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="description">Description</Label>
+          <textarea
+            id="description"
+            name="description"
+            rows={2}
+            defaultValue={courtType?.description ?? ''}
+            placeholder="Sprung wooden floor, air-conditioned hall."
+            className={inputClass}
+          />
+          <FieldError name="description" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="venue_id" required>
             Venue
           </Label>
-          <select id="venue_id" name="venue_id" defaultValue={court?.venue_id ?? defaultVenueId ?? ''} className={inputClass}>
+          <select id="venue_id" name="venue_id" defaultValue={courtType?.venue_id ?? defaultVenueId ?? ''} className={inputClass}>
             <option value="" disabled>
               Choose a venue
             </option>
@@ -223,7 +232,7 @@ export function CourtForm({
           <Label htmlFor="sport_id" required>
             Sport
           </Label>
-          <select id="sport_id" name="sport_id" defaultValue={court?.sport_id ?? ''} className={inputClass}>
+          <select id="sport_id" name="sport_id" defaultValue={courtType?.sport_id ?? ''} className={inputClass}>
             <option value="" disabled>
               Choose a sport
             </option>
@@ -240,37 +249,102 @@ export function CourtForm({
           <Label htmlFor="surface_type" required>
             Surface
           </Label>
-          <select id="surface_type" name="surface_type" defaultValue={court?.surface_type ?? 'synthetic'} className={inputClass}>
-            {(court && !(SURFACE_TYPES as readonly string[]).includes(court.surface_type) ? [court.surface_type, ...SURFACE_TYPES] : SURFACE_TYPES).map(
-              (surface) => (
-                <option key={surface} value={surface}>
-                  {titleCase(surface)}
-                </option>
-              )
-            )}
+          <select id="surface_type" name="surface_type" defaultValue={courtType?.surface_type ?? 'synthetic'} className={inputClass}>
+            {(courtType && !(SURFACE_TYPES as readonly string[]).includes(courtType.surface_type)
+              ? [courtType.surface_type, ...SURFACE_TYPES]
+              : SURFACE_TYPES
+            ).map((surface) => (
+              <option key={surface} value={surface}>
+                {titleCase(surface)}
+              </option>
+            ))}
           </select>
           <FieldError name="surface_type" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="price_per_hour" required>
-            Price per hour (₹)
-          </Label>
+          <Label htmlFor="sort_order">Sort order</Label>
           <input
-            id="price_per_hour"
-            name="price_per_hour"
+            id="sort_order"
+            name="sort_order"
             type="number"
-            min={1}
+            min={0}
             step="1"
-            defaultValue={court?.price_per_hour}
+            defaultValue={courtType?.sort_order ?? 0}
             className={inputClass}
           />
-          <p className="text-xs text-zinc-500">Slots are charged pro rata, e.g. a 90-minute slot costs 1.5×.</p>
-          <FieldError name="price_per_hour" />
+          <p className="text-xs text-zinc-500">Lower numbers come first in the app.</p>
+          <FieldError name="sort_order" />
         </div>
       </div>
       <div className="flex flex-wrap gap-6">
-        <Checkbox name="is_indoor" label="Indoor" defaultChecked={court?.is_indoor ?? true} />
-        <Checkbox name="has_ac" label="Air-conditioned" defaultChecked={court?.has_ac ?? false} />
+        <Checkbox name="is_indoor" label="Indoor" defaultChecked={courtType?.is_indoor ?? true} />
+        <Checkbox name="has_ac" label="Air-conditioned" defaultChecked={courtType?.has_ac ?? false} />
+        <Checkbox
+          name="is_active"
+          label="Taking bookings"
+          defaultChecked={courtType ? courtType.is_active !== false : true}
+          hint="Untick to hide this type and its courts from the app."
+        />
+      </div>
+      <div className="flex justify-end">
+        <SubmitButton>{courtType ? 'Save court type' : 'Create court type'}</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+/* ─── Court (one bookable unit of a type) ────────────────────────────────── */
+
+export function CourtForm({
+  court,
+  courtTypes,
+  defaultCourtTypeId,
+}: {
+  court?: {
+    id: string;
+    name: string;
+    court_type_id: string;
+    is_active: boolean | null;
+  };
+  courtTypes: { id: string; name: string; venue_id: string; is_active: boolean | null }[];
+  defaultCourtTypeId?: string;
+}) {
+  return (
+    <ActionForm action={saveCourt} className="space-y-4">
+      {court ? <input type="hidden" name="id" value={court.id} /> : null}
+      <FormMessage />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="name" required>
+            Court name
+          </Label>
+          <input id="name" name="name" defaultValue={court?.name} placeholder="Badminton Court 1" className={inputClass} />
+          <FieldError name="name" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="court_type_id" required>
+            Court type
+          </Label>
+          <select
+            id="court_type_id"
+            name="court_type_id"
+            defaultValue={court?.court_type_id ?? defaultCourtTypeId ?? ''}
+            className={inputClass}>
+            <option value="" disabled>
+              Choose a court type
+            </option>
+            {courtTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+                {type.is_active === false ? ' (inactive)' : ''}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-zinc-500">Sets the surface, climate, venue and price for this court.</p>
+          <FieldError name="court_type_id" />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-6">
         <Checkbox
           name="is_active"
           label="Taking bookings"

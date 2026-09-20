@@ -32,7 +32,7 @@ export type AdminBooking = NewBooking & {
   userId?: string | null;
   paymentStatus: 'PAID' | 'UNPAID';
   paymentMethod?: 'CASH' | 'UPI' | 'CARD' | 'COMPLIMENTARY';
-  /** Overrides the court's price, e.g. a discount. Defaults to rate × slot length. */
+  /** Overrides the slot option's price, e.g. a discount. Defaults to that price. */
   amount?: number;
 };
 
@@ -45,27 +45,31 @@ export type AdminBooking = NewBooking & {
  */
 export type PaidOrderOutcome = 'confirmed' | 'slot-lost';
 
+/** Unique (23505) or exclusion (23P01) violation: another live booking holds the slot. */
+function isSlotTaken(code: string | undefined): boolean {
+  return code === '23505' || code === '23P01';
+}
+
 export class BookingService {
   /**
    * Creates a PENDING booking that holds the slot for {@link HOLD_MINUTES}.
-   * The price is always worked out here from the facility's hourly rate — never
-   * taken from the client.
+   * The price is always the court type's price for the chosen slot length —
+   * never taken from the client.
    */
   static async createBooking(userId: string, input: NewBooking) {
     const { facilityId, date, startTime, endTime } = input;
 
-    // 1. The slot must exist and still be free
+    // 1. The length must be one this court sells; that option sets the price
+    const amount = await BookingService.priceFor(facilityId, startTime, endTime);
+
+    // 2. The slot must exist and still be free
     await BookingService.assertSlotFree(input);
 
-    // 2. Price
-    const amount = await BookingService.priceFor(facilityId, startTime, endTime);
-    if (!(amount > 0)) throw new BookingError('This court has no price set.', 409);
-
-    // 3. A lapsed checkout on this exact slot would still trip the unique index
-    await BookingService.releaseLapsedHold(facilityId, date, startTime);
+    // 3. A lapsed checkout overlapping this slot would still trip the overlap constraint
+    await BookingService.releaseLapsedHold(facilityId, date, startTime, endTime);
 
     // 4. Insert PENDING booking
-    // The DB Unique Constraint will block this if someone else JUST booked it
+    // The overlap constraint blocks this if someone else JUST booked any part of it
     const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString();
     const { data: booking, error } = await supabaseAdmin
       .from('bookings')
@@ -88,9 +92,7 @@ export class BookingService {
       .single();
 
     if (error) {
-      if (error.code === '23505') { // Postgres Unique Violation code
-        throw new BookingError('Slot was just booked by someone else.', 409);
-      }
+      if (isSlotTaken(error.code)) throw new BookingError('Slot was just booked by someone else.', 409);
       throw new Error('Failed to create booking: ' + error.message);
     }
 
@@ -104,13 +106,12 @@ export class BookingService {
   static async createAdminBooking(input: AdminBooking) {
     const { facilityId, date, startTime, endTime } = input;
 
+    const listPrice = await BookingService.priceFor(facilityId, startTime, endTime);
     await BookingService.assertSlotFree(input, { allowStarted: true });
 
-    const amount = input.paymentMethod === 'COMPLIMENTARY'
-      ? 0
-      : input.amount ?? (await BookingService.priceFor(facilityId, startTime, endTime));
+    const amount = input.paymentMethod === 'COMPLIMENTARY' ? 0 : input.amount ?? listPrice;
 
-    await BookingService.releaseLapsedHold(facilityId, date, startTime);
+    await BookingService.releaseLapsedHold(facilityId, date, startTime, endTime);
 
     const paid = input.paymentStatus === 'PAID';
     const { data: booking, error } = await supabaseAdmin
@@ -137,7 +138,7 @@ export class BookingService {
       .single();
 
     if (error) {
-      if (error.code === '23505') throw new BookingError('Slot was just booked by someone else.', 409);
+      if (isSlotTaken(error.code)) throw new BookingError('Slot was just booked by someone else.', 409);
       throw new Error('Failed to create booking: ' + error.message);
     }
 
@@ -145,8 +146,9 @@ export class BookingService {
   }
 
   /** Throws a 409 unless `startTime`–`endTime` is one of the facility's free slots on `date`. */
-  private static async assertSlotFree(input: NewBooking, options?: SlotOptions) {
-    const slots = await SlotService.getSlots(input.facilityId, input.date, options);
+  private static async assertSlotFree(input: NewBooking, options?: Omit<SlotOptions, 'durationMinutes'>) {
+    const durationMinutes = minutesBetween(input.startTime, input.endTime);
+    const slots = await SlotService.getSlots(input.facilityId, input.date, { ...options, durationMinutes });
     const slot = slots.find((entry) => entry.start_time === input.startTime && entry.end_time === input.endTime);
 
     if (!slot || !slot.available) {
@@ -154,26 +156,40 @@ export class BookingService {
     }
   }
 
-  /** The court's hourly rate × the slot's length, rounded to paise. */
+  /**
+   * The court type's price for a slot of this length. Every length a player can
+   * book is an explicit option with its own price, so there's no pro-rating: a
+   * length the court doesn't sell is refused. The amount is snapshotted onto the
+   * booking, which is what makes a later price change leave past bookings alone.
+   */
   static async priceFor(facilityId: string, startTime: string, endTime: string): Promise<number> {
     const { data: facility, error } = await supabaseAdmin
       .from('facilities')
-      .select('price_per_hour')
+      .select('court_type_id')
       .eq('id', facilityId)
-      .single();
-
+      .maybeSingle();
     if (error || !facility) throw new BookingError('Facility not found', 404);
-    return Math.round(Number(facility.price_per_hour) * (minutesBetween(startTime, endTime) / 60) * 100) / 100;
+
+    const { data: option } = await supabaseAdmin
+      .from('court_type_slot_options')
+      .select('price')
+      .eq('court_type_id', facility.court_type_id)
+      .eq('duration_minutes', minutesBetween(startTime, endTime))
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!option) throw new BookingError('This court does not offer a slot of that length.', 400);
+    return Number(option.price);
   }
 
-  /** A lapsed checkout on this exact slot would still trip the unique index. */
-  private static async releaseLapsedHold(facilityId: string, date: string, startTime: string) {
+  /** A lapsed checkout overlapping this slot would still trip the overlap constraint. */
+  private static async releaseLapsedHold(facilityId: string, date: string, startTime: string, endTime: string) {
     await supabaseAdmin
       .from('bookings')
       .update({ status: 'CANCELLED' })
       .eq('facility_id', facilityId)
       .eq('booking_date', date)
-      .eq('start_time', startTime)
+      .lt('start_time', endTime)
+      .gt('end_time', startTime)
       .eq('status', 'PENDING')
       .lt('expires_at', new Date().toISOString());
   }
@@ -219,7 +235,7 @@ export class BookingService {
       return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
     }
 
-    if (error?.code === '23505') {
+    if (isSlotTaken(error?.code)) {
       // Someone else holds the slot now. Keep the payment on record for a manual refund.
       const { error: recordError } = await supabaseAdmin
         .from('bookings')
@@ -318,9 +334,9 @@ export class BookingService {
         id, booking_date, start_time, end_time, amount_paid, status, payment_status,
         players, razorpay_order_id, paid_at, created_at,
         facilities (
-          id, name, is_indoor, has_ac, surface_type,
+          id, name,
           venues ( name, address, timezone ),
-          sports ( name )
+          court_types ( is_indoor, has_ac, surface_type, sports ( name ) )
         )
       `)
       .eq('user_id', userId)

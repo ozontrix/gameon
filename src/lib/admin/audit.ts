@@ -8,6 +8,7 @@ export type AuditEntity =
   | 'booking'
   | 'venue'
   | 'court'
+  | 'court_type'
   | 'sport'
   | 'operating_hours'
   | 'closure'

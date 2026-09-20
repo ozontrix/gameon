@@ -9,6 +9,7 @@ import {
   History,
   Images,
   LayoutDashboard,
+  Layers,
   LayoutGrid,
   LogOut,
   Megaphone,
@@ -56,7 +57,8 @@ function navGroups(refundsPending: number): NavGroup[] {
       label: 'Venue setup',
       items: [
         { href: '/admin/venues', label: 'Venues & hours', icon: Building2, adminOnly: true },
-        { href: '/admin/courts', label: 'Courts & pricing', icon: LayoutGrid, adminOnly: true },
+        { href: '/admin/court-types', label: 'Court types & pricing', icon: Layers, adminOnly: true },
+        { href: '/admin/courts', label: 'Courts', icon: LayoutGrid, adminOnly: true },
         { href: '/admin/sports', label: 'Sports', icon: Trophy, adminOnly: true },
         { href: '/admin/closures', label: 'Closures', icon: CalendarX2, adminOnly: true },
       ],

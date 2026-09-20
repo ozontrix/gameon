@@ -16,7 +16,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const [{ denied }, data] = await Promise.all([searchParams, getDashboard()]);
   const isAdmin = session.role === 'ADMIN';
 
-  const occupancy = data.occupancy.total ? Math.round((data.occupancy.booked / data.occupancy.total) * 100) : null;
+  const { bookedMinutes, openMinutes } = data.occupancy;
+  const occupancy = openMinutes ? Math.round((bookedMinutes / openMinutes) * 100) : null;
+  const hours = (minutes: number) => `${Math.round((minutes / 60) * 10) / 10} h`;
   const upcoming = data.todaysBookings.filter((b) => b.end_time > data.nowTime);
   const finished = data.todaysBookings.length - upcoming.length;
 
@@ -78,7 +80,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <StatCard
           label="Occupancy today"
           value={occupancy === null ? '—' : `${occupancy}%`}
-          hint={data.occupancy.total ? `${data.occupancy.booked} of ${data.occupancy.total} court slots` : 'No courts open today'}
+          hint={openMinutes ? `${hours(bookedMinutes)} of ${hours(openMinutes)} court time booked` : 'No courts open today'}
           href="/admin/schedule"
         />
         <StatCard label="Revenue today" value={formatMoney(data.revenueToday)} hint="Paid bookings played today" />

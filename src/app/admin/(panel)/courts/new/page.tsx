@@ -7,16 +7,16 @@ import { requireAdmin } from '@/lib/admin/session';
 
 export const metadata: Metadata = { title: 'Add court' };
 
-export default async function NewCourtPage({ searchParams }: { searchParams: Promise<{ venue?: string }> }) {
+export default async function NewCourtPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
   await requireAdmin();
-  const [{ venue }, options] = await Promise.all([searchParams, listCatalogOptions()]);
+  const [{ type }, options] = await Promise.all([searchParams, listCatalogOptions()]);
 
   return (
     <>
       <PageHeader back={{ href: '/admin/courts', label: 'Courts' }} title="Add court" />
       <Card className="max-w-3xl">
         <CardBody>
-          <CourtForm venues={options.venues} sports={options.sports} defaultVenueId={venue} />
+          <CourtForm courtTypes={options.courtTypes} defaultCourtTypeId={type} />
         </CardBody>
       </Card>
     </>

@@ -8,9 +8,10 @@ import { supabaseAdmin } from '@/lib/db/supabase';
 import { NotificationService } from '@/lib/services/notification.service';
 import { NOT_ALLOWED, formValues, invalid, type ActionState } from '../action-result';
 import { recordAudit } from '../audit';
-import { SLOT_DURATIONS, SURFACE_TYPES, WEEKDAYS } from '../constants';
+import { SURFACE_TYPES, WEEKDAYS } from '../constants';
 import { formatDate, todayIn } from '../format';
 import { authorize } from '../session';
+import { readImageField, removeImage, uploadImage } from '../storage';
 
 const uuid = z.string({ error: 'Choose an option.' }).uuid('Choose an option.');
 const checkbox = z
@@ -104,7 +105,7 @@ export async function saveOperatingHours(_state: ActionState, formData: FormData
   if (!venueId.success) return { ok: false, message: 'Unknown venue.' };
 
   const fieldErrors: Record<string, string> = {};
-  const openDays: { venue_id: string; day_of_week: number; open_time: string; close_time: string; slot_duration_minutes: number }[] = [];
+  const openDays: { venue_id: string; day_of_week: number; open_time: string; close_time: string }[] = [];
   const closedDays: number[] = [];
 
   WEEKDAYS.forEach((dayName, day) => {
@@ -114,7 +115,6 @@ export async function saveOperatingHours(_state: ActionState, formData: FormData
     }
     const open = values[`open_${day}`];
     const close = values[`close_${day}`];
-    const duration = Number(values[`duration_${day}`]);
 
     if (!open || !TIME.test(open) || !close || !TIME.test(close)) {
       fieldErrors[`day_${day}`] = `Set opening and closing times for ${dayName}, or mark it closed.`;
@@ -124,22 +124,11 @@ export async function saveOperatingHours(_state: ActionState, formData: FormData
       fieldErrors[`day_${day}`] = `${dayName}: closing time must be after opening time.`;
       return;
     }
-    if (!(SLOT_DURATIONS as readonly number[]).includes(duration)) {
-      fieldErrors[`day_${day}`] = `${dayName}: choose a slot length.`;
-      return;
-    }
-    const [oh, om] = open.split(':').map(Number);
-    const [ch, cm] = close.split(':').map(Number);
-    if (ch * 60 + cm - (oh * 60 + om) < duration) {
-      fieldErrors[`day_${day}`] = `${dayName}: the venue must be open for at least one ${duration}-minute slot.`;
-      return;
-    }
     openDays.push({
       venue_id: venueId.data,
       day_of_week: day,
       open_time: `${open}:00`,
       close_time: `${close}:00`,
-      slot_duration_minutes: duration,
     });
   });
 
@@ -167,11 +156,10 @@ export async function saveOperatingHours(_state: ActionState, formData: FormData
   }
 
   await recordAudit(actor, 'operating_hours.update', 'operating_hours', venueId.data, {
-    open_days: openDays.map(({ day_of_week, open_time, close_time, slot_duration_minutes }) => ({
+    open_days: openDays.map(({ day_of_week, open_time, close_time }) => ({
       day: WEEKDAYS[day_of_week],
       open_time,
       close_time,
-      slot_duration_minutes,
     })),
     closed_days: closedDays.map((day) => WEEKDAYS[day]),
   });
@@ -179,20 +167,293 @@ export async function saveOperatingHours(_state: ActionState, formData: FormData
   return { ok: true, message: 'Opening hours saved. Existing bookings are not moved.' };
 }
 
+/* ─── Court types ────────────────────────────────────────────────────────── */
+
+const courtTypeSchema = z.object({
+  id: z.string().uuid().optional(),
+  venue_id: uuid,
+  sport_id: uuid,
+  slug: z
+    .string({ error: 'Enter a slug.' })
+    .min(2, 'Enter a slug.')
+    .max(120)
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens only.'),
+  name: z.string({ error: 'Enter the court type name.' }).min(2, 'Enter the court type name.').max(120),
+  description: z.string().max(600, 'Keep the description under 600 characters.').optional(),
+  surface_type: z.enum(SURFACE_TYPES, { error: 'Choose a surface.' }),
+  sort_order: z.coerce.number().int().min(0).max(999).optional(),
+  is_indoor: checkbox,
+  has_ac: checkbox,
+  is_active: checkbox,
+});
+
+export async function saveCourtType(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await authorize('ADMIN');
+  if (!actor) return NOT_ALLOWED;
+
+  const parsed = courtTypeSchema.safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const { id, ...raw } = parsed.data;
+  const values = {
+    ...raw,
+    description: raw.description?.trim() || null,
+    sort_order: raw.sort_order ?? 0,
+  };
+
+  if (!id) {
+    const { data, error } = await supabaseAdmin.from('court_types').insert(values).select('id').single();
+    if (error) {
+      console.error('[admin] create court type failed', error);
+      return {
+        ok: false,
+        message:
+          error.code === '23505'
+            ? 'That slug is already used by another court type at this venue.'
+            : 'Could not create the court type.',
+      };
+    }
+    await recordAudit(actor, 'court_type.create', 'court_type', data.id, values);
+    refreshCatalog();
+    redirect(`/admin/court-types/${data.id}?created=1`);
+  }
+
+  const { data: before } = await supabaseAdmin
+    .from('court_types')
+    .select('is_active')
+    .eq('id', id)
+    .maybeSingle();
+
+  // Its courts follow a venue change on their own: the composite foreign key
+  // from facilities cascades on update.
+
+  const { error } = await supabaseAdmin.from('court_types').update(values).eq('id', id);
+  if (error) {
+    console.error('[admin] update court type failed', error);
+    return {
+      ok: false,
+      message:
+        error.code === '23505'
+          ? 'That slug is already used by another court type at this venue.'
+          : 'Could not save the court type.',
+    };
+  }
+  await recordAudit(actor, 'court_type.update', 'court_type', id, values);
+  refreshCatalog();
+
+  const notes: string[] = ['Court type saved.'];
+  if (before?.is_active !== false && !values.is_active) {
+    notes.push('It and its courts no longer take bookings.');
+  }
+  return { ok: true, message: notes.join(' ') };
+}
+
+/* ─── Court type slot options ───────────────────────────────────────────── */
+
+const slotOptionSchema = z.object({
+  id: z.string().uuid().optional(),
+  court_type_id: uuid,
+  duration_minutes: z.coerce
+    .number({ error: 'Enter the slot length.' })
+    .int('Use whole minutes.')
+    .min(5, 'A slot must be at least 5 minutes.')
+    .max(720, 'A slot can be at most 12 hours.'),
+  price: z.coerce
+    .number({ error: 'Enter the price.' })
+    .positive('The price must be more than ₹0.')
+    .max(100_000, 'That price looks too high.'),
+  is_active: checkbox,
+});
+
+/** Adds a slot length to a court type, or edits one (its length, price, or whether it's on sale). */
+export async function saveSlotOption(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await authorize('ADMIN');
+  if (!actor) return NOT_ALLOWED;
+
+  const parsed = slotOptionSchema.safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const { id, ...values } = parsed.data;
+
+  const { data: before } = id
+    ? await supabaseAdmin.from('court_type_slot_options').select('duration_minutes, price').eq('id', id).maybeSingle()
+    : { data: null };
+
+  const { error } = id
+    ? await supabaseAdmin.from('court_type_slot_options').update(values).eq('id', id)
+    : await supabaseAdmin.from('court_type_slot_options').insert(values);
+  if (error) {
+    console.error('[admin] save slot option failed', error);
+    return {
+      ok: false,
+      message:
+        error.code === '23505'
+          ? `This court type already sells ${values.duration_minutes}-minute slots.`
+          : 'Could not save the slot option.',
+    };
+  }
+
+  await recordAudit(actor, id ? 'court_type.slot_updated' : 'court_type.slot_added', 'court_type', values.court_type_id, {
+    ...values,
+    ...(before ? { previous: before } : {}),
+  });
+  refreshCatalog();
+
+  const notes = [id ? 'Slot option saved.' : 'Slot option added.'];
+  if (before && (Number(before.price) !== values.price || before.duration_minutes !== values.duration_minutes)) {
+    notes.push('Existing bookings keep what they were booked at.');
+  }
+  return { ok: true, message: notes.join(' ') };
+}
+
+/** Stops selling a slot length. Bookings already made in it are unaffected. */
+export async function deleteSlotOption(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await authorize('ADMIN');
+  if (!actor) return NOT_ALLOWED;
+
+  const id = z.string().uuid().safeParse(formData.get('id'));
+  if (!id.success) return { ok: false, message: 'Unknown slot option.' };
+
+  const { data, error } = await supabaseAdmin
+    .from('court_type_slot_options')
+    .delete()
+    .eq('id', id.data)
+    .select('court_type_id, duration_minutes, price')
+    .maybeSingle();
+  if (error) {
+    console.error('[admin] delete slot option failed', error);
+    return { ok: false, message: 'Could not remove the slot option.' };
+  }
+  if (!data) return { ok: false, message: 'That slot option was already removed.' };
+
+  await recordAudit(actor, 'court_type.slot_removed', 'court_type', data.court_type_id, data);
+  refreshCatalog();
+  return { ok: true, message: `${data.duration_minutes}-minute slots removed. Existing bookings are unaffected.` };
+}
+
+/* ─── Court type photos ─────────────────────────────────────────────────── */
+
+const MAX_COURT_TYPE_PHOTOS = 10;
+
+/** Adds an uploaded photo to the end of a court type's gallery. */
+export async function addCourtTypeImage(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await authorize('ADMIN');
+  if (!actor) return NOT_ALLOWED;
+
+  const courtTypeId = z.string().uuid().safeParse(formData.get('courtTypeId'));
+  if (!courtTypeId.success) return { ok: false, message: 'Unknown court type.' };
+
+  const image = await readImageField(formData, 'image');
+  if (!image) return { ok: false, message: 'Choose a photo to upload.' };
+  if ('error' in image) return { ok: false, message: image.error };
+
+  const { data: existing } = await supabaseAdmin
+    .from('court_type_images')
+    .select('sort_order')
+    .eq('court_type_id', courtTypeId.data)
+    .order('sort_order', { ascending: false });
+  if ((existing?.length ?? 0) >= MAX_COURT_TYPE_PHOTOS) {
+    return { ok: false, message: `A court type can have up to ${MAX_COURT_TYPE_PHOTOS} photos.` };
+  }
+
+  let url: string;
+  try {
+    url = await uploadImage(image, 'court-types');
+  } catch (error) {
+    console.error('[admin] court type photo upload failed', error);
+    return { ok: false, message: 'Could not upload the photo. Please try again.' };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('court_type_images')
+    .insert({ court_type_id: courtTypeId.data, url, sort_order: (existing?.[0]?.sort_order ?? -1) + 1 })
+    .select('id')
+    .single();
+  if (error) {
+    await removeImage(url);
+    console.error('[admin] save court type photo failed', error);
+    return { ok: false, message: 'Could not save the photo.' };
+  }
+
+  await recordAudit(actor, 'court_type.photo_added', 'court_type', courtTypeId.data, { imageId: data.id });
+  refreshCatalog();
+  return { ok: true, message: 'Photo added.' };
+}
+
+/** Removes one photo, and the file too if this panel uploaded it. */
+export async function deleteCourtTypeImage(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await authorize('ADMIN');
+  if (!actor) return NOT_ALLOWED;
+
+  const id = z.string().uuid().safeParse(formData.get('imageId'));
+  if (!id.success) return { ok: false, message: 'Unknown photo.' };
+
+  const { data, error } = await supabaseAdmin
+    .from('court_type_images')
+    .delete()
+    .eq('id', id.data)
+    .select('court_type_id, url')
+    .maybeSingle();
+  if (error) {
+    console.error('[admin] delete court type photo failed', error);
+    return { ok: false, message: 'Could not remove the photo.' };
+  }
+  if (!data) return { ok: false, message: 'That photo was already removed.' };
+
+  await removeImage(data.url);
+  await recordAudit(actor, 'court_type.photo_removed', 'court_type', data.court_type_id, { imageId: id.data });
+  refreshCatalog();
+  return { ok: true, message: 'Photo removed.' };
+}
+
+/** Swaps a photo with its neighbour, so the gallery can be reordered (and the cover changed). */
+export async function moveCourtTypeImage(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await authorize('ADMIN');
+  if (!actor) return NOT_ALLOWED;
+
+  const id = z.string().uuid().safeParse(formData.get('imageId'));
+  const direction = z.enum(['up', 'down']).safeParse(formData.get('direction'));
+  if (!id.success || !direction.success) return { ok: false, message: 'Unknown photo.' };
+
+  const { data: photo } = await supabaseAdmin
+    .from('court_type_images')
+    .select('id, court_type_id')
+    .eq('id', id.data)
+    .maybeSingle();
+  if (!photo) return { ok: false, message: 'That photo no longer exists.' };
+
+  const { data: gallery } = await supabaseAdmin
+    .from('court_type_images')
+    .select('id')
+    .eq('court_type_id', photo.court_type_id)
+    .order('sort_order')
+    .order('created_at');
+  const order = (gallery ?? []).map((entry) => entry.id);
+  const from = order.indexOf(photo.id);
+  const to = direction.data === 'up' ? from - 1 : from + 1;
+  if (from === -1 || to < 0 || to >= order.length) return { ok: true, message: 'Order unchanged.' };
+
+  [order[from], order[to]] = [order[to], order[from]];
+  // Rewrite every position, which also repairs any gaps or ties left behind.
+  const results = await Promise.all(
+    order.map((imageId, index) =>
+      supabaseAdmin.from('court_type_images').update({ sort_order: index }).eq('id', imageId)
+    )
+  );
+  if (results.some((result) => result.error)) {
+    console.error('[admin] reorder court type photos failed', results.find((result) => result.error)?.error);
+    return { ok: false, message: 'Could not reorder the photos.' };
+  }
+
+  await recordAudit(actor, 'court_type.photos_reordered', 'court_type', photo.court_type_id, { order });
+  refreshCatalog();
+  return { ok: true, message: 'Photo order saved.' };
+}
+
 /* ─── Courts ─────────────────────────────────────────────────────────────── */
 
 const courtSchema = z.object({
   id: z.string().uuid().optional(),
-  venue_id: uuid,
-  sport_id: uuid,
+  court_type_id: uuid,
   name: z.string({ error: 'Enter the court name.' }).min(2, 'Enter the court name.').max(120),
-  surface_type: z.enum(SURFACE_TYPES, { error: 'Choose a surface.' }),
-  price_per_hour: z.coerce
-    .number({ error: 'Enter the hourly price.' })
-    .positive('The hourly price must be more than ₹0.')
-    .max(100_000, 'That price looks too high.'),
-  is_indoor: checkbox,
-  has_ac: checkbox,
   is_active: checkbox,
 });
 
@@ -204,33 +465,37 @@ export async function saveCourt(_state: ActionState, formData: FormData): Promis
   if (!parsed.success) return invalid(parsed.error);
   const { id, ...values } = parsed.data;
 
+  // A court sits at whatever venue its type does; the composite foreign key
+  // rejects any other pairing, so derive it rather than ask for it.
+  const { data: courtType } = await supabaseAdmin
+    .from('court_types')
+    .select('venue_id')
+    .eq('id', values.court_type_id)
+    .maybeSingle();
+  if (!courtType) return { ok: false, message: 'Choose a court type.' };
+  const row = { ...values, venue_id: courtType.venue_id };
+
   if (!id) {
-    const { data, error } = await supabaseAdmin.from('facilities').insert(values).select('id').single();
+    const { data, error } = await supabaseAdmin.from('facilities').insert(row).select('id').single();
     if (error) {
       console.error('[admin] create court failed', error);
       return { ok: false, message: 'Could not create the court.' };
     }
-    await recordAudit(actor, 'court.create', 'court', data.id, values);
+    await recordAudit(actor, 'court.create', 'court', data.id, row);
     refreshCatalog();
     redirect(`/admin/courts/${data.id}?created=1`);
   }
 
-  const { data: before } = await supabaseAdmin.from('facilities').select('price_per_hour, is_active').eq('id', id).maybeSingle();
-  const { error } = await supabaseAdmin.from('facilities').update(values).eq('id', id);
+  const { data: before } = await supabaseAdmin.from('facilities').select('is_active').eq('id', id).maybeSingle();
+  const { error } = await supabaseAdmin.from('facilities').update(row).eq('id', id);
   if (error) {
     console.error('[admin] update court failed', error);
     return { ok: false, message: 'Could not save the court.' };
   }
-  await recordAudit(actor, 'court.update', 'court', id, {
-    ...values,
-    previous_price_per_hour: before?.price_per_hour ?? null,
-  });
+  await recordAudit(actor, 'court.update', 'court', id, row);
   refreshCatalog();
 
   const notes: string[] = ['Court saved.'];
-  if (before && Number(before.price_per_hour) !== values.price_per_hour) {
-    notes.push('The new price applies to new bookings only.');
-  }
   if (before?.is_active !== false && !values.is_active) {
     const pending = await upcomingBookings({ facilityId: id });
     notes.push(

@@ -166,7 +166,7 @@ export default async function BookingsPage({
                     <Td>
                       <div className="text-zinc-900">{booking.facilities.name}</div>
                       <div className="text-xs text-zinc-500">
-                        {[booking.facilities.sports?.name, booking.facilities.venues?.name].filter(Boolean).join(' · ')}
+                        {[booking.facilities.court_types?.sports?.name, booking.facilities.venues?.name].filter(Boolean).join(' · ')}
                       </div>
                     </Td>
                     <Td>

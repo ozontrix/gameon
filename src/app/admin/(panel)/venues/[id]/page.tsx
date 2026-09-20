@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { OperatingHoursForm, VenueForm } from '@/components/admin/catalog-forms';
 import { ActiveBadge } from '@/components/admin/status';
 import { Card, CardBody, CardHeader, EmptyState, LinkButton, Notice, PageHeader, Table, Td, Th } from '@/components/admin/ui';
-import { formatDate, formatMoney, formatTimeRange, titleCase } from '@/lib/admin/format';
+import { formatDate, formatTimeRange, titleCase } from '@/lib/admin/format';
 import { getVenue } from '@/lib/admin/queries/catalog';
 import { requireAdmin } from '@/lib/admin/session';
 
@@ -49,7 +49,10 @@ export default async function VenuePage({
       <div className="grid gap-4 xl:grid-cols-5">
         <div className="space-y-4 xl:col-span-3">
           <Card>
-            <CardHeader title="Opening hours" description="Slots are generated from these hours for every court at this venue." />
+            <CardHeader
+              title="Opening hours"
+              description="Every court here is bookable within these hours, in the slot lengths its court type sells."
+            />
             <CardBody>
               <OperatingHoursForm venueId={venue.id} hours={hours} />
             </CardBody>
@@ -72,7 +75,6 @@ export default async function VenuePage({
                   <tr>
                     <Th>Court</Th>
                     <Th>Type</Th>
-                    <Th className="text-right">Per hour</Th>
                     <Th>Status</Th>
                   </tr>
                 </thead>
@@ -83,12 +85,20 @@ export default async function VenuePage({
                         <Link href={`/admin/courts/${court.id}`} className="font-medium text-zinc-950 hover:underline">
                           {court.name}
                         </Link>
-                        <div className="text-xs text-zinc-500">{court.sports?.name}</div>
+                        <div className="text-xs text-zinc-500">{court.court_types?.sports?.name}</div>
                       </Td>
                       <Td className="text-xs">
-                        {[titleCase(court.surface_type), court.is_indoor ? 'Indoor' : 'Outdoor', court.has_ac ? 'AC' : 'Non-AC'].join(' · ')}
+                        <div className="text-zinc-900">{court.court_types?.name}</div>
+                        <div className="text-zinc-500">
+                          {court.court_types
+                            ? [
+                                titleCase(court.court_types.surface_type),
+                                court.court_types.is_indoor ? 'Indoor' : 'Outdoor',
+                                court.court_types.has_ac ? 'AC' : 'Non-AC',
+                              ].join(' · ')
+                            : '—'}
+                        </div>
                       </Td>
-                      <Td className="text-right tabular-nums">{formatMoney(court.price_per_hour)}</Td>
                       <Td>
                         <ActiveBadge active={court.is_active} />
                       </Td>

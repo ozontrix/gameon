@@ -96,10 +96,11 @@ function toAppBooking(b: UserBooking, now: Date) {
 
   const { date, weekday } = formatDate(b.booking_date);
   const bookedAt = new Date(b.paid_at ?? b.created_at ?? Date.now());
-  const sportName = facility?.sports?.name ?? 'Sport';
-  const setting = facility?.is_indoor ? 'Indoor' : 'Outdoor';
-  const climate = facility?.has_ac ? 'AC' : 'Non-AC';
-  const surface = capitalize(facility?.surface_type ?? '');
+  const courtType = facility?.court_types;
+  const sportName = courtType?.sports?.name ?? 'Sport';
+  const setting = courtType?.is_indoor ? 'Indoor' : 'Outdoor';
+  const climate = courtType?.has_ac ? 'AC' : 'Non-AC';
+  const surface = capitalize(courtType?.surface_type ?? '');
   const amount = Number(b.amount_paid ?? 0);
 
   return {
