@@ -253,7 +253,7 @@ export function ScreenHeader({
 /* ───────────────────────────── Flow step bar ───────────────────────────── */
 
 export const BOOKING_STEPS = [
-  { id: "slot", label: "Slot", href: "/gameon-multisports-league/book/slot" },
+  { id: "slot", label: "Date", href: "/gameon-multisports-league/book/slot" },
   { id: "details", label: "Details", href: "/gameon-multisports-league/book/details" },
   { id: "review", label: "Review", href: "/gameon-multisports-league/book/review" },
   { id: "payment", label: "Payment", href: "/gameon-multisports-league/book/payment" },
