@@ -220,36 +220,12 @@ export const ADD_ONS: AddOn[] = [
     emoji: "👕",
   },
   {
-    id: "merch",
-    name: "Fan merch kit",
-    description: "Event tee, cap and sticker pack",
-    price: 250,
-    unit: "player",
-    emoji: "🧢",
-  },
-  {
     id: "recording",
-    name: "Match recording & photos",
-    description: "Full-match footage plus an edited highlights reel",
+    name: "Match photos & video recording",
+    description: "Full-match video, edited highlights and the photo gallery",
     price: 999,
     unit: "team",
     emoji: "🎥",
-  },
-  {
-    id: "physio",
-    name: "Physio & recovery desk",
-    description: "On-court taping, ice bath and recovery drinks",
-    price: 399,
-    unit: "team",
-    emoji: "🧊",
-  },
-  {
-    id: "pizza",
-    name: "Pizza & drinks combo",
-    description: "Squad refuel right after the match",
-    price: 249,
-    unit: "player",
-    emoji: "🍕",
   },
 ];
 

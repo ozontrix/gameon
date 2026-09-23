@@ -1,15 +1,17 @@
 "use client";
 
 /**
- * Game On Multisports League — step 2: player / team details and optional add-ons.
+ * Game On Multisports League — step 2: player / team details and add-ons.
  *
- * Squad size drives the price of per-player add-ons (jerseys, merch, pizza),
- * so the totals below update as the headcount changes.
+ * The player never picks a squad size: team sports (cricket, football) are
+ * locked to the minimum required squad, and individual brackets (badminton,
+ * pickleball) book one ticket per player. Add-ons are the league jersey and the
+ * match photos & video recording.
  */
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Minus, Plus } from "lucide-react";
-import { ADD_ONS, formatINR } from "@/components/league/data";
+import { ArrowRight, Check, Minus, Plus, Ticket, Users } from "lucide-react";
+import { ADD_ONS, formatDayLabel, formatINR } from "@/components/league/data";
 import { useLeagueBooking } from "@/components/league/booking-context";
 import {
   Button,
@@ -56,7 +58,7 @@ export default function OlympicsDetailsPage() {
       <EmptyState
         emoji="📝"
         title="Nothing to fill in yet"
-        copy="Choose a sport, a category and a slot — then we will ask for your squad details."
+        copy="Choose a sport, a category and a match day — then we will ask for your details."
         ctaLabel="Browse sports"
         ctaHref="/gameon-multisports-league"
       />
@@ -64,12 +66,17 @@ export default function OlympicsDetailsPage() {
   }
 
   const isTeam = sport?.mode === "team";
-  const minSquad = category?.squadSize ?? 1;
-  const maxSquad = minSquad + 4;
-  const complete =
-    draft.captainName.trim().length > 2 &&
-    draft.phone.trim().length >= 10 &&
-    (!isTeam || draft.teamName.trim().length > 1);
+  /** Minimum squad for team sports; players sharing the bracket for individual entries. */
+  const squadSize = category?.squadSize ?? 1;
+
+  const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(draft.email.trim());
+  const missing = [
+    isTeam && draft.teamName.trim().length < 2 ? "team name" : null,
+    draft.captainName.trim().length > 2 ? null : isTeam ? "captain name" : "player name",
+    draft.phone.trim().length >= 10 ? null : "mobile number",
+    emailLooksValid ? null : "email",
+  ].filter((field): field is string => field !== null);
+  const complete = missing.length === 0;
 
   return (
     <div>
@@ -78,7 +85,7 @@ export default function OlympicsDetailsPage() {
         title={isTeam ? "Team details" : "Player details"}
         subtitle={
           sport && category
-            ? `${sport.name} · ${category.name} · ${draft.slot ?? "slot"}`
+            ? `${sport.name} · ${category.name} · ${formatDayLabel(draft.date)}`
             : "Loading your entry…"
         }
         backHref="/gameon-multisports-league/book/slot"
@@ -115,7 +122,7 @@ export default function OlympicsDetailsPage() {
               placeholder="+91 98110 00000"
             />
           </Field>
-          <Field label="Email" hint="optional">
+          <Field label="Email" hint="for your pass">
             <input
               className={inputClass}
               value={draft.email}
@@ -135,36 +142,35 @@ export default function OlympicsDetailsPage() {
           />
         </Field>
 
-        <Field
-          label={isTeam ? "Squad size" : "Entries in this draw"}
-          hint={`${minSquad} minimum`}
-        >
-          <div className="flex items-center gap-3 rounded-[14px] border border-white/[0.09] bg-white/[0.03] px-3.5 py-2.5">
-            <span className="flex-1 text-[14px] text-go-white">
-              {draft.squadSize} {draft.squadSize > 1 ? "players" : "player"}
+        {/* Squad size is never picked by the player — it is set by the format. */}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <span className="text-[12px] font-medium text-go-off/70">
+              {isTeam ? "Squad size" : "Tickets in this entry"}
             </span>
-            <span className="flex items-center gap-1.5">
-              <button
-                type="button"
-                aria-label="Decrease squad size"
-                disabled={draft.squadSize <= minSquad}
-                onClick={() => update({ squadSize: Math.max(minSquad, draft.squadSize - 1) })}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-go-off/70 transition-colors hover:text-go-white disabled:opacity-30"
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Increase squad size"
-                disabled={draft.squadSize >= maxSquad}
-                onClick={() => update({ squadSize: Math.min(maxSquad, draft.squadSize + 1) })}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-go-brand/40 bg-go-brand/15 text-go-brand transition-colors hover:bg-go-brand/25 disabled:opacity-30"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
+            <span className="text-[10.5px] text-go-off/35">
+              {isTeam ? "set by the league" : "one per player"}
             </span>
           </div>
-        </Field>
+
+          <div className="flex items-center justify-between gap-3 rounded-[14px] border border-go-brand/25 bg-go-brand/[0.08] px-3.5 py-3">
+            <span className="flex items-center gap-2.5 text-[14px] font-semibold text-go-white">
+              {isTeam ? (
+                <Users className="h-4 w-4 text-go-brand" />
+              ) : (
+                <Ticket className="h-4 w-4 text-go-brand" />
+              )}
+              {squadSize} {isTeam ? "players" : squadSize > 1 ? "tickets" : "ticket"}
+            </span>
+            <Chip tone="brand">{isTeam ? "Minimum squad" : "Per player"}</Chip>
+          </div>
+
+          <p className="mt-2 text-[11.5px] leading-relaxed text-go-off/45">
+            {isTeam
+              ? `${sport?.name} is played ${squadSize}-a-side, so the minimum required squad is already set — there is no headcount to pick.`
+              : `You are booking ${squadSize > 1 ? `${squadSize} tickets — one for each player` : "one ticket, one player"} in this ${category?.name} entry. Nothing to select here.`}
+          </p>
+        </div>
 
         <Field label="Anything we should know?" hint="optional">
           <textarea
@@ -196,7 +202,7 @@ export default function OlympicsDetailsPage() {
           const qty = draft.addons[addOn.id] ?? 0;
           const active = qty > 0;
           const perPlayer = addOn.unit === "player";
-          const max = perPlayer ? draft.squadSize + 2 : 1;
+          const max = perPlayer ? squadSize + 2 : 1;
 
           return (
             <div
@@ -289,13 +295,16 @@ export default function OlympicsDetailsPage() {
             </p>
             {!complete ? (
               <p className="text-[10.5px] text-amber-300/80">
-                Add {isTeam && draft.teamName.trim().length < 2 ? "a team name, " : ""}your name and
-                mobile number to continue
+                Add {missing.join(", ")} to continue
               </p>
             ) : null}
           </div>
           <Button
-            onClick={() => router.push("/gameon-multisports-league/book/review")}
+            onClick={() => {
+              // Pin the draft to the format's squad size for the rest of the flow.
+              update({ squadSize });
+              router.push("/gameon-multisports-league/book/review");
+            }}
             disabled={!complete}
             size="lg"
             className="flex-1 lg:flex-none"
