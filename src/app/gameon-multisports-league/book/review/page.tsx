@@ -9,8 +9,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowRight, Tag, X } from "lucide-react";
+import { Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   ADD_ONS,
@@ -20,6 +19,7 @@ import {
   type Coupon,
 } from "@/components/league/data";
 import { useLeagueBooking } from "@/components/league/booking-context";
+import { LeaguePayButton } from "@/components/league/pay-button";
 import {
   Button,
   Chip,
@@ -39,7 +39,6 @@ function hasEligibleEntry(coupon: Coupon, entryFee: number) {
 }
 
 export default function OlympicsReviewPage() {
-  const router = useRouter();
   const { draft, ready, sport, category, pricing, applyCoupon, removeCoupon } = useLeagueBooking();
   const [code, setCode] = useState("");
 
@@ -248,14 +247,10 @@ export default function OlympicsReviewPage() {
               {formatINR(pricing.total)}
             </p>
           </div>
-          <Button
-            onClick={() => router.push("/gameon-multisports-league/book/payment")}
-            size="lg"
+          <LeaguePayButton
+            label={`Proceed to pay ${formatINR(pricing.total)}`}
             className="flex-1 lg:flex-none"
-          >
-            Proceed to pay
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          />
         </div>
       </StepFooter>
     </div>

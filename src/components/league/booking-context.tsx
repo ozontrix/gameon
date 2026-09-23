@@ -23,8 +23,6 @@ import {
 } from "react";
 import {
   ADD_ONS,
-  GST_RATE,
-  PLATFORM_FEE,
   findCategory,
   findCoupon,
   findSport,
@@ -32,6 +30,7 @@ import {
   type Sport,
   type SportId,
 } from "./data";
+import { quoteEntry } from "@/lib/league/entry";
 
 export interface Draft {
   sport: SportId | null;
@@ -205,30 +204,11 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
   const sport = useMemo(() => findSport(draft.sport), [draft.sport]);
   const category = useMemo(() => findCategory(sport, draft.categoryId), [sport, draft.categoryId]);
 
-  const pricing = useMemo<Pricing>(() => {
-    const entryFee = category?.fee ?? 0;
-    const addOnsTotal = Object.entries(draft.addons).reduce((sum, [id, qty]) => {
-      const addOn = ADD_ONS.find((item) => item.id === id);
-      return addOn ? sum + addOn.price * qty : sum;
-    }, 0);
-    const subtotal = entryFee + addOnsTotal;
-    const coupon = draft.coupon ? findCoupon(draft.coupon) : null;
-    const discount = coupon ? Math.round((subtotal * coupon.percent) / 100) : 0;
-    const platformFee = subtotal > 0 ? PLATFORM_FEE : 0;
-    const taxable = Math.max(0, subtotal - discount) + platformFee;
-    const gst = Math.round(taxable * GST_RATE);
-    return {
-      entryFee,
-      addOnsTotal,
-      subtotal,
-      discount,
-      platformFee,
-      gst,
-      total: taxable + gst,
-      couponCode: coupon?.code ?? null,
-      couponLabel: coupon?.label ?? null,
-    };
-  }, [category, draft.addons, draft.coupon]);
+  // The same maths the payment API runs, so the shown total is the charged total.
+  const pricing = useMemo<Pricing>(
+    () => quoteEntry({ category, addons: draft.addons, coupon: draft.coupon }),
+    [category, draft.addons, draft.coupon]
+  );
 
   const value = useMemo<BookingContextValue>(
     () => ({

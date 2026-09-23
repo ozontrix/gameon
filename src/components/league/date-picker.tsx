@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, CalendarDays, Check, Clock, MapPin, Sparkles } from "lucide-react";
 import { formatINR } from "@/components/league/data";
+import { LEAGUE_MATCH_DAYS, LEAGUE_VENUE } from "@/lib/league/constants";
 import { useLeagueBooking } from "./booking-context";
 import {
   Button,
@@ -30,14 +31,11 @@ import { cn } from "@/lib/utils";
 
 const BASE = "/gameon-multisports-league";
 
-/** One address for the whole league — the per-sport zones stay internal. */
-const VENUE = "GameOn Multisports Complex, Sector 70, Gurugram";
-
-/** The two match days. Fixed dates, so the tiles render identically on both sides. */
-const MATCH_DAYS = [
-  { iso: "2026-10-17", label: "Day 1", accent: "#F5A623" },
-  { iso: "2026-10-18", label: "Day 2", accent: "#A855F7" },
-];
+/** Accent bloom per match day — the days themselves live in the shared constants. */
+const DAY_ACCENTS: Record<string, string> = {
+  "2026-10-17": "#F5A623",
+  "2026-10-18": "#A855F7",
+};
 
 interface DayParts {
   weekday: string;
@@ -74,7 +72,7 @@ export function LeagueDatePicker() {
     );
   }
 
-  const selected = MATCH_DAYS.find((day) => day.iso === picked) ?? null;
+  const selected = LEAGUE_MATCH_DAYS.find((day) => day.iso === picked) ?? null;
   const selectedParts = selected ? dayParts(selected.iso) : null;
 
   const handleConfirm = () => {
@@ -115,7 +113,7 @@ export function LeagueDatePicker() {
 
       {/* ─── The two match days ─── */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {MATCH_DAYS.map((day, index) => {
+        {LEAGUE_MATCH_DAYS.map((day, index) => {
           const parts = dayParts(day.iso);
           const active = picked === day.iso;
           return (
@@ -138,7 +136,7 @@ export function LeagueDatePicker() {
                 aria-hidden
                 className="pointer-events-none absolute -right-12 -top-14 h-36 w-36 rounded-full opacity-70 blur-2xl transition-opacity duration-300"
                 style={{
-                  background: `radial-gradient(circle, ${day.accent}55 0%, transparent 70%)`,
+                  background: `radial-gradient(circle, ${DAY_ACCENTS[day.iso] ?? "#F5A623"}55 0%, transparent 70%)`,
                 }}
               />
 
@@ -210,7 +208,7 @@ export function LeagueDatePicker() {
 
             <div className="mt-3 flex items-start gap-2.5 rounded-[16px] border border-white/[0.08] bg-go-black/30 px-3 py-2.5">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-go-brand" />
-              <span className="min-w-0 text-[12.5px] leading-snug text-white">{VENUE}</span>
+              <span className="min-w-0 text-[12.5px] leading-snug text-white">{LEAGUE_VENUE}</span>
             </div>
 
             <div className="mt-2.5 flex flex-wrap gap-2">
