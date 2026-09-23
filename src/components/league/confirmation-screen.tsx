@@ -11,7 +11,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import {
-  ArrowRight,
   CalendarDays,
   Check,
   Clock,
@@ -29,9 +28,6 @@ import { Button, Chip, EmptyState, InfoRow, Kicker, Panel } from "./ui";
 import { cn } from "@/lib/utils";
 
 const BASE = "/gameon-multisports-league";
-
-/** 6 × 6 pattern that reads like a scan code. */
-const QR = "111011101101111111000100111011111101";
 
 const subscribeNoop = () => () => {};
 
@@ -91,7 +87,7 @@ export function LeagueConfirmationScreen() {
       <EmptyState
         emoji="🎟️"
         title="No confirmed entry yet"
-        copy="Once a payment goes through, your pass, reference and QR code appear here."
+        copy="Once a payment goes through, your pass and booking ID appear here."
         ctaLabel="Back to the league"
         ctaHref={BASE}
       />
@@ -166,7 +162,7 @@ export function LeagueConfirmationScreen() {
             { label: "Match day", value: day.replace(/,\s\d{4}$/, "") },
             { label: "Entry", value: entry.squadSize > 1 ? `${entry.squadSize} tickets` : "1 ticket" },
             { label: entry.teamName ? "Team" : "Player", value: entry.teamName || entry.captainName },
-            { label: "Reference", value: confirmation.reference },
+            { label: "Booking ID", value: confirmation.reference },
           ].map((tile) => (
             <div
               key={tile.label}
@@ -185,29 +181,14 @@ export function LeagueConfirmationScreen() {
           <span className="min-w-0 text-[12.5px] leading-snug text-white">{LEAGUE_VENUE}</span>
         </div>
 
-        <div className="mt-4 flex items-center gap-4 border-t border-dashed border-white/15 pt-4">
-          <div className="grid h-[92px] w-[92px] shrink-0 grid-cols-6 gap-[3px] rounded-[14px] bg-white p-2">
-            {QR.split("").map((cell, index) => (
-              <span
-                key={index}
-                className={cn("rounded-[2px]", cell === "1" ? "bg-go-black" : "")}
-              />
-            ))}
-          </div>
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-go-brand/80">
-              Show at check-in
-            </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-go-off/55">
-              The desk scans this code or the reference{" "}
-              <b className="text-go-white">{confirmation.reference}</b> to check your squad in.
-            </p>
-            <p className="mt-1 text-[11.5px] text-go-off/40">
-              {entry.squadSize > 1
-                ? `${entry.squadSize} players — one pass each`
-                : "One player, one pass"}
-            </p>
-          </div>
+        <div className="mt-4 flex items-start gap-2.5 border-t border-dashed border-white/15 pt-4">
+          <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-go-brand" />
+          <p className="min-w-0 text-[12px] leading-relaxed text-go-off/55">
+            Show your booking ID{" "}
+            <b className="font-mono tracking-[0.06em] text-white">{confirmation.reference}</b> at the
+            front desk to check in
+            {entry.squadSize > 1 ? ` — ${entry.squadSize} players, one pass each.` : "."}
+          </p>
         </div>
       </Panel>
 
@@ -334,15 +315,9 @@ export function LeagueConfirmationScreen() {
         </ul>
       </Panel>
 
-      <div className="flex flex-col gap-2.5 sm:flex-row">
-        <Button href={`${BASE}/bookings`} size="lg" className="flex-1">
-          View my entries
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-        <Button href={BASE} variant="ghost" size="lg" className="flex-1">
-          Book another sport
-        </Button>
-      </div>
+      <Button href={BASE} size="lg" full>
+        Book another sport
+      </Button>
 
       <a
         href={`tel:${LEAGUE_HELP_PHONE.replace(/\s/g, "")}`}
