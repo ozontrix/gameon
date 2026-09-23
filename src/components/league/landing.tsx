@@ -5,13 +5,13 @@
  *
  * Hand-written (the generator script only copies the app screens), and the copy
  * of the Olympics sports list with the app chrome stripped: an inline brand
- * hero, the same sport cards with every category and fee, and no header, tab
- * bar or footer. Cards open the league's own category page.
+ * hero and the same sport cards showing only the entry price the sport starts
+ * from — the per-category (slot type) breakdown lives on the category page
+ * behind "Select Sport". No header, tab bar or footer.
  */
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { ArrowRight, MapPin, Power, Users, Zap } from "lucide-react";
 import { SPORTS, formatINR, type EntryMode } from "@/components/league/data";
 import { Button, Chip, IconTile, Kicker, Panel } from "@/components/league/ui";
@@ -118,26 +118,6 @@ export function LeagueLanding() {
               <Chip icon={Users}>{sport.capacity}</Chip>
             </div>
 
-            <div className="mt-4 space-y-1.5">
-              {sport.categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`${BASE}/sports/${sport.id}`}
-                  className="flex items-center justify-between gap-3 rounded-[16px] border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-go-brand/30 hover:bg-go-brand/[0.06]"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-[13px] font-medium text-go-white">
-                      {category.name}
-                    </span>
-                    <span className="block text-[11px] text-go-off/45">{category.format}</span>
-                  </span>
-                  <span className="shrink-0 font-mono text-[13px] font-semibold text-go-brand">
-                    {formatINR(category.fee)}
-                  </span>
-                </Link>
-              ))}
-            </div>
-
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
               <div>
                 <Kicker>Starts from</Kicker>
@@ -146,7 +126,7 @@ export function LeagueLanding() {
                 </p>
               </div>
               <Button href={`${BASE}/sports/${sport.id}`} size="md">
-                View categories
+                Select Sport
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
