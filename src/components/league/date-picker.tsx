@@ -30,6 +30,9 @@ import { cn } from "@/lib/utils";
 
 const BASE = "/gameon-multisports-league";
 
+/** One address for the whole league — the per-sport zones stay internal. */
+const VENUE = "GameOn Multisports Complex, Sector 70, Gurugram";
+
 /** The two match days. Fixed dates, so the tiles render identically on both sides. */
 const MATCH_DAYS = [
   { iso: "2026-10-17", label: "Day 1", accent: "#F5A623" },
@@ -204,9 +207,14 @@ export function LeagueDatePicker() {
             <p className="mt-1.5 font-display text-xl uppercase leading-tight text-go-white sm:text-2xl">
               {selectedParts.weekday}, {selectedParts.day} {selectedParts.month}
             </p>
+
+            <div className="mt-3 flex items-start gap-2.5 rounded-[16px] border border-white/[0.08] bg-go-black/30 px-3 py-2.5">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-go-brand" />
+              <span className="min-w-0 text-[12.5px] leading-snug text-white">{VENUE}</span>
+            </div>
+
             <div className="mt-2.5 flex flex-wrap gap-2">
-              <Chip icon={MapPin}>{sport?.venue}</Chip>
-              <Chip>{selected.label} of 2</Chip>
+              <Chip tone="brand">{selected.label} of 2</Chip>
             </div>
           </Panel>
         </motion.div>
