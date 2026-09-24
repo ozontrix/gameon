@@ -17,6 +17,8 @@ export type SportsCatalogCard = {
   description: string | null;
   location: string;
   type: string;
+  /** How many days ahead this card's venue takes bookings, today counting as day 1. */
+  bookingWindowDays: number;
   badges: string[];
   /** The slot lengths a player can book and what each costs, shortest first. */
   slotOptions: { durationMinutes: number; price: number }[];
@@ -40,7 +42,7 @@ type CourtTypeRow = {
   surface_type: string;
   is_indoor: boolean;
   has_ac: boolean;
-  venues: { name: string; address: string | null } | null;
+  venues: { name: string; address: string | null; booking_window_days: number } | null;
   sports: { name: string; image_url: string | null } | null;
   facilities: { id: string; name: string; is_active: boolean | null }[];
   court_type_amenities: {
@@ -53,7 +55,7 @@ type CourtTypeRow = {
 
 const SELECT = `
   id, slug, name, description, surface_type, is_indoor, has_ac, sort_order,
-  venues!inner ( name, address, is_active ),
+  venues!inner ( name, address, is_active, booking_window_days ),
   sports!inner ( name, image_url, is_active ),
   facilities ( id, name, is_active ),
   court_type_amenities ( amenities ( label, icon_family, icon_name, sort_order ) ),
@@ -93,6 +95,7 @@ function toCard(row: CourtTypeRow): SportsCatalogCard | null {
     title: row.name,
     description: row.description,
     location: [row.venues?.name, row.venues?.address].filter(Boolean).join(', '),
+    bookingWindowDays: row.venues?.booking_window_days ?? 14,
     type: `${setting} • ${surface} • ${climate}`,
     badges: [setting, climate],
     slotOptions,

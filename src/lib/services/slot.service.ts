@@ -14,6 +14,13 @@ export type Slot = {
   available: boolean;
 };
 
+/** Today, plus `windowDays - 1` more, as `YYYY-MM-DD` on the venue's clock. */
+export function lastBookableDate(windowDays: number, timeZone: string): string {
+  const today = new Date(`${wallClockIn(timeZone).date}T00:00:00Z`);
+  today.setUTCDate(today.getUTCDate() + Math.max(windowDays, 1) - 1);
+  return today.toISOString().slice(0, 10);
+}
+
 export type SlotOptions = {
   /**
    * The slot length to lay the day out in. It must be one of the court type's
@@ -23,6 +30,8 @@ export type SlotOptions = {
   /**
    * Front desk only: a slot that has started but not yet ended can still be
    * booked for a walk-in. The app always needs the slot to be in the future.
+   * It also lifts the venue's booking window, so staff can take a booking
+   * further ahead than the app offers.
    */
   allowStarted?: boolean;
 };
@@ -36,7 +45,7 @@ export class SlotService {
     // 1. Get facility and venue details
     const { data: facility, error: facError } = await supabaseAdmin
       .from('facilities')
-      .select('venue_id, court_type_id, is_active, venues ( timezone, is_active )')
+      .select('venue_id, court_type_id, is_active, venues ( timezone, is_active, booking_window_days )')
       .eq('id', facilityId)
       .single();
 
@@ -47,6 +56,13 @@ export class SlotService {
     const venueId = facility.venue_id;
     if (!venueId || facility.venues?.is_active === false) return [];
     const timeZone = facility.venues?.timezone || DEFAULT_TIMEZONE;
+
+    // Beyond the venue's booking window there is nothing on offer. The front
+    // desk books past it deliberately, so it only binds the app.
+    if (!options.allowStarted) {
+      const windowDays = facility.venues?.booking_window_days ?? 14;
+      if (targetDate > lastBookableDate(windowDays, timeZone)) return [];
+    }
 
     // Only a length this court's type actually sells lays out a day.
     const { data: slotOption } = await supabaseAdmin

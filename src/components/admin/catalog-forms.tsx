@@ -30,7 +30,14 @@ function Checkbox({ name, label, defaultChecked, hint }: { name: string; label: 
 export function VenueForm({
   venue,
 }: {
-  venue?: { id: string; name: string; address: string | null; timezone: string | null; is_active: boolean | null };
+  venue?: {
+    id: string;
+    name: string;
+    address: string | null;
+    timezone: string | null;
+    booking_window_days: number;
+    is_active: boolean | null;
+  };
 }) {
   const timezones: readonly string[] =
     venue?.timezone && !(TIMEZONES as readonly string[]).includes(venue.timezone) ? [venue.timezone, ...TIMEZONES] : TIMEZONES;
@@ -64,6 +71,25 @@ export function VenueForm({
         </select>
         <p className="text-xs text-zinc-500">Booking dates, &ldquo;today&rdquo; and check-in are judged on this clock.</p>
         <FieldError name="timezone" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="booking_window_days" required>
+          Book up to (days ahead)
+        </Label>
+        <input
+          id="booking_window_days"
+          name="booking_window_days"
+          type="number"
+          min={1}
+          max={365}
+          step={1}
+          defaultValue={venue?.booking_window_days ?? 14}
+          className={inputClass}
+        />
+        <p className="text-xs text-zinc-500">
+          How far ahead the app offers dates, counting today as day 1. Front-desk bookings can go further.
+        </p>
+        <FieldError name="booking_window_days" />
       </div>
       <Checkbox
         name="is_active"

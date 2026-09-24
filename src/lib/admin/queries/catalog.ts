@@ -19,7 +19,7 @@ export async function getVenue(id: string) {
 
   const { data: venue, error } = await supabaseAdmin
     .from('venues')
-    .select('id, name, address, timezone, is_active, created_at')
+    .select('id, name, address, timezone, booking_window_days, is_active, created_at')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;

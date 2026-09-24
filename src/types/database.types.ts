@@ -736,6 +736,7 @@ export type Database = {
       venues: {
         Row: {
           address: string | null
+          booking_window_days: number
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -744,6 +745,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          booking_window_days?: number
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -752,6 +754,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          booking_window_days?: number
           created_at?: string | null
           id?: string
           is_active?: boolean | null

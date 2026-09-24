@@ -52,6 +52,11 @@ const venueSchema = z.object({
   name: z.string({ error: 'Enter the venue name.' }).min(2, 'Enter the venue name.').max(120),
   address: z.string().max(300).optional(),
   timezone: z.string({ error: 'Choose a timezone.' }).refine(isTimeZone, 'Choose a valid timezone.'),
+  booking_window_days: z.coerce
+    .number({ error: 'Enter how many days ahead bookings open.' })
+    .int('Use whole days.')
+    .min(1, 'Bookings must open at least 1 day ahead.')
+    .max(365, 'Use 365 days or fewer.'),
   is_active: checkbox,
 });
 

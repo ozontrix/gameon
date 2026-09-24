@@ -4,6 +4,7 @@ import { BookingError, BookingService } from '@/lib/services/booking.service';
 import { withAuth, AuthenticatedUser } from '@/lib/middlewares/auth';
 import { DEFAULT_TIMEZONE, minutesBetween, zonedTimeToUtc } from '@/lib/utils/date-helpers';
 import { sportKeyFor } from '@/lib/utils/sport-key';
+import { bookingStatusAt } from '@/lib/utils/booking-status';
 
 const createBookingSchema = z.object({
   facilityId: z.string().uuid("Invalid Facility ID"),
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
   });
 }
 
-type UserBooking = Awaited<ReturnType<typeof BookingService.getUserBookings>>[number];
+type UserBooking = Awaited<ReturnType<typeof BookingService.getUserBookings>>['rows'][number];
 
 function capitalize(value: string): string {
   return value ? value[0].toUpperCase() + value.slice(1) : value;
@@ -92,7 +93,7 @@ function toAppBooking(b: UserBooking, now: Date) {
 
   const startsAt = zonedTimeToUtc(b.booking_date, b.start_time, timeZone);
   const endsAt = zonedTimeToUtc(b.booking_date, b.end_time, timeZone);
-  const status = now >= endsAt ? 'past' : now >= startsAt ? 'ongoing' : 'upcoming';
+  const status = bookingStatusAt(startsAt, endsAt, now);
 
   const { date, weekday } = formatDate(b.booking_date);
   const bookedAt = new Date(b.paid_at ?? b.created_at ?? Date.now());
@@ -135,16 +136,33 @@ function toAppBooking(b: UserBooking, now: Date) {
   };
 }
 
+const listQuerySchema = z.object({
+  status: z.enum(['upcoming', 'ongoing', 'past']).default('upcoming'),
+  page: z.coerce.number().int().min(1).max(500).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export async function GET(request: Request) {
   return withAuth(request, ['USER', 'ADMIN', 'STAFF'], async (req, user) => {
     try {
-      const bookings = await BookingService.getUserBookings(user.id);
-      const now = new Date();
+      const { searchParams } = new URL(req.url);
+      const parsed = listQuerySchema.safeParse({
+        status: searchParams.get('status') ?? undefined,
+        page: searchParams.get('page') ?? undefined,
+        limit: searchParams.get('limit') ?? undefined,
+      });
+      if (!parsed.success) {
+        return NextResponse.json({ success: false, error: 'Invalid parameters' }, { status: 400 });
+      }
+      const { status, page, limit } = parsed.data;
 
-      return NextResponse.json(
-        { success: true, data: bookings.map((booking) => toAppBooking(booking, now)) },
-        { status: 200 }
-      );
+      const { rows, total, hasMore } = await BookingService.getUserBookings(user.id, { status, page, limit });
+      const now = new Date();
+      // Today's rows sit in the window for both directions; only the ones
+      // actually in this status survive.
+      const data = rows.map((booking) => toAppBooking(booking, now)).filter((booking) => booking.status === status);
+
+      return NextResponse.json({ success: true, data, page, total, hasMore }, { status: 200 });
 
     } catch (error) {
       console.error('Fetch Bookings Error:', error);

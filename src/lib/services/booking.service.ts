@@ -1,7 +1,8 @@
 import { supabaseAdmin } from '../db/supabase';
+import type { AppBookingStatus } from '@/lib/utils/booking-status';
 import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn } from '../utils/date-helpers';
 import { NotificationService } from './notification.service';
-import { SlotService, type SlotOptions } from './slot.service';
+import { SlotService, lastBookableDate, type SlotOptions } from './slot.service';
 
 /** How long a checkout holds a slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -59,16 +60,19 @@ export class BookingService {
   static async createBooking(userId: string, input: NewBooking) {
     const { facilityId, date, startTime, endTime } = input;
 
-    // 1. The length must be one this court sells; that option sets the price
+    // 1. The date must fall inside the venue's booking window
+    await BookingService.assertWithinBookingWindow(facilityId, date);
+
+    // 2. The length must be one this court sells; that option sets the price
     const amount = await BookingService.priceFor(facilityId, startTime, endTime);
 
-    // 2. The slot must exist and still be free
+    // 3. The slot must exist and still be free
     await BookingService.assertSlotFree(input);
 
-    // 3. A lapsed checkout overlapping this slot would still trip the overlap constraint
+    // 4. A lapsed checkout overlapping this slot would still trip the overlap constraint
     await BookingService.releaseLapsedHold(facilityId, date, startTime, endTime);
 
-    // 4. Insert PENDING booking
+    // 5. Insert PENDING booking
     // The overlap constraint blocks this if someone else JUST booked any part of it
     const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString();
     const { data: booking, error } = await supabaseAdmin
@@ -143,6 +147,27 @@ export class BookingService {
     }
 
     return booking;
+  }
+
+  /**
+   * Throws a 400 for a date past the venue's booking window. Only the app is
+   * held to it; the front desk books beyond it on purpose.
+   */
+  private static async assertWithinBookingWindow(facilityId: string, date: string) {
+    const { data: facility } = await supabaseAdmin
+      .from('facilities')
+      .select('venues ( timezone, booking_window_days )')
+      .eq('id', facilityId)
+      .maybeSingle();
+
+    const windowDays = facility?.venues?.booking_window_days ?? 14;
+    const timeZone = facility?.venues?.timezone || DEFAULT_TIMEZONE;
+    if (date > lastBookableDate(windowDays, timeZone)) {
+      throw new BookingError(
+        `Bookings open ${windowDays} day${windowDays === 1 ? '' : 's'} ahead. Please pick an earlier date.`,
+        400
+      );
+    }
   }
 
   /** Throws a 409 unless `startTime`–`endTime` is one of the facility's free slots on `date`. */
@@ -327,24 +352,49 @@ export class BookingService {
   }
 
   /** The player's confirmed bookings, newest first. */
-  static async getUserBookings(userId: string) {
-    const { data, error } = await supabaseAdmin
-      .from('bookings')
-      .select(`
-        id, booking_date, start_time, end_time, amount_paid, status, payment_status,
-        players, razorpay_order_id, paid_at, created_at,
-        facilities (
-          id, name,
-          venues ( name, address, timezone ),
-          court_types ( is_indoor, has_ac, surface_type, sports ( name ) )
-        )
-      `)
-      .eq('user_id', userId)
-      .eq('status', 'CONFIRMED')
-      .order('booking_date', { ascending: false })
-      .order('start_time', { ascending: false });
+  /**
+   * A page of the player's confirmed bookings for one status.
+   *
+   * The status a booking is in depends on the clock in its venue's timezone,
+   * which SQL can't sort on. So the date window narrows it here — everything
+   * from today for upcoming and ongoing, everything up to today for past —
+   * and the exact status is settled once the rows are mapped. Only today's
+   * rows can fall out that way, so a page may come back a little short; it
+   * never comes back wrong.
+   */
+  static async getUserBookings(
+    userId: string,
+    { status, page, limit }: { status: AppBookingStatus; page: number; limit: number }
+  ) {
+    const today = wallClockIn(DEFAULT_TIMEZONE).date;
+    const upcoming = status !== 'past';
+    const from = (page - 1) * limit;
 
+    let query = supabaseAdmin
+      .from('bookings')
+      .select(
+        `id, booking_date, start_time, end_time, amount_paid, status, payment_status,
+         players, razorpay_order_id, paid_at, created_at,
+         facilities (
+           id, name,
+           venues ( name, address, timezone ),
+           court_types ( is_indoor, has_ac, surface_type, sports ( name ) )
+         )`,
+        { count: 'exact' }
+      )
+      .eq('user_id', userId)
+      .eq('status', 'CONFIRMED');
+
+    query = upcoming
+      ? query.gte('booking_date', today).order('booking_date').order('start_time')
+      : query
+          .lte('booking_date', today)
+          .order('booking_date', { ascending: false })
+          .order('start_time', { ascending: false });
+
+    const { data, count, error } = await query.range(from, from + limit - 1);
     if (error) throw error;
-    return data;
+
+    return { rows: data ?? [], total: count ?? 0, hasMore: from + (data?.length ?? 0) < (count ?? 0) };
   }
 }
