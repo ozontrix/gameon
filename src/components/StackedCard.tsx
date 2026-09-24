@@ -69,8 +69,8 @@ export function StackedCard({
     [0, 0.8, 1],
     [
       "0 0 0px rgba(0,0,0,0)",
-      `0 -2px 0px rgba(245,166,35,0.03), 0 -4px 20px -10px rgba(0,0,0,${0.2 + (index / totalCards) * 0.2})`,
-      `0 -2px 0px rgba(245,166,35,0.04), 0 -8px 30px -12px rgba(0,0,0,${0.25 + (index / totalCards) * 0.35})`,
+      `0 -2px 0px rgba(242,130,24,0.03), 0 -4px 20px -10px rgba(0,0,0,${0.2 + (index / totalCards) * 0.2})`,
+      `0 -2px 0px rgba(242,130,24,0.04), 0 -8px 30px -12px rgba(0,0,0,${0.25 + (index / totalCards) * 0.35})`,
     ]
   );
 

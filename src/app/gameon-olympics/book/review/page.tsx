@@ -79,7 +79,7 @@ export default function OlympicsReviewPage() {
       {/* ─── Entry ─── */}
       <Panel className="mb-3">
         <div className="flex items-start gap-3">
-          <IconTile emoji={sport?.emoji ?? "🏸"} accent={sport?.accent ?? "#F5A623"} />
+          <IconTile emoji={sport?.emoji ?? "🏸"} accent={sport?.accent ?? "#F28218"} />
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-lg uppercase leading-tight text-go-white">
               {sport?.name}

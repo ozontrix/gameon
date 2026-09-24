@@ -55,7 +55,7 @@ function fireNewsletterConfetti() {
     gravity: 0.8,
     decay: 0.94,
     startVelocity: 30,
-    colors: ["#F5A623", "#F5D000", "#F7F5F2"],
+    colors: ["#F28218", "#F5D000", "#F7F5F2"],
   };
   confetti({ ...defaults, particleCount: 40, angle: 60, origin: { x: 0, y: 0.8 } });
   confetti({ ...defaults, particleCount: 40, angle: 120, origin: { x: 1, y: 0.8 } });

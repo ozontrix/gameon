@@ -267,7 +267,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
             {onNotifyClick && (
               <button
                 onClick={onNotifyClick}
-                className="shrink-0 flex items-center gap-2 bg-go-brand text-go-black text-[11px] font-bold tracking-wider uppercase rounded-full px-4 py-2 transition-all duration-300 hover:shadow-[0_0_28px_rgba(245,166,35,0.4)] hover:scale-[1.03] cursor-pointer"
+                className="shrink-0 flex items-center gap-2 bg-go-brand text-go-black text-[11px] font-bold tracking-wider uppercase rounded-full px-4 py-2 transition-all duration-300 hover:shadow-[0_0_28px_rgba(242,130,24,0.4)] hover:scale-[1.03] cursor-pointer"
               >
                 <Bell className="w-3.5 h-3.5" />
                 <span className="hidden xl:inline">Get Early Access</span>
@@ -392,7 +392,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                     closeMore();
                     onNotifyClick();
                   }}
-                  className="mt-3 w-full flex items-center justify-center gap-2 bg-go-brand text-go-black text-xs font-bold tracking-wider uppercase rounded-2xl py-3.5 hover:shadow-[0_0_24px_rgba(245,166,35,0.35)] transition-all cursor-pointer"
+                  className="mt-3 w-full flex items-center justify-center gap-2 bg-go-brand text-go-black text-xs font-bold tracking-wider uppercase rounded-2xl py-3.5 hover:shadow-[0_0_24px_rgba(242,130,24,0.35)] transition-all cursor-pointer"
                 >
                   <Bell className="w-4 h-4" />
                   Get Early Access
