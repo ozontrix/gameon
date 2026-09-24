@@ -13,7 +13,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Clock, Timer, Users } from "lucide-react";
-import { findSport, formatINR, type SportId } from "@/components/league/data";
+import { findCategories, entryFees, entryTickets, findSport, formatINR, type SportId } from "@/components/league/data";
 import { useLeagueBooking } from "./booking-context";
 import {
   Button,
@@ -42,16 +42,20 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
   const router = useRouter();
   const { draft, startBooking } = useLeagueBooking();
   const sport = findSport(sportId);
-  // A local override wins; otherwise fall back to the category already in the draft.
-  const [override, setOverride] = useState<string | null>(null);
-  const selected = override ?? (draft.sport === sportId ? draft.categoryId : null);
+  // A local override wins; otherwise fall back to the brackets already in the draft.
+  const [override, setOverride] = useState<string[] | null>(null);
+  const selected = override ?? (draft.sport === sportId ? draft.categoryIds : []);
 
   if (!sport) return null;
 
-  const category = sport.categories.find((item) => item.id === selected) ?? null;
+  const chosen = findCategories(sport, selected);
+  const tickets = entryTickets(chosen);
+
+  const toggle = (id: string) =>
+    setOverride(selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]);
 
   const handleContinue = () => {
-    if (!selected) return;
+    if (chosen.length === 0) return;
     startBooking(sport.id, selected);
     router.push(`${BASE}/book/details`);
   };
@@ -80,22 +84,22 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
 
       <div className="mb-3">
         <h2 className="font-display text-lg uppercase tracking-wide text-go-white">
-          Pick a category
+          Pick your categories
         </h2>
         <p className="mt-0.5 text-[12px] text-go-off/45">
-          {sport.categories.length} {sport.categories.length === 1 ? "category" : "categories"} ·
-          fee is per entry
+          {sport.categories.length} {sport.categories.length === 1 ? "category" : "categories"} · fee
+          is per entry · pick as many as you like
         </p>
       </div>
 
       <div className="space-y-2.5">
         {sport.categories.map((item) => {
-          const active = selected === item.id;
+          const active = selected.includes(item.id);
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => setOverride(item.id)}
+              onClick={() => toggle(item.id)}
               aria-pressed={active}
               className={cn(
                 "flex w-full items-center gap-3 rounded-[20px] border px-4 py-3.5 text-left transition-all active:scale-[0.99]",
@@ -106,7 +110,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
             >
               <span
                 className={cn(
-                  "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                  "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[7px] border transition-colors",
                   active ? "border-go-brand bg-go-brand text-go-black" : "border-white/25"
                 )}
               >
@@ -136,15 +140,19 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         <div className="flex items-center gap-3 lg:justify-between">
           <div className="min-w-0 flex-1 lg:flex-none">
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-go-off/40">
-              {category ? category.name : "Select a category"}
+              {chosen.length > 0
+                ? `${chosen.length} ${chosen.length === 1 ? "bracket" : "brackets"} · ${tickets} ${
+                    tickets === 1 ? "ticket" : "tickets"
+                  }`
+                : "Select a category"}
             </p>
             <p className="font-display text-lg leading-tight text-go-white">
-              {category ? formatINR(category.fee) : "—"}
+              {chosen.length > 0 ? formatINR(entryFees(chosen)) : "—"}
             </p>
           </div>
           <Button
             onClick={handleContinue}
-            disabled={!category}
+            disabled={chosen.length === 0}
             size="lg"
             className="flex-1 lg:flex-none"
           >

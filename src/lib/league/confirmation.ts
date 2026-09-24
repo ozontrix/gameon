@@ -31,8 +31,8 @@ export interface LeagueConfirmation {
   entry: {
     sport: string;
     sportName: string;
-    categoryId: string;
-    categoryName: string;
+    /** Every bracket the entry holds — one entry can cover several. */
+    categories: { id: string; name: string }[];
     date: string;
     squadSize: number;
     teamName: string;
@@ -45,4 +45,9 @@ export interface LeagueConfirmation {
     coupon: string | null;
   };
   quote: EntryQuote;
+}
+
+/** "Men's Doubles + Men's Singles" — the brackets of an entry in one label. */
+export function confirmationBrackets(entry: LeagueConfirmation["entry"]): string {
+  return entry.categories.map((category) => category.name).join(" + ");
 }

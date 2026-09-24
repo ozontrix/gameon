@@ -22,7 +22,7 @@ import {
   Users,
 } from "lucide-react";
 import { findSport, formatINR } from "@/components/league/data";
-import { LEAGUE_CONFIRMATION_KEY, type LeagueConfirmation } from "@/lib/league/confirmation";
+import { LEAGUE_CONFIRMATION_KEY, confirmationBrackets, type LeagueConfirmation } from "@/lib/league/confirmation";
 import { LEAGUE_HELP_PHONE, LEAGUE_VENUE, matchDayLabel } from "@/lib/league/constants";
 import { Button, Chip, EmptyState, InfoRow, Kicker, Panel } from "./ui";
 import { cn } from "@/lib/utils";
@@ -96,6 +96,7 @@ export function LeagueConfirmationScreen() {
 
   const { entry, quote } = confirmation;
   const sport = findSport(entry.sport);
+  const brackets = confirmationBrackets(entry);
   const day = matchDayLabel(entry.date);
   const paidAt = new Date(confirmation.paidAt).toLocaleString("en-IN", {
     dateStyle: "medium",
@@ -129,7 +130,7 @@ export function LeagueConfirmationScreen() {
         </motion.h1>
         <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-go-off/60">
           Payment of <strong className="text-go-white">{formatINR(confirmation.amount)}</strong>{" "}
-          received. Your {entry.sportName} · {entry.categoryName} entry on {day} is confirmed.
+          received. Your {entry.sportName} · {brackets} entry on {day} is confirmed.
         </p>
 
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
@@ -150,7 +151,7 @@ export function LeagueConfirmationScreen() {
             <h2 className="mt-1.5 font-display text-xl uppercase leading-tight text-go-white">
               {entry.sportName}
             </h2>
-            <p className="text-[12.5px] text-go-off/60">{entry.categoryName}</p>
+            <p className="text-[12.5px] text-go-off/60">{brackets}</p>
           </div>
           <span className="text-3xl" aria-hidden>
             {sport?.emoji ?? "🏆"}

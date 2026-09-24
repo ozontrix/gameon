@@ -8,6 +8,7 @@ import {
   matchDayLabel,
 } from "./constants";
 import type { LeagueConfirmation } from "./confirmation";
+import { confirmationBrackets } from "./confirmation";
 
 /**
  * The paid-entry confirmation email.
@@ -62,6 +63,8 @@ function block(title: string, rows: string, marginBottom = 22): string {
 interface EmailContext {
   greeting: string;
   day: string;
+  /** Every bracket in the entry — "Men's Singles + Men's Doubles". */
+  brackets: string;
   tickets: string;
   passRows: string;
   addOnRows: string;
@@ -71,16 +74,18 @@ interface EmailContext {
 function describe(confirmation: LeagueConfirmation): EmailContext {
   const { entry, quote } = confirmation;
   const day = matchDayLabel(entry.date);
+  const brackets = confirmationBrackets(entry);
 
   return {
     greeting: entry.teamName ? `Team ${entry.teamName}` : entry.captainName.split(" ")[0],
     day,
+    brackets,
     tickets: entry.squadSize > 1 ? `${entry.squadSize} tickets` : "1 ticket",
     passRows: [
       row("Player", entry.captainName),
       entry.teamName ? row("Team", entry.teamName) : "",
       row("Sport", entry.sportName),
-      row("Category", entry.categoryName),
+      row("Category", brackets),
       row("Match day", day),
       row("Entry", `${entry.squadSize > 1 ? `${entry.squadSize} tickets` : "1 ticket"} · one pass per player`),
       row("Venue", LEAGUE_VENUE),
@@ -90,7 +95,7 @@ function describe(confirmation: LeagueConfirmation): EmailContext {
       .map((addOn) => row(`${addOn.emoji} ${addOn.name} × ${addOn.qty}`, formatINR(addOn.amount)))
       .join(""),
     priceRows: [
-      row(`Entry fee · ${entry.categoryName}`, formatINR(quote.entryFee)),
+      row(`Entry fee · ${brackets}`, formatINR(quote.entryFee)),
       quote.addOnsTotal > 0 ? row("Add-ons", formatINR(quote.addOnsTotal)) : "",
       quote.discount > 0 && quote.couponCode
         ? row(`Discount · ${quote.couponCode}`, `- ${formatINR(quote.discount)}`)
@@ -115,7 +120,7 @@ function bodyHtml(confirmation: LeagueConfirmation, context: EmailContext): stri
             <p style="margin:0 0 20px;font-size:14px;color:#4a4a4a;line-height:1.7;">Your spot in the <strong>${escapeHtml(
               entry.sportName
             )} &middot; ${escapeHtml(
-              entry.categoryName
+              context.brackets
             )}</strong> bracket on <strong>${escapeHtml(
               context.day
             )}</strong> is locked in. Here is everything you need on match day &mdash; keep this email handy or show the reference at the front desk.</p>
@@ -193,7 +198,7 @@ function buildText(confirmation: LeagueConfirmation, context: EmailContext): str
     `${LEAGUE_NAME} — entry confirmed`,
     "",
     `Hi ${context.greeting},`,
-    `Your ${entry.sportName} · ${entry.categoryName} entry on ${context.day} is locked in.`,
+    `Your ${entry.sportName} · ${context.brackets} entry on ${context.day} is locked in.`,
     "",
     `Reference: ${confirmation.reference}`,
     `Venue: ${LEAGUE_VENUE}`,
@@ -220,7 +225,7 @@ export function renderLeagueConfirmationEmail(confirmation: LeagueConfirmation) 
   const context = describe(confirmation);
 
   return {
-    subject: `You're in! ${confirmation.entry.sportName} · ${confirmation.entry.categoryName} — ${confirmation.reference}`,
+    subject: `You're in! ${confirmation.entry.sportName} · ${confirmationBrackets(confirmation.entry)} — ${confirmation.reference}`,
     html: shellHtml(confirmation, bodyHtml(confirmation, context)),
     text: buildText(confirmation, context),
   };

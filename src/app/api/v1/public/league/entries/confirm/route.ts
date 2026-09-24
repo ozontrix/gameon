@@ -62,8 +62,7 @@ export async function POST(request: Request) {
         entry: {
           sport: entry.sport.id,
           sportName: entry.sport.name,
-          categoryId: entry.category.id,
-          categoryName: entry.category.name,
+          categories: entry.categories.map((category) => ({ id: category.id, name: category.name })),
           date: entry.date,
           squadSize: entry.squadSize,
           teamName: entry.teamName,

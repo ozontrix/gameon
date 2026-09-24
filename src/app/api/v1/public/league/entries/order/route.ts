@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         notes: {
           league: LEAGUE_NAME,
           sport: entry.sport.name,
-          category: entry.category.name,
+          categories: entry.categories.map((category) => category.name).join(", "),
           match_day: matchDayLabel(entry.date),
           contact: entry.phone,
         },

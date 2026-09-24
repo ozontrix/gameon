@@ -70,13 +70,13 @@ export function LeaguePayButton({
   className?: string;
 }) {
   const router = useRouter();
-  const { draft, sport, category, update } = useLeagueBooking();
+  const { draft, sport, categories, update } = useLeagueBooking();
   const [status, setStatus] = useState<Status>("idle");
   const busy = status !== "idle";
 
   const buildEntry = () => ({
     sport: draft.sport,
-    categoryId: draft.categoryId,
+    categoryIds: draft.categoryIds,
     date: draft.date,
     squadSize: draft.squadSize,
     teamName: draft.teamName,
@@ -90,7 +90,7 @@ export function LeaguePayButton({
   });
 
   const handlePay = async () => {
-    if (!draft.sport || !draft.categoryId || !draft.date) {
+    if (!draft.sport || draft.categoryIds.length === 0 || !draft.date) {
       toast.error("Pick a sport and a category first.");
       return;
     }
@@ -127,7 +127,9 @@ export function LeaguePayButton({
         currency: order.currency,
         order_id: order.orderId,
         name: LEAGUE_NAME,
-        description: `${sport?.name ?? "Entry"} · ${category?.name ?? ""} · ${matchDayLabel(draft.date)}`,
+        description: `${sport?.name ?? "Entry"} · ${categories
+          .map((item) => item.name)
+          .join(" + ")} · ${matchDayLabel(draft.date)}`,
         image: "/game_on_favicon.png",
         prefill: {
           name: draft.captainName || draft.teamName,
@@ -136,7 +138,7 @@ export function LeaguePayButton({
         },
         notes: {
           sport: sport?.name ?? "",
-          category: category?.name ?? "",
+          category: categories.map((item) => item.name).join(", "),
           match_day: matchDayLabel(draft.date),
         },
         theme: { color: "#F5A623" },

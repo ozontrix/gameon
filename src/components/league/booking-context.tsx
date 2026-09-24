@@ -27,7 +27,9 @@ import {
 } from "react";
 import {
   ADD_ONS,
-  findCategory,
+  entryFees,
+  entryTickets,
+  findCategories,
   findCoupon,
   findSport,
   type Category,
@@ -39,10 +41,11 @@ import { quoteEntry } from "@/lib/league/entry";
 
 export interface Draft {
   sport: SportId | null;
-  categoryId: string | null;
+  /** Every bracket this entry holds — the player can pick more than one. */
+  categoryIds: string[];
   date: string | null;
   slot: string | null;
-  /** Headcount for the entry — squad size for team sports. */
+  /** Headcount for the entry — tickets across every bracket, or the squad size. */
   squadSize: number;
   teamName: string;
   captainName: string;
@@ -64,7 +67,7 @@ const DEFAULT_MATCH_DAY = LEAGUE_MATCH_DAYS[0].iso;
 
 const EMPTY_DRAFT: Draft = {
   sport: null,
-  categoryId: null,
+  categoryIds: [],
   date: DEFAULT_MATCH_DAY,
   slot: null,
   squadSize: 1,
@@ -98,11 +101,12 @@ interface BookingContextValue {
   /** False until the stored draft has been read — guards wait for this. */
   ready: boolean;
   sport: Sport | null;
-  category: Category | null;
+  /** Every bracket in the entry, in the order the player picked them. */
+  categories: Category[];
   pricing: Pricing;
   update: (patch: Partial<Draft>) => void;
-  /** Picks a sport + category and clears anything downstream of it. */
-  startBooking: (sport: SportId, categoryId: string) => void;
+  /** Picks a sport + its brackets and clears anything downstream of it. */
+  startBooking: (sport: SportId, categoryIds: string[]) => void;
   toggleAddOn: (id: string) => void;
   setAddOnQty: (id: string, qty: number) => void;
   applyCoupon: (code: string) => { ok: boolean; message: string };
@@ -150,10 +154,10 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
     setDraft((current) => ({ ...current, ...patch }));
   }, []);
 
-  const startBooking = useCallback((sportId: SportId, categoryId: string) => {
+  const startBooking = useCallback((sportId: SportId, categoryIds: string[]) => {
     setDraft((current) => {
       const nextSport = findSport(sportId);
-      const nextCategory = findCategory(nextSport, categoryId);
+      const nextCategories = findCategories(nextSport, categoryIds);
       const sportChanged = current.sport !== sportId;
       return {
         ...EMPTY_DRAFT,
@@ -163,8 +167,8 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
         email: current.email,
         city: current.city,
         sport: sportId,
-        categoryId,
-        squadSize: nextCategory?.squadSize ?? 1,
+        categoryIds: nextCategories.map((category) => category.id),
+        squadSize: Math.max(1, entryTickets(nextCategories)),
         // The player never picks a match day — every entry is pinned to the
         // season's first day. Switching sports invalidates the slot that was held.
         date: DEFAULT_MATCH_DAY,
@@ -202,7 +206,7 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
       const coupon = findCoupon(code);
       if (!coupon) return { ok: false, message: "That code isn't valid for this event." };
       const activeSport = findSport(draft.sport);
-      const entryFee = findCategory(activeSport, draft.categoryId)?.fee ?? 0;
+      const entryFee = entryFees(findCategories(activeSport, draft.categoryIds));
       if (entryFee < coupon.minSubtotal) {
         return {
           ok: false,
@@ -212,7 +216,7 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
       setDraft((current) => ({ ...current, coupon: coupon.code }));
       return { ok: true, message: `${coupon.code} applied — ${coupon.label}.` };
     },
-    [draft.categoryId, draft.sport]
+    [draft.categoryIds, draft.sport]
   );
 
   const removeCoupon = useCallback(() => {
@@ -222,12 +226,15 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
   const reset = useCallback(() => setDraft(EMPTY_DRAFT), []);
 
   const sport = useMemo(() => findSport(draft.sport), [draft.sport]);
-  const category = useMemo(() => findCategory(sport, draft.categoryId), [sport, draft.categoryId]);
+  const categories = useMemo(
+    () => findCategories(sport, draft.categoryIds),
+    [sport, draft.categoryIds]
+  );
 
   // The same maths the payment API runs, so the shown total is the charged total.
   const pricing = useMemo<Pricing>(
-    () => quoteEntry({ category, addons: draft.addons, coupon: draft.coupon }),
-    [category, draft.addons, draft.coupon]
+    () => quoteEntry({ categories, addons: draft.addons, coupon: draft.coupon }),
+    [categories, draft.addons, draft.coupon]
   );
 
   const value = useMemo<BookingContextValue>(
@@ -235,7 +242,7 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
       draft,
       ready,
       sport,
-      category,
+      categories,
       pricing,
       update,
       startBooking,
@@ -249,7 +256,7 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
       draft,
       ready,
       sport,
-      category,
+      categories,
       pricing,
       update,
       startBooking,

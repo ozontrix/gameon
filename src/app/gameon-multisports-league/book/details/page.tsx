@@ -11,7 +11,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Minus, Plus, Ticket, Users } from "lucide-react";
-import { ADD_ONS, formatDayLabel, formatINR } from "@/components/league/data";
+import { ADD_ONS, entryTickets, formatDayLabel, formatINR } from "@/components/league/data";
 import { useLeagueBooking } from "@/components/league/booking-context";
 import {
   Button,
@@ -50,10 +50,10 @@ const inputClass =
 
 export default function OlympicsDetailsPage() {
   const router = useRouter();
-  const { draft, ready, sport, category, pricing, update, toggleAddOn, setAddOnQty } =
+  const { draft, ready, sport, categories, pricing, update, toggleAddOn, setAddOnQty } =
     useLeagueBooking();
 
-  if (ready && (!sport || !category)) {
+  if (ready && (!sport || categories.length === 0)) {
     return (
       <EmptyState
         emoji="📝"
@@ -66,8 +66,10 @@ export default function OlympicsDetailsPage() {
   }
 
   const isTeam = sport?.mode === "team";
-  /** Minimum squad for team sports; players sharing the bracket for individual entries. */
-  const squadSize = category?.squadSize ?? 1;
+  /** Minimum squad for team sports; tickets across every bracket for individuals. */
+  const squadSize = Math.max(1, entryTickets(categories));
+  /** "Men's Singles + Men's Doubles" — the brackets this entry covers. */
+  const brackets = categories.map((item) => item.name).join(" + ");
 
   const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(draft.email.trim());
   const missing = [
@@ -84,8 +86,8 @@ export default function OlympicsDetailsPage() {
       <ScreenHeader
         title={isTeam ? "Team details" : "Player details"}
         subtitle={
-          sport && category
-            ? `${sport.name} · ${category.name} · ${formatDayLabel(draft.date)}`
+          sport && categories.length > 0
+            ? `${sport.name} · ${brackets} · ${formatDayLabel(draft.date)}`
             : "Loading your entry…"
         }
         backHref={
@@ -170,7 +172,7 @@ export default function OlympicsDetailsPage() {
           <p className="mt-2 text-[11.5px] leading-relaxed text-go-off/45">
             {isTeam
               ? `${sport?.name} is played ${squadSize}-a-side, so the minimum required squad is already set — there is no headcount to pick.`
-              : `You are booking ${squadSize > 1 ? `${squadSize} tickets — one for each player` : "one ticket, one player"} in this ${category?.name} entry. Nothing to select here.`}
+              : `You are booking ${squadSize > 1 ? `${squadSize} tickets — one for each player` : "one ticket, one player"} across ${brackets}. Nothing to select here.`}
           </p>
         </div>
 

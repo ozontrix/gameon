@@ -12,7 +12,9 @@ import {
   ADD_ONS,
   GST_RATE,
   PLATFORM_FEE,
-  findCategory,
+  entryFees,
+  entryTickets,
+  findCategories,
   findCoupon,
   findSport,
   type Category,
@@ -26,7 +28,8 @@ export const LEAGUE_SPORT_IDS = ["badminton", "pickleball", "cricket", "football
 
 export const LeagueEntrySchema = z.object({
   sport: z.enum(LEAGUE_SPORT_IDS),
-  categoryId: z.string().trim().min(1).max(40),
+  /** Every bracket the player is entering — one entry can hold several. */
+  categoryIds: z.array(z.string().trim().min(1).max(40)).min(1).max(6),
   date: z.string().trim().min(8).max(10),
   squadSize: z.number().int().min(1).max(30).optional(),
   teamName: z.string().trim().max(60).optional().default(""),
@@ -44,7 +47,8 @@ export type LeagueEntryInput = z.infer<typeof LeagueEntrySchema>;
 /** The normalised entry that the APIs, the email and the pass all agree on. */
 export interface LeagueEntry {
   sport: Sport;
-  category: Category;
+  /** The brackets in this entry, in the order the player picked them. */
+  categories: Category[];
   date: string;
   squadSize: number;
   teamName: string;
@@ -87,8 +91,14 @@ export function parseLeagueEntry(input: unknown): ParseResult {
 
   const data = parsed.data;
   const sport = findSport(data.sport);
-  const category = findCategory(sport, data.categoryId);
-  if (!sport || !category) return { ok: false, error: "That sport and category combination is not on the board." };
+  if (!sport) return { ok: false, error: "That sport and category combination is not on the board." };
+
+  // The same bracket twice is one bracket, and every id must belong to the sport.
+  const ids = [...new Set(data.categoryIds)];
+  const categories = findCategories(sport, ids);
+  if (categories.length !== ids.length) {
+    return { ok: false, error: "That sport and category combination is not on the board." };
+  }
 
   if (!findMatchDay(data.date)) return { ok: false, error: "Please pick one of the two match days." };
 
@@ -112,11 +122,11 @@ export function parseLeagueEntry(input: unknown): ParseResult {
 
   const entry: LeagueEntry = {
     sport,
-    category,
+    categories,
     date: data.date,
     // Team sports: the minimum required squad. Individual brackets: one ticket
-    // per player, straight from the category.
-    squadSize: category.squadSize,
+    // per player, summed across every bracket in the entry.
+    squadSize: entryTickets(categories),
     teamName: data.teamName.trim(),
     captainName: data.captainName.trim(),
     phone: data.phone.trim(),
@@ -127,21 +137,21 @@ export function parseLeagueEntry(input: unknown): ParseResult {
     coupon: data.coupon?.trim().toUpperCase() || null,
   };
 
-  return { ok: true, entry, quote: quoteEntry({ category: entry.category, addons: data.addons, coupon: entry.coupon }) };
+  return { ok: true, entry, quote: quoteEntry({ categories: entry.categories, addons: data.addons, coupon: entry.coupon }) };
 }
 
 /* ───────────────────────────── Money ───────────────────────────── */
 
 /** Everything the money maths needs — the client draft and the server entry both fit. */
 export interface QuoteInput {
-  category: Category | null;
+  categories: Category[] | null;
   addons: Record<string, number>;
   coupon: string | null;
 }
 
 /** The single source of truth for what a league entry costs. */
 export function quoteEntry(input: QuoteInput): EntryQuote {
-  const entryFee = input.category?.fee ?? 0;
+  const entryFee = entryFees(input.categories ?? []);
   const addOnsTotal = Object.entries(input.addons).reduce((sum, [id, qty]) => {
     const addOn = ADD_ONS.find((item) => item.id === id);
     return addOn && qty > 0 ? sum + addOn.price * qty : sum;

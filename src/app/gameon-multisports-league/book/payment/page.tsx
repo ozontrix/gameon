@@ -127,19 +127,19 @@ function MethodDetail({ method, total }: { method: Method; total: number }) {
 
 export default function OlympicsPaymentPage() {
   const router = useRouter();
-  const { draft, ready, sport, category, pricing, update } = useLeagueBooking();
+  const { draft, ready, sport, categories, pricing, update } = useLeagueBooking();
   const [method, setMethod] = useState<Method>(
     (draft.paymentMethod as Method | null) ?? "upi"
   );
   const [agreed, setAgreed] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  if (ready && (!sport || !category)) {
+  if (ready && (!sport || categories.length === 0)) {
     return (
       <EmptyState
         emoji="💳"
         title="Nothing to pay for yet"
-        copy="Complete your entry first — the payment step unlocks once there is a slot and a squad."
+        copy="Complete your entry first — the payment step unlocks once there are brackets and a squad."
         ctaLabel="Browse sports"
         ctaHref="/gameon-multisports-league"
       />
@@ -160,7 +160,9 @@ export default function OlympicsPaymentPage() {
       <StepBar current="payment" />
       <ScreenHeader
         title="Payment"
-        subtitle={`${sport?.name} · ${category?.name} · ${draft.slot ?? "slot to be confirmed"}`}
+        subtitle={`${sport?.name} · ${categories.map((item) => item.name).join(" + ")} · ${
+          draft.slot ?? "slot to be confirmed"
+        }`}
         backHref="/gameon-multisports-league/book/review"
       />
 

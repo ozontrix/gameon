@@ -39,15 +39,16 @@ function hasEligibleEntry(coupon: Coupon, entryFee: number) {
 }
 
 export default function OlympicsReviewPage() {
-  const { draft, ready, sport, category, pricing, applyCoupon, removeCoupon } = useLeagueBooking();
+  const { draft, ready, sport, categories, pricing, applyCoupon, removeCoupon } =
+    useLeagueBooking();
   const [code, setCode] = useState("");
 
-  if (ready && (!sport || !category)) {
+  if (ready && (!sport || categories.length === 0)) {
     return (
       <EmptyState
         emoji="🧾"
         title="Nothing to review"
-        copy="Pick a sport and a category first — your entry summary will show up here."
+        copy="Pick a sport and at least one category first — your entry summary will show up here."
         ctaLabel="Browse sports"
         ctaHref="/gameon-multisports-league"
       />
@@ -83,7 +84,9 @@ export default function OlympicsReviewPage() {
             <h2 className="font-display text-lg uppercase leading-tight text-go-white">
               {sport?.name}
             </h2>
-            <p className="mt-0.5 text-[13px] text-go-off/60">{category?.name}</p>
+            <p className="mt-0.5 text-[13px] text-go-off/60">
+              {categories.map((item) => item.name).join(" + ")}
+            </p>
             <p className="mt-2 text-[12px] text-go-off/45">
               {formatDayLabel(draft.date)} · {draft.slot ?? "slot to be confirmed"}
             </p>
@@ -116,7 +119,14 @@ export default function OlympicsReviewPage() {
           <InfoRow label="Mobile" value={draft.phone || "—"} />
           {draft.email ? <InfoRow label="Email" value={draft.email} /> : null}
           {draft.city ? <InfoRow label="City" value={draft.city} /> : null}
-          <InfoRow label="Squad size" value={`${draft.squadSize} players`} />
+          <InfoRow
+            label={sport?.mode === "team" ? "Squad size" : "Tickets"}
+            value={
+              sport?.mode === "team"
+                ? `${draft.squadSize} players`
+                : `${draft.squadSize} ${draft.squadSize === 1 ? "ticket" : "tickets"}`
+            }
+          />
           {draft.notes ? <InfoRow label="Notes" value={draft.notes} /> : null}
         </div>
       </Panel>
@@ -217,7 +227,16 @@ export default function OlympicsReviewPage() {
       <Panel className="mb-4">
         <Kicker>Price details</Kicker>
         <div className="mt-2">
-          <InfoRow label={`Entry fee · ${category?.name}`} value={formatINR(pricing.entryFee)} />
+          {categories.map((item) => (
+            <InfoRow
+              key={item.id}
+              label={`Entry fee · ${item.name}`}
+              value={formatINR(item.fee)}
+            />
+          ))}
+          {categories.length > 1 ? (
+            <InfoRow label="Entry fee total" value={formatINR(pricing.entryFee)} strong />
+          ) : null}
           {pricing.addOnsTotal > 0 ? (
             <InfoRow label="Add-ons" value={formatINR(pricing.addOnsTotal)} />
           ) : null}

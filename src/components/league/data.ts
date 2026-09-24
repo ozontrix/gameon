@@ -140,6 +140,28 @@ export function findCategory(
   return sport.categories.find((category) => category.id === categoryId) ?? null;
 }
 
+/**
+ * Resolves the bracket ids an entry holds, in the order the player picked them.
+ * One entry can hold several brackets (Men's Singles + Men's Doubles), so every
+ * screen works from this list rather than from a single category.
+ */
+export function findCategories(sport: Sport | null, ids: string[]): Category[] {
+  if (!sport) return [];
+  return ids
+    .map((id) => sport.categories.find((category) => category.id === id) ?? null)
+    .filter((category): category is Category => category !== null);
+}
+
+/** Tickets in an entry — one per player, across every bracket it holds. */
+export function entryTickets(categories: Category[]): number {
+  return categories.reduce((sum, category) => sum + category.squadSize, 0);
+}
+
+/** Entry fee for a set of brackets — the sum of their fees. */
+export function entryFees(categories: Category[]): number {
+  return categories.reduce((sum, category) => sum + category.fee, 0);
+}
+
 /* ────────────────────────────── Money ────────────────────────────── */
 
 export const PLATFORM_FEE = 49;
@@ -190,7 +212,6 @@ export interface Coupon {
 }
 
 export const COUPONS: Coupon[] = [
-  { code: "GAMEON10", label: "10% off your entry", percent: 10, minSubtotal: 0 },
   { code: "EARLYBIRD", label: "15% off entries above ₹1,500", percent: 15, minSubtotal: 1500 },
 ];
 
@@ -475,7 +496,7 @@ export const FAQS: Faq[] = [
 ];
 
 export const OLYMPICS_PROMO = {
-  code: "GAMEON10",
-  title: "Get 10% Off Your Next Game",
-  copy: "Use code GAMEON10 at checkout.",
+  code: "EARLYBIRD",
+  title: "Get 15% Off Your Entry",
+  copy: "Use code EARLYBIRD on entries above ₹1,500.",
 };
