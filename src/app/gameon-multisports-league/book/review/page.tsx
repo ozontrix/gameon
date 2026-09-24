@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Game On Multisports League — step 3: review.
+ * Game On Multisports League — step 2: review.
  *
  * One screen with everything the player is about to pay for: the entry, the
  * squad, add-ons, a coupon box and the full price breakdown.
@@ -47,7 +47,7 @@ export default function OlympicsReviewPage() {
       <EmptyState
         emoji="🧾"
         title="Nothing to review"
-        copy="Pick a sport, a category and a slot first — your entry summary will show up here."
+        copy="Pick a sport and a category first — your entry summary will show up here."
         ctaLabel="Browse sports"
         ctaHref="/gameon-multisports-league"
       />
@@ -87,10 +87,11 @@ export default function OlympicsReviewPage() {
             <p className="mt-2 text-[12px] text-go-off/45">
               {formatDayLabel(draft.date)} · {draft.slot ?? "slot to be confirmed"}
             </p>
-            <p className="text-[12px] text-go-off/45">{sport?.venue}</p>
           </div>
           <Link
-            href="/gameon-multisports-league/book/slot"
+            href={
+              sport ? `/gameon-multisports-league/sports/${sport.id}` : "/gameon-multisports-league"
+            }
             className="shrink-0 text-[12px] font-semibold text-go-brand"
           >
             Edit

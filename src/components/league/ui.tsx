@@ -253,7 +253,6 @@ export function ScreenHeader({
 /* ───────────────────────────── Flow step bar ───────────────────────────── */
 
 export const BOOKING_STEPS = [
-  { id: "slot", label: "Date", href: "/gameon-multisports-league/book/slot" },
   { id: "details", label: "Details", href: "/gameon-multisports-league/book/details" },
   { id: "review", label: "Review", href: "/gameon-multisports-league/book/review" },
   { id: "payment", label: "Payment", href: "/gameon-multisports-league/book/payment" },
@@ -261,7 +260,7 @@ export const BOOKING_STEPS = [
 
 export type BookingStepId = (typeof BOOKING_STEPS)[number]["id"];
 
-/** Compact 4-step progress rail used by every flow screen. */
+/** Compact 3-step progress rail used by every flow screen. */
 export function StepBar({ current }: { current: BookingStepId }) {
   const activeIndex = BOOKING_STEPS.findIndex((step) => step.id === current);
 

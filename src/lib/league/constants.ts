@@ -1,8 +1,8 @@
 /**
  * Game On Multisports League — locked event identity.
  *
- * Shared by the match-day picker, the payment APIs and the confirmation email,
- * so the dates, venue and contact details can never drift apart.
+ * Shared by the booking flow, the payment APIs and the confirmation email, so
+ * the dates, venue and contact details can never drift apart.
  */
 
 export const LEAGUE_NAME = "Game On Multisports League";
@@ -16,7 +16,7 @@ export interface LeagueMatchDay {
   label: string;
 }
 
-/** The two match days. Everything (picker, API validation, email) reads this. */
+/** The two match days. The draft pins the first; the APIs and email read them all. */
 export const LEAGUE_MATCH_DAYS: LeagueMatchDay[] = [
   { iso: "2026-10-17", label: "Day 1" },
   { iso: "2026-10-18", label: "Day 2" },

@@ -3,10 +3,14 @@
 /**
  * Game On Multisports League — booking draft.
  *
- * The flow (sport → category → slot → details → payment) is a set of separate
- * screens, so the draft lives in one client-side context that the
- * `gameon-olympics` layout mounts above every screen. It is mirrored into
- * sessionStorage so a refresh or deep link during the flow keeps the entry.
+ * The flow (sport → category → details → review → payment) is a set of separate
+ * screens, so the draft lives in one client-side context that the league layout
+ * mounts above every screen. It is mirrored into sessionStorage so a refresh or
+ * deep link during the flow keeps the entry.
+ *
+ * There is no date screen: the player never picks a match day, so the draft is
+ * always pinned to the season's first day. Per-category match days will be shown
+ * on the sport page and set here instead.
  *
  * UI only: nothing here talks to the API yet. When the flow goes live the
  * `pricing` block below is replaced by the server's quote.
@@ -30,6 +34,7 @@ import {
   type Sport,
   type SportId,
 } from "./data";
+import { LEAGUE_MATCH_DAYS } from "@/lib/league/constants";
 import { quoteEntry } from "@/lib/league/entry";
 
 export interface Draft {
@@ -51,10 +56,16 @@ export interface Draft {
   paymentMethod: string | null;
 }
 
+/**
+ * The match day every entry is pinned to while the player never chooses one.
+ * Per-category days will replace this once they are fixed.
+ */
+const DEFAULT_MATCH_DAY = LEAGUE_MATCH_DAYS[0].iso;
+
 const EMPTY_DRAFT: Draft = {
   sport: null,
   categoryId: null,
-  date: null,
+  date: DEFAULT_MATCH_DAY,
   slot: null,
   squadSize: 1,
   teamName: "",
@@ -110,8 +121,16 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const stored = window.sessionStorage.getItem(STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore of client-only storage
-      if (stored) setDraft({ ...EMPTY_DRAFT, ...(JSON.parse(stored) as Partial<Draft>) });
+      if (stored) {
+        // Re-pin the match day: nothing in the flow chooses it, so a stale draft
+        // must not be able to leave the entry without a valid day.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore of client-only storage
+        setDraft({
+          ...EMPTY_DRAFT,
+          ...(JSON.parse(stored) as Partial<Draft>),
+          date: DEFAULT_MATCH_DAY,
+        });
+      }
     } catch {
       // Unreadable storage simply means a fresh entry.
     }
@@ -146,8 +165,9 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
         sport: sportId,
         categoryId,
         squadSize: nextCategory?.squadSize ?? 1,
-        // Switching sports invalidates the slot that was held.
-        date: sportChanged ? null : current.date,
+        // The player never picks a match day — every entry is pinned to the
+        // season's first day. Switching sports invalidates the slot that was held.
+        date: DEFAULT_MATCH_DAY,
         slot: sportChanged ? null : current.slot,
         addons: sportChanged ? {} : current.addons,
       };

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Game On Multisports League — step 4: payment method.
+ * Game On Multisports League — step 3: payment method.
  *
  * UI only: no gateway is called. "Pay" simulates the Razorpay hand-off and
  * lands on the confirmation pass, so the whole flow can be clicked through.
@@ -160,7 +160,7 @@ export default function OlympicsPaymentPage() {
       <StepBar current="payment" />
       <ScreenHeader
         title="Payment"
-        subtitle={`${sport?.name} · ${category?.name} · ${draft.slot ?? "slot"}`}
+        subtitle={`${sport?.name} · ${category?.name} · ${draft.slot ?? "slot to be confirmed"}`}
         backHref="/gameon-multisports-league/book/review"
       />
 

@@ -10,7 +10,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CalendarClock, MapPin, QrCode, XCircle } from "lucide-react";
+import { CalendarClock, QrCode, XCircle } from "lucide-react";
 import { formatINR } from "@/components/league/data";
 import { Button, Chip, IconTile, Kicker, Panel, ScreenHeader } from "@/components/league/ui";
 
@@ -23,7 +23,6 @@ interface SampleBooking {
   date: string;
   slot: string;
   squad: number;
-  venue: string;
   emoji: string;
   accent: string;
   paid: number;
@@ -39,7 +38,6 @@ const BOOKINGS: SampleBooking[] = [
     date: "Sat, 12 Dec 2026",
     slot: "6:00 PM",
     squad: 2,
-    venue: "Indoor Courts · Zone A",
     emoji: "🏸",
     accent: "#A855F7",
     paid: 1800,
@@ -53,7 +51,6 @@ const BOOKINGS: SampleBooking[] = [
     date: "Sat, 19 Dec 2026",
     slot: "8:00 PM",
     squad: 7,
-    venue: "Astro Turf Arena · Zone C",
     emoji: "🏏",
     accent: "#34D399",
     paid: 2000,
@@ -67,7 +64,6 @@ const BOOKINGS: SampleBooking[] = [
     date: "Sun, 14 Dec 2026",
     slot: "5:00 PM",
     squad: 2,
-    venue: "Indoor + Outdoor · Zone B",
     emoji: "🏓",
     accent: "#F5D000",
     paid: 800,
@@ -126,10 +122,6 @@ export default function OlympicsBookingsPage() {
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarClock className="h-3.5 w-3.5" />
                     {booking.date} · {booking.slot}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {booking.venue}
                   </span>
                 </div>
               </div>

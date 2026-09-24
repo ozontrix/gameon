@@ -3,21 +3,22 @@
 /**
  * Game On Multisports League — category page.
  *
- * Opens from a sport card on the league landing. Same content as the Olympics
- * sport page — format, rules, every category with its fee — then Continue hands
- * the chosen category to the league's slot page.
+ * Opens from a sport card on the league landing and hands the chosen category
+ * straight to the details step — the flow has no date screen. Kept lean on
+ * purpose: the intro paragraph carries the facts (court counts), the chips under
+ * it are only the slot length and the entry cap, and the page ends with the
+ * category list. No venue/zone, surface, highlight or format & rules blocks.
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Clock, MapPin, Timer, Trophy, Users } from "lucide-react";
+import { ArrowRight, Check, Clock, Timer, Users } from "lucide-react";
 import { findSport, formatINR, type SportId } from "@/components/league/data";
 import { useLeagueBooking } from "./booking-context";
 import {
   Button,
   Chip,
   IconTile,
-  Kicker,
   Panel,
   ScreenHeader,
   StepFooter,
@@ -52,7 +53,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
   const handleContinue = () => {
     if (!selected) return;
     startBooking(sport.id, selected);
-    router.push(`${BASE}/book/slot`);
+    router.push(`${BASE}/book/details`);
   };
 
   return (
@@ -68,38 +69,12 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         <Bloom accent={sport.accent} />
         <p className="relative text-[13.5px] leading-relaxed text-go-off/75">{sport.description}</p>
         <div className="relative mt-4 grid grid-cols-2 gap-2">
-          <Chip icon={MapPin} className="justify-start">
-            {sport.venue}
-          </Chip>
           <Chip icon={Timer} className="justify-start">
             {sport.slotLength}
           </Chip>
           <Chip icon={Users} className="justify-start">
             {sport.capacity}
           </Chip>
-          <Chip icon={Trophy} className="justify-start">
-            {sport.surface}
-          </Chip>
-        </div>
-      </Panel>
-
-      <Panel className="mb-4">
-        <Kicker>Format &amp; rules</Kicker>
-        <p className="mt-2 text-[13px] font-medium text-go-white">{sport.format}</p>
-        <ul className="mt-3 space-y-2">
-          {sport.rules.map((rule) => (
-            <li key={rule} className="flex items-start gap-2.5 text-[12.5px] text-go-off/65">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-go-brand" />
-              {rule}
-            </li>
-          ))}
-        </ul>
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
-          {sport.highlights.map((highlight) => (
-            <Chip key={highlight} tone="brand">
-              {highlight}
-            </Chip>
-          ))}
         </div>
       </Panel>
 

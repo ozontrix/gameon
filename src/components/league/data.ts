@@ -35,17 +35,16 @@ export interface Sport {
   emoji: string;
   /** Muted tint for the icon tile — matches the marketing site's sport colours. */
   accent: string;
+  /**
+   * Punchy one-liner under the sport name on the cards. Left empty for the team
+   * sports, where the description already carries every fact we want to show.
+   */
   tagline: string;
   description: string;
   mode: EntryMode;
-  venue: string;
-  surface: string;
   slotLength: string;
-  format: string;
   capacity: string;
   categories: Category[];
-  highlights: string[];
-  rules: string[];
 }
 
 export const SPORTS: Sport[] = [
@@ -55,24 +54,10 @@ export const SPORTS: Sport[] = [
     emoji: "🏸",
     accent: "#A855F7",
     tagline: "All-time classic",
-    description:
-      "5 synthetic courts — 2 air-conditioned & 3 indoor — with BWF-grade flooring and shuttles on the house.",
+    description: "5 courts — 2 AC wooden courts and 3 synthetic indoor courts.",
     mode: "individual",
-    venue: "Indoor Courts · Zone A",
-    surface: "BWF-grade synthetic",
     slotLength: "60 min per match slot",
-    format: "League + knockout · best of 3 games to 21",
     capacity: "104 player entries",
-    highlights: [
-      "2 AC + 3 non-AC courts",
-      "Shuttles provided every match",
-      "Medals, trophies & certificates",
-    ],
-    rules: [
-      "Best of 3 games, 21 points, rally point scoring.",
-      "Umpire decision is final; shuttle changed every 11 points.",
-      "Report 15 minutes before your slot.",
-    ],
     categories: [
       { id: "mens-singles", name: "Men's Singles", short: "Men's · Singles", fee: 1000, format: "32 entries", squadSize: 1 },
       { id: "mens-doubles", name: "Men's Doubles", short: "Men's · Doubles", fee: 1800, format: "32 entries", squadSize: 2 },
@@ -87,24 +72,10 @@ export const SPORTS: Sport[] = [
     emoji: "🏓",
     accent: "#F5D000",
     tagline: "Fastest growing sport",
-    description:
-      "2 premium indoor AC courts + 2 outdoor courts, with pro-grade paddles and balls included for every match.",
+    description: "4 courts — 2 indoor AC and 2 outdoor courts.",
     mode: "individual",
-    venue: "Indoor + Outdoor Courts · Zone B",
-    surface: "Cushioned acrylic",
     slotLength: "60 min per match slot",
-    format: "Round robin pools → semifinals → final",
     capacity: "80 player entries",
-    highlights: [
-      "2 Indoor AC + 2 Outdoor",
-      "Paddles & balls provided",
-      "Beginner-friendly brackets",
-    ],
-    rules: [
-      "Games to 11 points, win by 2, best of 3.",
-      "Double bounce rule and non-volley zone apply.",
-      "Bring your own paddle or use the venue's pro paddles.",
-    ],
     categories: [
       { id: "mens-singles", name: "Men's Singles", short: "Men's · Singles", fee: 800, format: "32 entries", squadSize: 1 },
       { id: "mens-doubles", name: "Men's Doubles", short: "Men's · Doubles", fee: 1500, format: "16 entries", squadSize: 2 },
@@ -118,21 +89,11 @@ export const SPORTS: Sport[] = [
     name: "Box Cricket 7v7",
     emoji: "🏏",
     accent: "#34D399",
-    tagline: "Shared turf arena",
-    description:
-      "100 × 60 ft astroturf arena under floodlights with a digital scoreboard — 6 overs a side, 7 players a side.",
+    tagline: "",
+    description: "Box cricket arena — six overs a side, seven players a side.",
     mode: "team",
-    venue: "Astro Turf Arena · Zone C",
-    surface: "Astro turf, floodlit",
     slotLength: "60 min per match slot",
-    format: "7v7 · 6 overs a side · league + playoffs",
     capacity: "12 teams",
-    highlights: ["6 overs a side, 7v7", "Floodlit evening slots", "Live digital scoreboard"],
-    rules: [
-      "Maximum 6 overs per innings, 7 players a side.",
-      "Squad of 10 allowed — 3 rolling substitutes.",
-      "Two sets of stumps, bats and balls provided.",
-    ],
     categories: [
       {
         id: "team",
@@ -149,21 +110,11 @@ export const SPORTS: Sport[] = [
     name: "Football 6v6",
     emoji: "⚽",
     accent: "#38BDF8",
-    tagline: "Turf under floodlights",
-    description:
-      "6v6 on the same astro turf arena — 30 minutes full time, rolling subs and a referee for every game.",
+    tagline: "",
+    description: "Box football arena — 6v6.",
     mode: "team",
-    venue: "Astro Turf Arena · Zone C",
-    surface: "Astro turf, floodlit",
     slotLength: "45 min per match slot",
-    format: "6v6 · 30 minutes full time · league + playoffs",
     capacity: "8 teams",
-    highlights: ["6v6 · 30 minutes full time", "Referee & scoreboard", "Rolling substitutions"],
-    rules: [
-      "30 minutes full time, 15-minute halves.",
-      "Rolling substitutions; studs are not permitted on turf.",
-      "Match ball and bibs provided by the venue.",
-    ],
     categories: [
       {
         id: "team",

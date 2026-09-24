@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Game On Multisports League — step 2: player / team details and add-ons.
+ * Game On Multisports League — step 1: player / team details and add-ons.
  *
  * The player never picks a squad size: team sports (cricket, football) are
  * locked to the minimum required squad, and individual brackets (badminton,
@@ -58,7 +58,7 @@ export default function OlympicsDetailsPage() {
       <EmptyState
         emoji="📝"
         title="Nothing to fill in yet"
-        copy="Choose a sport, a category and a match day — then we will ask for your details."
+        copy="Choose a sport and a category — then we will ask for your details."
         ctaLabel="Browse sports"
         ctaHref="/gameon-multisports-league"
       />
@@ -88,7 +88,9 @@ export default function OlympicsDetailsPage() {
             ? `${sport.name} · ${category.name} · ${formatDayLabel(draft.date)}`
             : "Loading your entry…"
         }
-        backHref="/gameon-multisports-league/book/slot"
+        backHref={
+          sport ? `/gameon-multisports-league/sports/${sport.id}` : "/gameon-multisports-league"
+        }
       />
 
       <Panel className="mb-4 space-y-3.5">

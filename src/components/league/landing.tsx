@@ -8,11 +8,17 @@
  * hero and the same sport cards showing only the entry price the sport starts
  * from — the per-category (slot type) breakdown lives on the category page
  * behind "Select Sport". No header, tab bar or footer.
+ *
+ * The cards stay deliberately lean: no venue/zone chip (the description carries
+ * the facts, e.g. court counts) and no flavour tagline on the team sports.
+ *
+ * The brand mark is the official `public/game_on.png` wordmark, used exactly as
+ * it ships — no rebuilt GAME ⚡ N text lockup and no separate power glyph.
  */
 
 import { useState } from "react";
 import Image from "next/image";
-import { ArrowRight, MapPin, Power, Users, Zap } from "lucide-react";
+import { ArrowRight, MapPin, Users, Zap } from "lucide-react";
 import { SPORTS, formatINR, type EntryMode } from "@/components/league/data";
 import { Button, Chip, IconTile, Kicker, Panel } from "@/components/league/ui";
 
@@ -34,19 +40,15 @@ export function LeagueLanding() {
     <div>
       {/* ─── Inline landing hero (scrolls with the page — no top bar) ─── */}
       <section className="mb-6">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Image
-            src="/game_on_favicon.png"
-            alt=""
-            width={30}
-            height={30}
-            className="h-[30px] w-[30px] rounded-lg object-contain"
+            src="/game_on.png"
+            alt="Game On"
+            width={893}
+            height={250}
+            sizes="130px"
+            className="h-8 w-auto object-contain sm:h-9"
           />
-          <span className="flex items-center font-display text-xl leading-none tracking-wide text-go-white">
-            GAME
-            <Power className="mx-[1px] h-[17px] w-[17px] text-go-brand" strokeWidth={3} />
-            N
-          </span>
           <span className="rounded-full bg-go-brand px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-go-black">
             Multisports League
           </span>
@@ -107,14 +109,15 @@ export function LeagueLanding() {
                     {sport.mode === "team" ? "Team entry" : "Individual"}
                   </Chip>
                 </div>
-                <p className="mt-1 text-[12px] text-go-off/50">{sport.tagline}</p>
+                {sport.tagline ? (
+                  <p className="mt-1 text-[12px] text-go-off/50">{sport.tagline}</p>
+                ) : null}
               </div>
             </div>
 
             <p className="mt-3 text-[13px] leading-relaxed text-go-off/70">{sport.description}</p>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              <Chip icon={MapPin}>{sport.venue}</Chip>
               <Chip icon={Users}>{sport.capacity}</Chip>
             </div>
 

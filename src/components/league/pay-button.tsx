@@ -91,7 +91,7 @@ export function LeaguePayButton({
 
   const handlePay = async () => {
     if (!draft.sport || !draft.categoryId || !draft.date) {
-      toast.error("Pick a category and a match day first.");
+      toast.error("Pick a sport and a category first.");
       return;
     }
 
