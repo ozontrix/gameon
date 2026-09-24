@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { isValidWebhookSignature } from '@/lib/razorpay';
 import { BookingError, BookingService } from '@/lib/services/booking.service';
+import { EventError, EventService } from '@/lib/services/event.service';
+import { TournamentError, TournamentService } from '@/lib/services/tournament.service';
 
 /**
  * Razorpay webhook (Dashboard → Settings → Webhooks), subscribed to
  * `payment.captured` and `order.paid`.
  *
- * This is what confirms a booking when the app never gets to call
- * /user/payments/verify — the app was closed, or the network dropped, right
- * after the money was taken. Confirmation is idempotent, so receiving both
- * events (or the app's verify call as well) is harmless.
+ * This is what confirms a booking, tournament entry or event order when the
+ * app never gets to call its own /payments/verify — the app was closed, or
+ * the network dropped, right after the money was taken. Confirmation is
+ * idempotent, so receiving both events (or the app's verify call as well) is
+ * harmless. An order belongs to exactly one of the three tables, so each is
+ * tried in turn and a 404 from one just means "try the next."
  */
 export async function POST(request: Request) {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -53,12 +57,32 @@ export async function POST(request: Request) {
     const result = await BookingService.confirmPaidOrder(orderId, payment.id);
     return NextResponse.json({ received: true, outcome: result.outcome });
   } catch (error) {
-    if (error instanceof BookingError && error.status === 404) {
-      // An order that is not a court booking (e.g. created from the dashboard)
+    if (!(error instanceof BookingError && error.status === 404)) {
+      console.error('Razorpay Webhook Error (booking):', error);
+      return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+    }
+  }
+
+  try {
+    const result = await TournamentService.confirmPaidOrder(orderId, payment.id);
+    return NextResponse.json({ received: true, outcome: result.outcome });
+  } catch (error) {
+    if (!(error instanceof TournamentError && error.status === 404)) {
+      console.error('Razorpay Webhook Error (tournament):', error);
+      return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+    }
+  }
+
+  try {
+    const result = await EventService.confirmPaidOrder(orderId, payment.id);
+    return NextResponse.json({ received: true, outcome: result.outcome });
+  } catch (error) {
+    if (error instanceof EventError && error.status === 404) {
+      // Not a booking, a tournament entry, or an event order — e.g. an order
+      // created straight from the Razorpay dashboard.
       return NextResponse.json({ received: true, outcome: 'ignored' });
     }
-    // Anything else: let Razorpay retry
-    console.error('Razorpay Webhook Error:', error);
+    console.error('Razorpay Webhook Error (event):', error);
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }
