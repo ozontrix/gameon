@@ -130,8 +130,8 @@ function buildEmailHtml({ type, name, email, phone, submittedAt }: NotifyPayload
       <tr><td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background-color:#FFFFFF;border-radius:20px;overflow:hidden;border:1px solid #e6e2da;">
           <tr><td style="background:linear-gradient(135deg,#1A1D23 0%,#0B0B0C 100%);padding:30px 32px;text-align:center;">
-            <p style="margin:0;font-size:26px;font-weight:800;letter-spacing:2px;color:#FFFFFF;font-family:Arial,sans-serif;">GAME<span style="color:#F28218;">ON</span></p>
-            <p style="margin:8px 0 0;font-size:12px;color:#F28218;text-transform:uppercase;letter-spacing:3px;font-family:Arial,sans-serif;font-weight:700;">${title}</p>
+            <p style="margin:0;font-size:26px;font-weight:800;letter-spacing:2px;color:#FFFFFF;font-family:Arial,sans-serif;">GAME<span style="color:#F38F2F;">ON</span></p>
+            <p style="margin:8px 0 0;font-size:12px;color:#F38F2F;text-transform:uppercase;letter-spacing:3px;font-family:Arial,sans-serif;font-weight:700;">${title}</p>
           </td></tr>
           <tr><td style="padding:30px 32px;font-family:Arial,sans-serif;">
             <p style="margin:0 0 18px;font-size:15px;color:#1a1d23;line-height:1.6;">A new submission just came in from the <strong>Game On</strong> website. Here are the details:</p>

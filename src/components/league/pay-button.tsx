@@ -141,7 +141,7 @@ export function LeaguePayButton({
           category: categories.map((item) => item.name).join(", "),
           match_day: matchDayLabel(draft.date),
         },
-        theme: { color: "#F28218" },
+        theme: { color: "#F38F2F" },
         retry: { enabled: true },
         modal: {
           confirm_close: true,

@@ -54,7 +54,7 @@ export function OlympicsAppShell({ children }: { children: React.ReactNode }) {
           className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[420px]"
           style={{
             background:
-              "radial-gradient(120% 100% at 50% 0%, rgba(242,130,24,0.13) 0%, rgba(11,11,12,0) 62%)",
+              "radial-gradient(120% 100% at 50% 0%, rgba(243,143,47,0.13) 0%, rgba(11,11,12,0) 62%)",
           }}
         />
 

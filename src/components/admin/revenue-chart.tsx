@@ -2,7 +2,7 @@ import { formatDate, formatMoney } from '@/lib/admin/format';
 
 /**
  * Deep amber from the GameOn brand family (#B86E00, hover #8F5500). The raw brand
- * amber (#F28218) is too light for data marks on white (2:1); this step passes the
+ * amber (#F38F2F) is too light for data marks on white (2:1); this step passes the
  * palette validator's lightness band and 3:1 contrast against the card surface.
  * Written as literal classes so Tailwind generates them.
  */

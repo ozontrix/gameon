@@ -132,18 +132,18 @@ function bodyHtml(confirmation: LeagueConfirmation, context: EmailContext): stri
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf8f4;border-radius:14px;margin-bottom:24px;">
               <tr><td style="padding:18px 20px;font-family:${FONT};">
                 <p style="margin:0 0 12px;font-size:11px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:#9a9388;">What happens next</p>
-                <p style="margin:0 0 9px;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F28218;">1.</strong> We schedule your exact match timing &mdash; it reaches you on WhatsApp <strong>24 hours before</strong> ${escapeHtml(
+                <p style="margin:0 0 9px;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F38F2F;">1.</strong> We schedule your exact match timing &mdash; it reaches you on WhatsApp <strong>24 hours before</strong> ${escapeHtml(
                   context.day
                 )}.</p>
-                <p style="margin:0 0 9px;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F28218;">2.</strong> Reach ${escapeHtml(
+                <p style="margin:0 0 9px;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F38F2F;">2.</strong> Reach ${escapeHtml(
                   LEAGUE_VENUE
                 )} 15 minutes early with a photo ID.</p>
-                <p style="margin:0;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F28218;">3.</strong> Need to change plans? Cancellations are fully refunded up to 72 hours before your match day.</p>
+                <p style="margin:0;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F38F2F;">3.</strong> Need to change plans? Cancellations are fully refunded up to 72 hours before your match day.</p>
               </td></tr>
             </table>
 
             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 26px;">
-              <tr><td align="center" style="border-radius:999px;background-color:#F28218;">
+              <tr><td align="center" style="border-radius:999px;background-color:#F38F2F;">
                 <a href="https://game-on.in/gameon-multisports-league/bookings" style="display:inline-block;padding:14px 34px;font-family:${FONT};font-size:14px;font-weight:800;color:#0B0B0C;text-decoration:none;letter-spacing:0.6px;">View my entry</a>
               </td></tr>
             </table>
@@ -159,12 +159,12 @@ function shellHtml(confirmation: LeagueConfirmation, body: string): string {
       <tr><td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#FFFFFF;border-radius:22px;overflow:hidden;border:1px solid #e6e2da;">
           <tr><td style="background:linear-gradient(135deg,#1A1D23 0%,#0B0B0C 100%);padding:28px 30px 22px;text-align:center;">
-            <p style="margin:0;font-size:25px;font-weight:800;letter-spacing:2px;color:#FFFFFF;font-family:${FONT};">GAME<span style="color:#F28218;">ON</span></p>
-            <p style="margin:8px 0 0;font-size:10px;color:#F28218;text-transform:uppercase;letter-spacing:3px;font-family:${FONT};font-weight:700;">${escapeHtml(
+            <p style="margin:0;font-size:25px;font-weight:800;letter-spacing:2px;color:#FFFFFF;font-family:${FONT};">GAME<span style="color:#F38F2F;">ON</span></p>
+            <p style="margin:8px 0 0;font-size:10px;color:#F38F2F;text-transform:uppercase;letter-spacing:3px;font-family:${FONT};font-weight:700;">${escapeHtml(
               LEAGUE_NAME
             )}</p>
           </td></tr>
-          <tr><td style="background-color:#F28218;padding:15px 30px;text-align:center;">
+          <tr><td style="background-color:#F38F2F;padding:15px 30px;text-align:center;">
             <p style="margin:0;font-size:19px;font-weight:800;color:#0B0B0C;font-family:${FONT};">You&rsquo;re in &mdash; entry confirmed 🎉</p>
             <p style="margin:6px 0 0;font-size:12px;color:#3b2a05;font-family:${FONT};">Paid ${escapeHtml(
               formatINR(confirmation.amount)

@@ -65,7 +65,7 @@ function ConfettiBurst() {
           spread: 80,
           startVelocity: 44,
           origin: { y: 0.3 },
-          colors: ["#F28218", "#FFFFFF", "#38BDF8", "#A855F7"],
+          colors: ["#F38F2F", "#FFFFFF", "#38BDF8", "#A855F7"],
         });
       })
       .catch(() => {

@@ -70,7 +70,7 @@ export function SponsorshipPage() {
               </p>
               <motion.a
                 href="mailto:info@gameonmultisports.com?subject=Sponsorship%20enquiry"
-                className="mt-6 inline-flex items-center gap-2 bg-go-brand text-go-black text-[11px] font-bold tracking-wider uppercase rounded-full px-5 py-3 transition-all duration-300 hover:shadow-[0_0_28px_rgba(242,130,24,0.4)] hover:scale-[1.03] cursor-pointer"
+                className="mt-6 inline-flex items-center gap-2 bg-go-brand text-go-black text-[11px] font-bold tracking-wider uppercase rounded-full px-5 py-3 transition-all duration-300 hover:shadow-[0_0_28px_rgba(243,143,47,0.4)] hover:scale-[1.03] cursor-pointer"
                 whileTap={{ scale: 0.96 }}
                 transition={spring}
               >

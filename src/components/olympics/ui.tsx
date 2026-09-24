@@ -158,7 +158,7 @@ interface ButtonProps {
 
 const VARIANTS: Record<ButtonVariant, string> = {
   brand:
-    "bg-go-brand text-go-black hover:bg-go-brand/90 shadow-[0_10px_30px_-12px_rgba(242,130,24,0.7)]",
+    "bg-go-brand text-go-black hover:bg-go-brand/90 shadow-[0_10px_30px_-12px_rgba(243,143,47,0.7)]",
   ghost:
     "bg-white/[0.05] text-go-off/80 hover:bg-white/[0.09] hover:text-go-white border border-white/10",
   outline: "border border-go-brand/40 text-go-brand hover:bg-go-brand/10",

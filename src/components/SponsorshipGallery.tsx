@@ -74,7 +74,7 @@ export function SponsorshipGallery() {
               aria-label={`View slide ${slide.id} of ${slides.length} full screen`}
               className="group block w-full cursor-zoom-in rounded-[24px] focus:outline-none focus-visible:ring-2 focus-visible:ring-go-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-go-black"
             >
-              <div className="relative aspect-[16/9] overflow-hidden rounded-[24px] border border-white/[0.08] bg-go-navy-glass shadow-[0_12px_45px_-22px_rgba(0,0,0,0.9)] transition-all duration-500 group-hover:border-go-brand/30 group-hover:shadow-[0_24px_70px_-26px_rgba(242,130,24,0.4)]">
+              <div className="relative aspect-[16/9] overflow-hidden rounded-[24px] border border-white/[0.08] bg-go-navy-glass shadow-[0_12px_45px_-22px_rgba(0,0,0,0.9)] transition-all duration-500 group-hover:border-go-brand/30 group-hover:shadow-[0_24px_70px_-26px_rgba(243,143,47,0.4)]">
                 <Image
                   src={slide.src}
                   alt={slide.alt}

@@ -167,7 +167,7 @@ function CourtLines() {
         className="absolute left-0 right-0 h-px"
         style={{
           top: "30%",
-          background: "linear-gradient(90deg, transparent, rgba(242, 130, 24, 0.12), transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(243, 143, 47, 0.12), transparent)",
         }}
         initial={{ scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
@@ -177,7 +177,7 @@ function CourtLines() {
         className="absolute left-0 right-0 h-px"
         style={{
           top: "55%",
-          background: "linear-gradient(90deg, transparent, rgba(242, 130, 24, 0.08), transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(243, 143, 47, 0.08), transparent)",
         }}
         initial={{ scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
@@ -187,7 +187,7 @@ function CourtLines() {
         className="absolute left-0 right-0 h-px"
         style={{
           top: "75%",
-          background: "linear-gradient(90deg, transparent, rgba(242, 130, 24, 0.06), transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(243, 143, 47, 0.06), transparent)",
         }}
         initial={{ scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
@@ -197,7 +197,7 @@ function CourtLines() {
       <motion.div
         className="absolute top-0 bottom-0 w-px left-1/2"
         style={{
-          background: "linear-gradient(180deg, transparent, rgba(242, 130, 24, 0.06), transparent)",
+          background: "linear-gradient(180deg, transparent, rgba(243, 143, 47, 0.06), transparent)",
         }}
         initial={{ scaleY: 0, opacity: 0 }}
         animate={{ scaleY: 1, opacity: 1 }}
@@ -342,7 +342,7 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
         {/* Brand color wash */}
         <div className="absolute inset-0 z-[5] mix-blend-overlay opacity-20"
           style={{
-            background: `linear-gradient(135deg, rgba(242, 130, 24, 0.3) 0%, transparent 50%, rgba(242, 130, 24, 0.1) 100%)`,
+            background: `linear-gradient(135deg, rgba(243, 143, 47, 0.3) 0%, transparent 50%, rgba(243, 143, 47, 0.1) 100%)`,
           }}
         />
       </motion.div>
@@ -481,7 +481,7 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
           >
             <button
               onClick={onNotifyClick}
-              className="group relative bg-go-brand text-go-black font-bold text-sm tracking-[0.12em] uppercase rounded-full py-4 px-10 flex items-center justify-center gap-3 cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-[0_0_40px_rgba(242,130,24,0.4)]"
+              className="group relative bg-go-brand text-go-black font-bold text-sm tracking-[0.12em] uppercase rounded-full py-4 px-10 flex items-center justify-center gap-3 cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-[0_0_40px_rgba(243,143,47,0.4)]"
             >
               {/* Ripple border */}
               <span className="absolute inset-0 rounded-full border-2 border-transparent group-hover:border-go-brand/30 transition-all duration-500" />
