@@ -67,13 +67,16 @@ export class BookingService {
     // 2. The length must be one this court sells; that option sets the price
     const amount = await BookingService.priceFor(facilityId, startTime, endTime);
 
-    // 3. The slot must exist and still be free
+    // 3. Players can't exceed what this court type's admin-set limit allows
+    await BookingService.assertPlayersWithinLimit(facilityId, input.players);
+
+    // 4. The slot must exist and still be free
     await BookingService.assertSlotFree(input);
 
-    // 4. A lapsed checkout overlapping this slot would still trip the overlap constraint
+    // 5. A lapsed checkout overlapping this slot would still trip the overlap constraint
     await BookingService.releaseLapsedHold(facilityId, date, startTime, endTime);
 
-    // 5. Insert PENDING booking
+    // 6. Insert PENDING booking
     // The overlap constraint blocks this if someone else JUST booked any part of it
     const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString();
     const { data: booking, error } = await supabaseAdmin
@@ -205,6 +208,26 @@ export class BookingService {
       .maybeSingle();
     if (!option) throw new BookingError('This court does not offer a slot of that length.', 400);
     return Number(option.price);
+  }
+
+  /**
+   * Throws a 400 if `players` exceeds the court type's admin-configured cap.
+   * A missing/zero `players` is a booking made without stating a count, which
+   * has nothing to check.
+   */
+  private static async assertPlayersWithinLimit(facilityId: string, players?: number) {
+    if (!players) return;
+
+    const { data: facility } = await supabaseAdmin
+      .from('facilities')
+      .select('court_types ( max_players )')
+      .eq('id', facilityId)
+      .maybeSingle();
+
+    const maxPlayers = facility?.court_types?.max_players;
+    if (maxPlayers && players > maxPlayers) {
+      throw new BookingError(`This court allows up to ${maxPlayers} players per booking.`, 400);
+    }
   }
 
   /** A lapsed checkout overlapping this slot would still trip the overlap constraint. */

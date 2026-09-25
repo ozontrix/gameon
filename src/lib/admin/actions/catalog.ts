@@ -186,6 +186,11 @@ const courtTypeSchema = z.object({
   name: z.string({ error: 'Enter the court type name.' }).min(2, 'Enter the court type name.').max(120),
   description: z.string().max(600, 'Keep the description under 600 characters.').optional(),
   surface_type: z.enum(SURFACE_TYPES, { error: 'Choose a surface.' }),
+  max_players: z.coerce
+    .number({ error: 'Enter the player limit.' })
+    .int()
+    .min(1, 'Must be at least 1.')
+    .max(200, 'Must be 200 or fewer.'),
   sort_order: z.coerce.number().int().min(0).max(999).optional(),
   is_indoor: checkbox,
   has_ac: checkbox,

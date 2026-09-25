@@ -198,6 +198,7 @@ export function CourtTypeForm({
     surface_type: string;
     is_indoor: boolean;
     has_ac: boolean;
+    max_players: number;
     sort_order: number;
     is_active: boolean;
   };
@@ -286,6 +287,23 @@ export function CourtTypeForm({
             ))}
           </select>
           <FieldError name="surface_type" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="max_players" required>
+            Max players per booking
+          </Label>
+          <input
+            id="max_players"
+            name="max_players"
+            type="number"
+            min={1}
+            max={200}
+            step="1"
+            defaultValue={courtType?.max_players ?? 10}
+            className={inputClass}
+          />
+          <p className="text-xs text-zinc-500">The app&apos;s player-count picker is capped at this for the sport.</p>
+          <FieldError name="max_players" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="sort_order">Sort order</Label>

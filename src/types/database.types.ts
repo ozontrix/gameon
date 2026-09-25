@@ -355,6 +355,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_indoor: boolean
+          max_players: number
           name: string
           slug: string
           sort_order: number
@@ -370,6 +371,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_indoor: boolean
+          max_players?: number
           name: string
           slug: string
           sort_order?: number
@@ -385,6 +387,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_indoor?: boolean
+          max_players?: number
           name?: string
           slug?: string
           sort_order?: number

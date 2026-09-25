@@ -82,7 +82,12 @@ export default async function CourtTypesPage({
                   </Td>
                   <Td>{type.venues?.name ?? '—'}</Td>
                   <Td className="text-xs">
-                    {[titleCase(type.surface_type), type.is_indoor ? 'Indoor' : 'Outdoor', type.has_ac ? 'AC' : 'Non-AC'].join(' · ')}
+                    {[
+                      titleCase(type.surface_type),
+                      type.is_indoor ? 'Indoor' : 'Outdoor',
+                      type.has_ac ? 'AC' : 'Non-AC',
+                      `Up to ${type.max_players} players`,
+                    ].join(' · ')}
                   </Td>
                   <Td className="text-right tabular-nums">{type.courtCount}</Td>
                   <Td className="text-xs">
