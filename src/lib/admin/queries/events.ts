@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
+import { titleCase } from '@/lib/admin/format';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -11,7 +12,7 @@ export async function listTournaments(filters: { venue?: string; status?: string
     .from('tournaments')
     .select(
       `id, title, match_type, team_capacity, entry_fee, starts_on, ends_on, status,
-       venues ( name ), court_types ( name ),
+       venues ( name ), court_types ( name, surface_type, is_indoor, has_ac ),
        tournament_registrations ( status )`
     )
     .order('starts_on', { ascending: false });
@@ -33,12 +34,27 @@ export async function getTournament(id: string) {
     .select(
       `id, venue_id, court_type_id, title, match_type, description, format, team_size_label,
        team_capacity, entry_fee, starts_on, ends_on, daily_start_time, daily_end_time,
-       registration_closes_at, status`
+       registration_closes_at, status,
+       court_types ( surface_type, is_indoor, has_ac )`
     )
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
+
+  const { court_types: courtType, ...tournamentFields } = data;
+  const tournament = {
+    ...tournamentFields,
+    // Same breakdown, same order, as the Court types page and the app's
+    // Sports tab card — surface, then setting, then climate.
+    court_type_summary: courtType
+      ? [
+          titleCase(courtType.surface_type),
+          courtType.is_indoor ? 'Indoor' : 'Outdoor',
+          courtType.has_ac ? 'AC' : 'Non-AC',
+        ].join(' · ')
+      : null,
+  };
 
   const [images, sections, registrations] = await Promise.all([
     supabaseAdmin.from('tournament_images').select('id, url, sort_order').eq('tournament_id', id).order('sort_order').order('created_at'),
@@ -51,7 +67,7 @@ export async function getTournament(id: string) {
   ]);
 
   return {
-    tournament: data,
+    tournament,
     images: images.data ?? [],
     sections: sections.data ?? [],
     registrations: registrations.data ?? [],

@@ -37,7 +37,7 @@ const PUBLIC_SELECT = `
   id, title, match_type, description, format, team_size_label, team_capacity, entry_fee,
   starts_on, ends_on, daily_start_time, daily_end_time, registration_closes_at, status,
   venues ( name, address ),
-  court_types ( name, sports ( name ) ),
+  court_types ( name, surface_type, is_indoor, has_ac, sports ( name ) ),
   tournament_images ( url, sort_order ),
   tournament_sections ( id, title, body, sort_order )
 `;
@@ -58,10 +58,20 @@ type TournamentRow = {
   registration_closes_at: string;
   status: string;
   venues: { name: string; address: string | null } | null;
-  court_types: { name: string; sports: { name: string } | null } | null;
+  court_types: {
+    name: string;
+    surface_type: string;
+    is_indoor: boolean;
+    has_ac: boolean;
+    sports: { name: string } | null;
+  } | null;
   tournament_images: { url: string; sort_order: number }[];
   tournament_sections: { id: string; title: string; body: string; sort_order: number }[];
 };
+
+function capitalize(value: string): string {
+  return value ? value[0].toUpperCase() + value.slice(1) : value;
+}
 
 /** Shapes one row for the app: what the listing card and the detail screen both need. */
 function toPublicTournament(row: TournamentRow, taken: number) {
@@ -69,6 +79,13 @@ function toPublicTournament(row: TournamentRow, taken: number) {
   const sections = [...row.tournament_sections]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map(({ id, title, body }) => ({ key: id, title, body }));
+
+  // Same shape the Sports tab's own cards use for their court type, so a
+  // tournament's court reads exactly like the card it was picked from.
+  const courtType = row.court_types;
+  const setting = courtType ? (courtType.is_indoor ? 'Indoor' : 'Outdoor') : null;
+  const climate = courtType ? (courtType.has_ac ? 'AC' : 'Non-AC') : null;
+  const surface = courtType ? capitalize(courtType.surface_type) : null;
 
   return {
     id: row.id,
@@ -78,8 +95,10 @@ function toPublicTournament(row: TournamentRow, taken: number) {
     description: row.description,
     format: row.format,
     teamSize: row.team_size_label,
-    courtTypeLabel: row.court_types?.name ?? null,
-    sport: sportKeyFor(row.court_types?.sports?.name),
+    courtTypeLabel: courtType?.name ?? null,
+    courtTypeSummary: setting && surface && climate ? `${setting} • ${surface} • ${climate}` : null,
+    courtTypeBadges: setting && climate ? [setting, climate] : [],
+    sport: sportKeyFor(courtType?.sports?.name),
     venue: row.venues?.name ?? '',
     address: row.venues?.address ?? null,
     capacity: row.team_capacity,

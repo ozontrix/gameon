@@ -154,7 +154,10 @@ export async function listCatalogOptions() {
   const [venues, sports, courtTypes, courts] = await Promise.all([
     supabaseAdmin.from('venues').select('id, name, is_active').order('name'),
     supabaseAdmin.from('sports').select('id, name, is_active').order('name'),
-    supabaseAdmin.from('court_types').select('id, name, venue_id, sport_id, is_active, venues ( name )').order('sort_order'),
+    supabaseAdmin
+      .from('court_types')
+      .select('id, name, venue_id, sport_id, is_active, surface_type, is_indoor, has_ac, venues ( name )')
+      .order('sort_order'),
     supabaseAdmin.from('facilities').select('id, name, venue_id').order('name'),
   ]);
   return {

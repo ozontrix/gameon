@@ -1,7 +1,18 @@
 import { ActionForm, FieldError, FormMessage, SubmitButton } from '@/components/admin/action-form';
 import { inputClass, textareaClass } from '@/components/admin/ui';
 import { saveEvent, saveTournament } from '@/lib/admin/actions/events';
+import { titleCase } from '@/lib/admin/format';
 import { DEFAULT_TIMEZONE, wallClockIn } from '@/lib/utils/date-helpers';
+
+/**
+ * "Indoor · Wooden · AC" — the same setting/surface/climate breakdown the
+ * Court types page and the app's Sports tab card show, so a tournament's
+ * court reads identically wherever it appears.
+ */
+function courtTypeAttributes(type: { surface_type?: string; is_indoor?: boolean; has_ac?: boolean }): string | null {
+  if (type.surface_type === undefined || type.is_indoor === undefined || type.has_ac === undefined) return null;
+  return [titleCase(type.surface_type), type.is_indoor ? 'Indoor' : 'Outdoor', type.has_ac ? 'AC' : 'Non-AC'].join(' · ');
+}
 
 const STATUSES = [
   { value: 'draft', label: 'Draft — hidden from the app' },
@@ -49,8 +60,19 @@ export function TournamentForm({
     daily_end_time: string;
     registration_closes_at: string;
     status: string;
+    /** The chosen court type's own attributes, so the current choice reads the same way the Sports tab's card does. */
+    court_type_summary?: string | null;
   };
-  courtTypes: { id: string; name: string; venue_id: string; is_active: boolean | null; venues?: { name: string } | null }[];
+  courtTypes: {
+    id: string;
+    name: string;
+    venue_id: string;
+    is_active: boolean | null;
+    surface_type?: string;
+    is_indoor?: boolean;
+    has_ac?: boolean;
+    venues?: { name: string } | null;
+  }[];
 }) {
   return (
     <ActionForm action={saveTournament} className="space-y-4">
@@ -98,18 +120,28 @@ export function TournamentForm({
             <option value="" disabled>
               Choose which court this runs on
             </option>
-            {courtTypes.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name}
-                {type.venues ? ` — ${type.venues.name}` : ''}
-                {type.is_active === false ? ' (inactive)' : ''}
-              </option>
-            ))}
+            {courtTypes.map((type) => {
+              const attributes = courtTypeAttributes(type);
+              return (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                  {type.venues ? ` — ${type.venues.name}` : ''}
+                  {attributes ? ` (${attributes})` : ''}
+                  {type.is_active === false ? ' (inactive)' : ''}
+                </option>
+              );
+            })}
           </select>
-          <p className="text-xs text-zinc-500">
-            The venue follows the court type automatically. Descriptive only — this doesn&apos;t block the court&apos;s normal
-            hourly bookings.
-          </p>
+          {tournament?.court_type_summary ? (
+            <p className="text-xs text-zinc-500">
+              Shown on the app the same way the Sports tab shows it: <span className="font-medium text-zinc-700">{tournament.court_type_summary}</span>.
+            </p>
+          ) : (
+            <p className="text-xs text-zinc-500">
+              The venue follows the court type automatically. Descriptive only — this doesn&apos;t block the court&apos;s normal
+              hourly bookings.
+            </p>
+          )}
           <FieldError name="court_type_id" />
         </div>
         <div className="space-y-1.5">

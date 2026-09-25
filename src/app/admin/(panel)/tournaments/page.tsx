@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import { EventStatusBadge } from '@/components/admin/status';
 import { Card, EmptyState, LinkButton, PageHeader, Table, Td, Th, buttonClass, inputClass } from '@/components/admin/ui';
-import { formatDate, formatMoney } from '@/lib/admin/format';
+import { formatDate, formatMoney, titleCase } from '@/lib/admin/format';
 import { listCatalogOptions } from '@/lib/admin/queries/catalog';
 import { listTournaments } from '@/lib/admin/queries/events';
 import { requireAdmin } from '@/lib/admin/session';
@@ -84,6 +84,15 @@ export default async function TournamentsPage({
                   <Td className="text-xs">
                     {tournament.venues?.name ?? '—'}
                     <div className="text-zinc-500">{tournament.court_types?.name}</div>
+                    {tournament.court_types ? (
+                      <div className="text-zinc-400">
+                        {[
+                          titleCase(tournament.court_types.surface_type),
+                          tournament.court_types.is_indoor ? 'Indoor' : 'Outdoor',
+                          tournament.court_types.has_ac ? 'AC' : 'Non-AC',
+                        ].join(' · ')}
+                      </div>
+                    ) : null}
                   </Td>
                   <Td className="text-xs">
                     {formatDate(tournament.starts_on)} – {formatDate(tournament.ends_on)}
