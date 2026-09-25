@@ -100,6 +100,8 @@ export type Database = {
           players: number | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
+          refund_due_amount: number | null
+          refund_percent: number | null
           refund_reference: string | null
           refunded_at: string | null
           scanned_at: string | null
@@ -130,6 +132,8 @@ export type Database = {
           players?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          refund_due_amount?: number | null
+          refund_percent?: number | null
           refund_reference?: string | null
           refunded_at?: string | null
           scanned_at?: string | null
@@ -160,6 +164,8 @@ export type Database = {
           players?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          refund_due_amount?: number | null
+          refund_percent?: number | null
           refund_reference?: string | null
           refunded_at?: string | null
           scanned_at?: string | null
@@ -184,6 +190,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cancellation_policy_tiers: {
+        Row: {
+          applies_to: string
+          created_at: string
+          id: string
+          min_hours_before: number
+          refund_percent: number
+          updated_at: string
+        }
+        Insert: {
+          applies_to?: string
+          created_at?: string
+          id?: string
+          min_hours_before: number
+          refund_percent: number
+          updated_at?: string
+        }
+        Update: {
+          applies_to?: string
+          created_at?: string
+          id?: string
+          min_hours_before?: number
+          refund_percent?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       court_type_amenities: {
         Row: {

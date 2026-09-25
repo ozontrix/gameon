@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../db/supabase';
 import type { AppBookingStatus } from '@/lib/utils/booking-status';
-import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn } from '../utils/date-helpers';
+import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn, zonedTimeToUtc } from '../utils/date-helpers';
+import { CancellationPolicyService } from './cancellation-policy.service';
 import { NotificationService } from './notification.service';
 import { SlotService, lastBookableDate, type SlotOptions } from './slot.service';
 
@@ -396,5 +397,95 @@ export class BookingService {
     if (error) throw error;
 
     return { rows: data ?? [], total: count ?? 0, hasMore: from + (data?.length ?? 0) < (count ?? 0) };
+  }
+
+  /**
+   * What cancelling `bookingId` right now would refund, without cancelling
+   * anything — what the app shows before the player confirms.
+   */
+  static async cancellationPreview(userId: string, bookingId: string) {
+    const { booking, hoursBeforeStart } = await BookingService.loadCancellable(userId, bookingId);
+    const refundPercent = await CancellationPolicyService.refundPercentFor('booking', hoursBeforeStart);
+    const amountPaid = Number(booking.amount_paid ?? 0);
+    return {
+      hoursBeforeStart,
+      refundPercent,
+      refundDueAmount: Math.round(amountPaid * (refundPercent / 100) * 100) / 100,
+      amountPaid,
+    };
+  }
+
+  /**
+   * A player cancelling their own booking. Unlike the admin's cancel action
+   * (a human judgement call, e.g. the venue closed unexpectedly), this always
+   * prices the refund from the configured policy and snapshots it onto the
+   * booking, so the Refunds page shows what's actually owed rather than the
+   * full amount paid.
+   */
+  static async cancelByPlayer(userId: string, bookingId: string, reason?: string) {
+    const { booking, hoursBeforeStart } = await BookingService.loadCancellable(userId, bookingId);
+    const refundPercent = await CancellationPolicyService.refundPercentFor('booking', hoursBeforeStart);
+    const amountPaid = Number(booking.amount_paid ?? 0);
+    const refundDueAmount = Math.round(amountPaid * (refundPercent / 100) * 100) / 100;
+
+    const { data: cancelled, error } = await supabaseAdmin
+      .from('bookings')
+      .update({
+        status: 'CANCELLED',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: userId,
+        cancel_reason: reason?.trim() || 'Cancelled by customer',
+        expires_at: null,
+        refund_percent: refundPercent,
+        refund_due_amount: refundDueAmount,
+      })
+      .eq('id', bookingId)
+      .eq('status', 'CONFIRMED') // guards against a race with another cancel/check-in
+      .select('id')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!cancelled) throw new BookingError('This booking was just updated. Please refresh and try again.', 409);
+
+    await NotificationService.notifyBooking(bookingId, { type: 'cancelled', reason });
+
+    return {
+      hoursBeforeStart,
+      refundPercent,
+      refundDueAmount,
+      amountPaid,
+      paymentStatus: booking.payment_status,
+    };
+  }
+
+  /** Fetches a booking and validates it is the caller's own, confirmed, and not yet started. */
+  private static async loadCancellable(userId: string, bookingId: string) {
+    const { data: booking, error } = await supabaseAdmin
+      .from('bookings')
+      .select(
+        `id, user_id, status, payment_status, amount_paid, booking_date, start_time,
+         facilities ( venues ( timezone ) )`
+      )
+      .eq('id', bookingId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!booking || booking.user_id !== userId) throw new BookingError('Booking not found', 404);
+    if (booking.status !== 'CONFIRMED') {
+      throw new BookingError(
+        booking.status === 'CANCELLED' ? 'This booking is already cancelled.' : 'This booking can no longer be cancelled.',
+        400
+      );
+    }
+
+    const timeZone = booking.facilities?.venues?.timezone || DEFAULT_TIMEZONE;
+    const startsAt = zonedTimeToUtc(booking.booking_date, booking.start_time, timeZone);
+    const hoursBeforeStart = (startsAt.getTime() - Date.now()) / 3_600_000;
+
+    if (hoursBeforeStart <= 0) {
+      throw new BookingError('This booking has already started and can no longer be cancelled.', 400);
+    }
+
+    return { booking, hoursBeforeStart };
   }
 }
