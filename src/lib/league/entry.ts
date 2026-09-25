@@ -10,8 +10,6 @@
 import { z } from "zod";
 import {
   ADD_ONS,
-  GST_RATE,
-  PLATFORM_FEE,
   entryFees,
   entryTickets,
   findCategories,
@@ -66,8 +64,6 @@ export interface EntryQuote {
   addOnsTotal: number;
   subtotal: number;
   discount: number;
-  platformFee: number;
-  gst: number;
   total: number;
   couponCode: string | null;
   couponLabel: string | null;
@@ -149,7 +145,12 @@ export interface QuoteInput {
   coupon: string | null;
 }
 
-/** The single source of truth for what a league entry costs. */
+/**
+ * The single source of truth for what a league entry costs.
+ *
+ * There are no extra charges: the brackets' entry fees plus any add-ons, less
+ * the coupon, are the whole bill. No platform fee and no GST is added on top.
+ */
 export function quoteEntry(input: QuoteInput): EntryQuote {
   const entryFee = entryFees(input.categories ?? []);
   const addOnsTotal = Object.entries(input.addons).reduce((sum, [id, qty]) => {
@@ -162,18 +163,12 @@ export function quoteEntry(input: QuoteInput): EntryQuote {
   const eligible = coupon !== null && entryFee >= coupon.minSubtotal;
   const discount = eligible && coupon ? Math.round((subtotal * coupon.percent) / 100) : 0;
 
-  const platformFee = subtotal > 0 ? PLATFORM_FEE : 0;
-  const taxable = Math.max(0, subtotal - discount) + platformFee;
-  const gst = Math.round(taxable * GST_RATE);
-
   return {
     entryFee,
     addOnsTotal,
     subtotal,
     discount,
-    platformFee,
-    gst,
-    total: taxable + gst,
+    total: Math.max(0, subtotal - discount),
     couponCode: eligible && coupon ? coupon.code : null,
     couponLabel: eligible && coupon ? coupon.label : null,
   };

@@ -100,8 +100,6 @@ function describe(confirmation: LeagueConfirmation): EmailContext {
       quote.discount > 0 && quote.couponCode
         ? row(`Discount · ${quote.couponCode}`, `- ${formatINR(quote.discount)}`)
         : "",
-      row("Platform fee", formatINR(quote.platformFee)),
-      row("GST (18%)", formatINR(quote.gst)),
       row("Total paid", formatINR(confirmation.amount), true),
     ].join(""),
   };

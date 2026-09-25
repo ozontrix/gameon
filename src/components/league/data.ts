@@ -164,9 +164,6 @@ export function entryFees(categories: Category[]): number {
 
 /* ────────────────────────────── Money ────────────────────────────── */
 
-export const PLATFORM_FEE = 49;
-export const GST_RATE = 0.18;
-
 export function formatINR(value: number): string {
   return `₹${Math.round(value).toLocaleString("en-IN")}`;
 }

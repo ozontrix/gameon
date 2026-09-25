@@ -185,10 +185,6 @@ export default function OlympicsPaymentPage() {
           {pricing.discount > 0 ? (
             <InfoRow label="Coupon discount" value={`- ${formatINR(pricing.discount)}`} />
           ) : null}
-          <InfoRow
-            label="Platform fee + GST"
-            value={formatINR(pricing.platformFee + pricing.gst)}
-          />
         </div>
       </Panel>
 

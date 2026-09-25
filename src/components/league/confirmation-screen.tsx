@@ -251,8 +251,6 @@ export function LeagueConfirmationScreen() {
           {quote.discount > 0 && quote.couponCode ? (
             <InfoRow label={`Discount · ${quote.couponCode}`} value={`- ${formatINR(quote.discount)}`} />
           ) : null}
-          <InfoRow label="Platform fee" value={formatINR(quote.platformFee)} />
-          <InfoRow label="GST (18%)" value={formatINR(quote.gst)} />
           <InfoRow label="Total paid" value={formatINR(confirmation.amount)} strong />
         </div>
 

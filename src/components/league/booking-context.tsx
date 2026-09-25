@@ -87,8 +87,6 @@ export interface Pricing {
   addOnsTotal: number;
   subtotal: number;
   discount: number;
-  platformFee: number;
-  gst: number;
   total: number;
   couponCode: string | null;
   couponLabel: string | null;

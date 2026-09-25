@@ -243,8 +243,6 @@ export default function OlympicsReviewPage() {
           {pricing.discount > 0 ? (
             <InfoRow label={`Discount · ${pricing.couponCode}`} value={`- ${formatINR(pricing.discount)}`} />
           ) : null}
-          <InfoRow label="Platform fee" value={formatINR(pricing.platformFee)} />
-          <InfoRow label="GST (18%)" value={formatINR(pricing.gst)} />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-3.5">
           <span className="font-display text-base uppercase tracking-wide text-go-white">
