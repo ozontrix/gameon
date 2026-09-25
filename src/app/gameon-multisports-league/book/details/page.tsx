@@ -175,15 +175,6 @@ export default function OlympicsDetailsPage() {
               : `You are booking ${squadSize > 1 ? `${squadSize} tickets — one for each player` : "one ticket, one player"} across ${brackets}. Nothing to select here.`}
           </p>
         </div>
-
-        <Field label="Anything we should know?" hint="optional">
-          <textarea
-            className={cn(inputClass, "min-h-[76px] resize-none")}
-            value={draft.notes}
-            onChange={(event) => update({ notes: event.target.value })}
-            placeholder="Preferred shuttles, jersey sizes, arrival time…"
-          />
-        </Field>
       </Panel>
 
       {/* ─── Add-ons ─── */}
