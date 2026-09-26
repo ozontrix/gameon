@@ -17,7 +17,8 @@ export type AuditEntity =
   | 'notification'
   | 'tournament'
   | 'event'
-  | 'cancellation_policy';
+  | 'cancellation_policy'
+  | 'wallet';
 
 /**
  * Records a change made from the admin panel. Never throws: a failed audit

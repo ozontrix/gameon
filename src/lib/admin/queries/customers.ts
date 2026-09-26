@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
+import { WalletService } from '@/lib/services/wallet.service';
 import { PAGE_SIZE } from '../constants';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -68,5 +69,16 @@ export async function getCustomer(id: string) {
     .limit(200);
   if (bookingsError) throw bookingsError;
 
-  return { customer, bookings, ...summarise(bookings.map((b) => ({ ...b, user_id: id }))) };
+  const [wallet, walletTransactions] = await Promise.all([
+    WalletService.getSummary(id),
+    WalletService.listTransactions(id, 1, 20),
+  ]);
+
+  return {
+    customer,
+    bookings,
+    wallet,
+    walletTransactions: walletTransactions.rows,
+    ...summarise(bookings.map((b) => ({ ...b, user_id: id }))),
+  };
 }
