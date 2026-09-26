@@ -5,7 +5,9 @@ export type WalletReason =
   | 'refund_credit_release'
   | 'booking_redeem'
   | 'booking_redeem_release'
-  | 'admin_adjustment';
+  | 'admin_adjustment'
+  | 'referral_signup'
+  | 'referral_bonus';
 
 /** A failure the API can report as-is, with the HTTP status that fits it. */
 export class WalletError extends Error {

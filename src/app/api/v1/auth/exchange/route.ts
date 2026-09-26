@@ -7,6 +7,8 @@ import { withRateLimit } from '@/lib/middlewares/rate-limiter';
 
 const exchangeSchema = z.object({
   firebaseToken: z.string().min(1),
+  // Only ever applied to a brand-new account — see findOrCreatePhoneUser.
+  referralCode: z.string().trim().max(20).optional(),
 });
 
 /** The auth user registered with this phone number, if any. */
@@ -16,13 +18,14 @@ async function findUserIdByPhone(phone: string): Promise<string | null> {
   return data;
 }
 
-async function findOrCreatePhoneUser(phone: string): Promise<string> {
+async function findOrCreatePhoneUser(phone: string, referralCode?: string): Promise<string> {
   const existing = await findUserIdByPhone(phone);
-  if (existing) return existing;
+  if (existing) return existing; // Returning caller — a stray code here is a no-op, not re-applied.
 
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
     phone,
     phone_confirm: true, // Auto-confirm since Firebase verified it
+    user_metadata: referralCode ? { referral_code: referralCode } : undefined,
   });
   if (data.user) return data.user.id;
 
@@ -72,7 +75,7 @@ export async function POST(request: Request) {
       const e164Phone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
 
       // STEP B: Supabase Identity Resolution
-      const userId = await findOrCreatePhoneUser(e164Phone);
+      const userId = await findOrCreatePhoneUser(e164Phone, validation.data.referralCode);
 
       // STEP C: The profile row bookings belong to. Only the verified phone is
       // written, so a name the player chose is never overwritten.

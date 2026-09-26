@@ -693,6 +693,9 @@ export type Database = {
           id: string
           phone: string | null
           preferred_sports: string[]
+          referral_bonus_paid: boolean
+          referral_code: string
+          referred_by: string | null
           updated_at: string
         }
         Insert: {
@@ -705,6 +708,9 @@ export type Database = {
           id: string
           phone?: string | null
           preferred_sports?: string[]
+          referral_bonus_paid?: boolean
+          referral_code?: string
+          referred_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -717,6 +723,38 @@ export type Database = {
           id?: string
           phone?: string | null
           preferred_sports?: string[]
+          referral_bonus_paid?: boolean
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_settings: {
+        Row: {
+          first_booking_bonus_points: number
+          id: boolean
+          signup_bonus_points: number
+          updated_at: string
+        }
+        Insert: {
+          first_booking_bonus_points?: number
+          id?: boolean
+          signup_bonus_points?: number
+          updated_at?: string
+        }
+        Update: {
+          first_booking_bonus_points?: number
+          id?: boolean
+          signup_bonus_points?: number
           updated_at?: string
         }
         Relationships: []

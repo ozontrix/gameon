@@ -311,6 +311,7 @@ export class BookingService {
 
     if (confirmed) {
       await NotificationService.notifyBooking(booking.id, { type: 'confirmed' });
+      if (booking.user_id) await BookingService.maybeCreditReferralBonus(booking.user_id, booking.id);
       return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
     }
 
@@ -398,7 +399,47 @@ export class BookingService {
     }
 
     await NotificationService.notifyBooking(bookingId, { type: 'confirmed' });
+    await BookingService.maybeCreditReferralBonus(userId, bookingId);
     return { bookingId };
+  }
+
+  /**
+   * Credits whoever referred `userId` a first-booking bonus — but only
+   * once, ever, for that referral. `referral_bonus_paid` IS the "was this
+   * their first booking" check: it flips true on whichever confirmation
+   * reaches this first, so there's nothing to count. Never throws — a
+   * referral hiccup must not fail an otherwise-successful confirmation.
+   */
+  private static async maybeCreditReferralBonus(userId: string, bookingId: string) {
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('referred_by, referral_bonus_paid')
+        .eq('id', userId)
+        .maybeSingle();
+      if (!profile?.referred_by || profile.referral_bonus_paid) return;
+
+      const { data: claimed } = await supabaseAdmin
+        .from('profiles')
+        .update({ referral_bonus_paid: true })
+        .eq('id', userId)
+        .eq('referral_bonus_paid', false)
+        .select('id')
+        .maybeSingle();
+      if (!claimed) return; // another confirmation already claimed it
+
+      const { data: settings } = await supabaseAdmin
+        .from('referral_settings')
+        .select('first_booking_bonus_points')
+        .limit(1)
+        .maybeSingle();
+      const bonus = settings?.first_booking_bonus_points ?? 0;
+      if (bonus > 0) {
+        await WalletService.adjust(profile.referred_by, bonus, 'referral_bonus', bookingId);
+      }
+    } catch (error) {
+      console.error(`[referrals] Could not credit referral bonus for booking ${bookingId}`, error);
+    }
   }
 
   /**
