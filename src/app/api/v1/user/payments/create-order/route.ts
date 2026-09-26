@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       // 1. Fetch the caller's PENDING booking; its amount was set by the server
       const { data: booking, error: fetchError } = await supabaseAdmin
         .from('bookings')
-        .select('amount_paid, status, user_id, expires_at, razorpay_order_id')
+        .select('amount_paid, status, user_id, expires_at, razorpay_order_id, wallet_points_used')
         .eq('id', bookingId)
         .maybeSingle();
 
@@ -45,10 +45,15 @@ export async function POST(request: Request) {
         );
       }
 
-      // Amount must be in paise (₹1 = 100 paise)
-      const amountInPaise = Math.round(Number(booking.amount_paid || 0) * 100);
+      // Any Points applied at hold time already came off the price — Razorpay
+      // is only ever asked for what's left.
+      const remaining = Number(booking.amount_paid || 0) - Number(booking.wallet_points_used || 0);
+      const amountInPaise = Math.round(remaining * 100);
       if (amountInPaise <= 0) {
-        return NextResponse.json({ success: false, error: 'This booking has no amount to pay.' }, { status: 409 });
+        return NextResponse.json(
+          { success: false, error: 'This booking has no amount to pay.', code: 'FULLY_COVERED_BY_WALLET' },
+          { status: 409 }
+        );
       }
 
       const keyId = process.env.RAZORPAY_KEY_ID; // Publishable key for the checkout

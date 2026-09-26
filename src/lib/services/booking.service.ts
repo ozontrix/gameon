@@ -4,6 +4,7 @@ import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn, zonedTimeToUtc } from '.
 import { CancellationPolicyService } from './cancellation-policy.service';
 import { NotificationService } from './notification.service';
 import { SlotService, lastBookableDate, type SlotOptions } from './slot.service';
+import { WalletService } from './wallet.service';
 
 /** How long a checkout holds a slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -25,6 +26,8 @@ export type NewBooking = {
   contactName?: string;
   contactPhone?: string;
   notes?: string;
+  /** How many GameOn Points the player chose to apply, from `WalletBlock`. */
+  walletPointsToUse?: number;
 };
 
 /** A booking taken at the front desk (walk-in or phone), confirmed on creation. */
@@ -76,7 +79,16 @@ export class BookingService {
     // 5. A lapsed checkout overlapping this slot would still trip the overlap constraint
     await BookingService.releaseLapsedHold(facilityId, date, startTime, endTime);
 
-    // 6. Insert PENDING booking
+    // 6. How many of the player's own Points this booking's price can absorb.
+    // A price split, not a debit — nothing leaves the wallet until the
+    // booking is actually confirmed (see confirmPaidOrder/confirmWithWallet).
+    let walletPointsUsed = 0;
+    if (input.walletPointsToUse) {
+      const balance = await WalletService.getBalance(userId);
+      walletPointsUsed = Math.max(0, Math.min(input.walletPointsToUse, balance, Math.floor(amount)));
+    }
+
+    // 7. Insert PENDING booking
     // The overlap constraint blocks this if someone else JUST booked any part of it
     const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString();
     const { data: booking, error } = await supabaseAdmin
@@ -95,8 +107,9 @@ export class BookingService {
         contact_name: input.contactName || null,
         contact_phone: input.contactPhone || null,
         notes: input.notes || null,
+        wallet_points_used: walletPointsUsed,
       })
-      .select('id, amount_paid, expires_at')
+      .select('id, amount_paid, expires_at, wallet_points_used')
       .single();
 
     if (error) {
@@ -250,7 +263,7 @@ export class BookingService {
   static async confirmPaidOrder(orderId: string, paymentId: string) {
     const { data: booking, error: fetchError } = await supabaseAdmin
       .from('bookings')
-      .select('id, status')
+      .select('id, status, user_id, wallet_points_used')
       .eq('razorpay_order_id', orderId)
       .maybeSingle();
 
@@ -260,6 +273,23 @@ export class BookingService {
     if (booking.status === 'CONFIRMED') {
       // Already confirmed by the other caller (app verify or webhook); its notice is already out.
       return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
+    }
+
+    const walletPointsUsed = booking.wallet_points_used ?? 0;
+    // Razorpay was only ever charged the remainder after this many Points, so
+    // debit them now, before the booking is confirmed. If the balance somehow
+    // dropped since the hold priced this split, the payment is already
+    // captured — proceed and confirm anyway rather than strand a paid
+    // customer's booking over a wallet-ledger discrepancy this rare.
+    if (walletPointsUsed > 0 && booking.user_id) {
+      try {
+        await WalletService.adjust(booking.user_id, -walletPointsUsed, 'booking_redeem', booking.id);
+      } catch (walletError) {
+        console.error(
+          `[payments] Could not debit ${walletPointsUsed} Points for booking ${booking.id} (order ${orderId}) — confirming anyway.`,
+          walletError
+        );
+      }
     }
 
     const paid = {
@@ -292,6 +322,10 @@ export class BookingService {
         .eq('id', booking.id);
       if (recordError) throw recordError;
 
+      if (walletPointsUsed > 0 && booking.user_id) {
+        await WalletService.adjust(booking.user_id, walletPointsUsed, 'booking_redeem_release', booking.id);
+      }
+
       console.error(
         `[payments] Paid booking ${booking.id} lost its slot (order ${orderId}, payment ${paymentId}) — refund needed.`
       );
@@ -312,6 +346,59 @@ export class BookingService {
       return { bookingId: booking.id, outcome: 'confirmed' as PaidOrderOutcome };
     }
     throw new Error(`Could not confirm booking ${booking.id} for order ${orderId}`);
+  }
+
+  /**
+   * Confirms a PENDING hold whose Points fully cover its price — no Razorpay
+   * order was ever needed. Debits the wallet first: nothing else has moved
+   * yet, so a rejected debit (rare — the balance changed since the hold
+   * priced this) is a clean no-op with nothing to compensate.
+   */
+  static async confirmWithWallet(userId: string, bookingId: string) {
+    const { data: booking, error: fetchError } = await supabaseAdmin
+      .from('bookings')
+      .select('id, status, user_id, amount_paid, wallet_points_used')
+      .eq('id', bookingId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!booking || booking.user_id !== userId) throw new BookingError('Booking not found', 404);
+    if (booking.status !== 'PENDING') {
+      throw new BookingError('This booking is no longer awaiting payment.', 409);
+    }
+
+    const walletPointsUsed = booking.wallet_points_used ?? 0;
+    const remaining = Number(booking.amount_paid ?? 0) - walletPointsUsed;
+    if (walletPointsUsed <= 0 || remaining > 0) {
+      throw new BookingError('This booking is not fully covered by Points.', 400);
+    }
+
+    await WalletService.adjust(userId, -walletPointsUsed, 'booking_redeem', bookingId);
+
+    const { data: confirmed, error } = await supabaseAdmin
+      .from('bookings')
+      .update({
+        status: 'CONFIRMED',
+        payment_status: 'PAID',
+        payment_method: 'WALLET',
+        paid_at: new Date().toISOString(),
+        expires_at: null,
+      })
+      .eq('id', bookingId)
+      .eq('status', 'PENDING')
+      .select('id')
+      .maybeSingle();
+
+    if (!confirmed) {
+      // The hold lapsed (or was cancelled) between the debit above and here —
+      // give the Points back; nothing was ever charged to a gateway.
+      await WalletService.adjust(userId, walletPointsUsed, 'booking_redeem_release', bookingId);
+      if (error) throw error;
+      throw new BookingError('Your hold on this slot expired. Please pick the slot again.', 410);
+    }
+
+    await NotificationService.notifyBooking(bookingId, { type: 'confirmed' });
+    return { bookingId };
   }
 
   /**
@@ -397,7 +484,7 @@ export class BookingService {
     let query = supabaseAdmin
       .from('bookings')
       .select(
-        `id, booking_date, start_time, end_time, amount_paid, status, payment_status,
+        `id, booking_date, start_time, end_time, amount_paid, status, payment_status, payment_method,
          players, razorpay_order_id, paid_at, created_at,
          facilities (
            id, name,
@@ -450,6 +537,19 @@ export class BookingService {
     const refundPercent = await CancellationPolicyService.refundPercentFor('booking', hoursBeforeStart);
     const amountPaid = Number(booking.amount_paid ?? 0);
     const refundDueAmount = Math.round(amountPaid * (refundPercent / 100) * 100) / 100;
+    // Only a booking that was actually paid has anything to hand back; a
+    // CONFIRMED-but-UNPAID booking (an admin edge case) still gets its
+    // refund_percent/refund_due_amount recorded, just nothing credited.
+    const owesRefund = refundDueAmount > 0 && booking.payment_status === 'PAID';
+    const creditPoints = Math.round(refundDueAmount);
+
+    // Credit before the cancellation commits: if this booking loses a race
+    // with another cancel/check-in below, the credit is reversed and nothing
+    // is left half-done. The reverse order would risk a cancellation that
+    // says REFUNDED while the credit itself silently failed.
+    if (owesRefund) {
+      await WalletService.adjust(userId, creditPoints, 'refund_credit', bookingId);
+    }
 
     const { data: cancelled, error } = await supabaseAdmin
       .from('bookings')
@@ -461,14 +561,22 @@ export class BookingService {
         expires_at: null,
         refund_percent: refundPercent,
         refund_due_amount: refundDueAmount,
+        // The refund happens right here, as Points — this cancellation never
+        // reaches the admin's manual "to refund" queue.
+        ...(owesRefund ? { payment_status: 'REFUNDED' as const, refunded_at: new Date().toISOString(), refund_reference: 'Wallet credit' } : {}),
       })
       .eq('id', bookingId)
       .eq('status', 'CONFIRMED') // guards against a race with another cancel/check-in
       .select('id')
       .maybeSingle();
 
-    if (error) throw error;
-    if (!cancelled) throw new BookingError('This booking was just updated. Please refresh and try again.', 409);
+    if (!cancelled) {
+      if (owesRefund) {
+        await WalletService.adjust(userId, -creditPoints, 'refund_credit_release', bookingId);
+      }
+      if (error) throw error;
+      throw new BookingError('This booking was just updated. Please refresh and try again.', 409);
+    }
 
     await NotificationService.notifyBooking(bookingId, { type: 'cancelled', reason });
 
@@ -477,7 +585,7 @@ export class BookingService {
       refundPercent,
       refundDueAmount,
       amountPaid,
-      paymentStatus: booking.payment_status,
+      paymentStatus: owesRefund ? 'REFUNDED' : booking.payment_status,
     };
   }
 

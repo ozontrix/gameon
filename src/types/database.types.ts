@@ -109,6 +109,7 @@ export type Database = {
           start_time: string
           status: Database["public"]["Enums"]["booking_status"]
           user_id: string | null
+          wallet_points_used: number
         }
         Insert: {
           amount_paid?: number | null
@@ -141,6 +142,7 @@ export type Database = {
           start_time: string
           status?: Database["public"]["Enums"]["booking_status"]
           user_id?: string | null
+          wallet_points_used?: number
         }
         Update: {
           amount_paid?: number | null
@@ -173,6 +175,7 @@ export type Database = {
           start_time?: string
           status?: Database["public"]["Enums"]["booking_status"]
           user_id?: string | null
+          wallet_points_used?: number
         }
         Relationships: [
           {
@@ -1234,6 +1237,77 @@ export type Database = {
           },
         ]
       }
+      wallets: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          balance_after: number
+          booking_id: string | null
+          created_at: string
+          id: string
+          points: number
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          balance_after: number
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          points: number
+          reason: string
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          points?: number
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1273,6 +1347,10 @@ export type Database = {
       }
       user_unread_notification_count: {
         Args: { p_user_id: string }
+        Returns: number
+      }
+      wallet_adjust: {
+        Args: { p_booking_id?: string | null; p_points: number; p_reason: string; p_user_id: string }
         Returns: number
       }
     }
