@@ -2,20 +2,30 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { ConfirmAction } from '@/components/admin/confirm-action';
 import { BookingStatusBadge, PaymentStatusBadge, SourceBadge } from '@/components/admin/status';
 import { Card, CardBody, CardHeader, DetailList, EmptyState, PageHeader, StatCard, Table, Td, Th } from '@/components/admin/ui';
+import { adjustCustomerWallet } from '@/lib/admin/actions/wallet';
 import { formatDate, formatDateTime, formatMoney, formatTimeRange, shortBookingId, titleCase } from '@/lib/admin/format';
 import { getCustomer } from '@/lib/admin/queries/customers';
 import { requireStaff } from '@/lib/admin/session';
 
 export const metadata: Metadata = { title: 'Customer' };
 
+const WALLET_REASON_LABEL: Record<string, string> = {
+  refund_credit: 'Refund credited',
+  refund_credit_release: 'Refund reversed',
+  booking_redeem: 'Redeemed at checkout',
+  booking_redeem_release: 'Redemption returned',
+  admin_adjustment: 'Admin adjustment',
+};
+
 export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireStaff();
+  const session = await requireStaff();
   const { id } = await params;
   const result = await getCustomer(id);
   if (!result) notFound();
-  const { customer, bookings, bookingCount, spent, lastBooking } = result;
+  const { customer, bookings, bookingCount, spent, lastBooking, wallet, walletTransactions } = result;
 
   return (
     <>
@@ -48,6 +58,63 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
                 },
               ]}
             />
+          </CardBody>
+        </Card>
+
+        <Card className="h-fit">
+          <CardHeader
+            title="GameOn Wallet"
+            action={
+              session.role === 'ADMIN' ? (
+                <ConfirmAction
+                  action={adjustCustomerWallet}
+                  hidden={{ userId: customer.id }}
+                  trigger="Adjust balance"
+                  title="Adjust GameOn Points"
+                  description={`Current balance: ${wallet.balance.toLocaleString('en-IN')} PTS. A positive amount credits, a negative amount debits.`}
+                  confirmLabel="Save adjustment"
+                  inputs={[
+                    { name: 'points', label: 'Points (e.g. 100 or -50)', required: true },
+                    { name: 'note', label: 'Reason', placeholder: 'Why is this adjustment being made?', multiline: true, required: true },
+                  ]}
+                />
+              ) : undefined
+            }
+          />
+          <CardBody>
+            <div className="mb-4 grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-lg font-semibold tabular-nums text-zinc-950">{wallet.balance.toLocaleString('en-IN')}</p>
+                <p className="text-xs text-zinc-500">Balance</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold tabular-nums text-emerald-600">{wallet.totalEarned.toLocaleString('en-IN')}</p>
+                <p className="text-xs text-zinc-500">Earned</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold tabular-nums text-red-600">{wallet.totalUsed.toLocaleString('en-IN')}</p>
+                <p className="text-xs text-zinc-500">Used</p>
+              </div>
+            </div>
+
+            {walletTransactions.length === 0 ? (
+              <EmptyState title="No wallet activity yet" />
+            ) : (
+              <div className="space-y-2">
+                {walletTransactions.map((txn) => (
+                  <div key={txn.id} className="flex items-center justify-between border-t border-zinc-100 pt-2 text-sm first:border-t-0 first:pt-0">
+                    <div>
+                      <div className="text-zinc-800">{WALLET_REASON_LABEL[txn.reason] ?? txn.reason}</div>
+                      <div className="text-xs text-zinc-500">{formatDateTime(txn.createdAt)}</div>
+                    </div>
+                    <div className={`tabular-nums font-medium ${txn.points > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {txn.points > 0 ? '+' : ''}
+                      {txn.points}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardBody>
         </Card>
 

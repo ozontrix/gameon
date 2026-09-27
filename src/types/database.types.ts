@@ -100,6 +100,8 @@ export type Database = {
           players: number | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
+          refund_due_amount: number | null
+          refund_percent: number | null
           refund_reference: string | null
           refunded_at: string | null
           scanned_at: string | null
@@ -107,6 +109,7 @@ export type Database = {
           start_time: string
           status: Database["public"]["Enums"]["booking_status"]
           user_id: string | null
+          wallet_points_used: number
         }
         Insert: {
           amount_paid?: number | null
@@ -130,6 +133,8 @@ export type Database = {
           players?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          refund_due_amount?: number | null
+          refund_percent?: number | null
           refund_reference?: string | null
           refunded_at?: string | null
           scanned_at?: string | null
@@ -137,6 +142,7 @@ export type Database = {
           start_time: string
           status?: Database["public"]["Enums"]["booking_status"]
           user_id?: string | null
+          wallet_points_used?: number
         }
         Update: {
           amount_paid?: number | null
@@ -160,6 +166,8 @@ export type Database = {
           players?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          refund_due_amount?: number | null
+          refund_percent?: number | null
           refund_reference?: string | null
           refunded_at?: string | null
           scanned_at?: string | null
@@ -167,6 +175,7 @@ export type Database = {
           start_time?: string
           status?: Database["public"]["Enums"]["booking_status"]
           user_id?: string | null
+          wallet_points_used?: number
         }
         Relationships: [
           {
@@ -184,6 +193,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cancellation_policy_tiers: {
+        Row: {
+          applies_to: string
+          created_at: string
+          id: string
+          min_hours_before: number
+          refund_percent: number
+          updated_at: string
+        }
+        Insert: {
+          applies_to?: string
+          created_at?: string
+          id?: string
+          min_hours_before: number
+          refund_percent: number
+          updated_at?: string
+        }
+        Update: {
+          applies_to?: string
+          created_at?: string
+          id?: string
+          min_hours_before?: number
+          refund_percent?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       court_type_amenities: {
         Row: {
@@ -322,6 +358,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_indoor: boolean
+          max_players: number
           name: string
           slug: string
           sort_order: number
@@ -337,6 +374,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_indoor: boolean
+          max_players?: number
           name: string
           slug: string
           sort_order?: number
@@ -352,6 +390,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_indoor?: boolean
+          max_players?: number
           name?: string
           slug?: string
           sort_order?: number
@@ -654,6 +693,9 @@ export type Database = {
           id: string
           phone: string | null
           preferred_sports: string[]
+          referral_bonus_paid: boolean
+          referral_code: string
+          referred_by: string | null
           updated_at: string
         }
         Insert: {
@@ -666,6 +708,9 @@ export type Database = {
           id: string
           phone?: string | null
           preferred_sports?: string[]
+          referral_bonus_paid?: boolean
+          referral_code?: string
+          referred_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -678,6 +723,38 @@ export type Database = {
           id?: string
           phone?: string | null
           preferred_sports?: string[]
+          referral_bonus_paid?: boolean
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_settings: {
+        Row: {
+          first_booking_bonus_points: number
+          id: boolean
+          signup_bonus_points: number
+          updated_at: string
+        }
+        Insert: {
+          first_booking_bonus_points?: number
+          id?: boolean
+          signup_bonus_points?: number
+          updated_at?: string
+        }
+        Update: {
+          first_booking_bonus_points?: number
+          id?: boolean
+          signup_bonus_points?: number
           updated_at?: string
         }
         Relationships: []
@@ -763,6 +840,512 @@ export type Database = {
         }
         Relationships: []
       }
+      tournaments: {
+        Row: {
+          court_type_id: string
+          created_at: string
+          created_by: string | null
+          daily_end_time: string
+          daily_start_time: string
+          description: string | null
+          ends_on: string
+          entry_fee: number
+          format: string | null
+          id: string
+          match_type: string
+          registration_closes_at: string
+          starts_on: string
+          status: string
+          team_capacity: number
+          team_size_label: string | null
+          title: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          court_type_id: string
+          created_at?: string
+          created_by?: string | null
+          daily_end_time: string
+          daily_start_time: string
+          description?: string | null
+          ends_on: string
+          entry_fee: number
+          format?: string | null
+          id?: string
+          match_type: string
+          registration_closes_at: string
+          starts_on: string
+          status?: string
+          team_capacity: number
+          team_size_label?: string | null
+          title: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          court_type_id?: string
+          created_at?: string
+          created_by?: string | null
+          daily_end_time?: string
+          daily_start_time?: string
+          description?: string | null
+          ends_on?: string
+          entry_fee?: number
+          format?: string | null
+          id?: string
+          match_type?: string
+          registration_closes_at?: string
+          starts_on?: string
+          status?: string
+          team_capacity?: number
+          team_size_label?: string | null
+          title?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournaments_court_type_venue_fk"
+            columns: ["court_type_id", "venue_id"]
+            isOneToOne: false
+            referencedRelation: "court_types"
+            referencedColumns: ["id", "venue_id"]
+          },
+          {
+            foreignKeyName: "tournaments_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_images: {
+        Row: {
+          created_at: string
+          id: string
+          sort_order: number
+          tournament_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sort_order?: number
+          tournament_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sort_order?: number
+          tournament_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_images_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_sections: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sort_order: number
+          title: string
+          tournament_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title: string
+          tournament_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_sections_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_registrations: {
+        Row: {
+          amount_paid: number
+          captain_name: string
+          contact_email: string | null
+          contact_phone: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_status: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: string
+          team_name: string
+          tournament_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          captain_name: string
+          contact_email?: string | null
+          contact_phone: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          team_name: string
+          tournament_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          captain_name?: string
+          contact_email?: string | null
+          contact_phone?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          team_name?: string
+          tournament_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_registrations_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          daily_end_time: string
+          daily_start_time: string
+          description: string | null
+          ends_on: string
+          entry_fee: number | null
+          fee_unit: string
+          format: string | null
+          id: string
+          max_tickets_per_order: number
+          registration_closes_at: string
+          sport_id: string | null
+          starts_on: string
+          status: string
+          ticket_capacity: number
+          title: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          daily_end_time: string
+          daily_start_time: string
+          description?: string | null
+          ends_on: string
+          entry_fee?: number | null
+          fee_unit?: string
+          format?: string | null
+          id?: string
+          max_tickets_per_order?: number
+          registration_closes_at: string
+          sport_id?: string | null
+          starts_on: string
+          status?: string
+          ticket_capacity: number
+          title: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          daily_end_time?: string
+          daily_start_time?: string
+          description?: string | null
+          ends_on?: string
+          entry_fee?: number | null
+          fee_unit?: string
+          format?: string | null
+          id?: string
+          max_tickets_per_order?: number
+          registration_closes_at?: string
+          sport_id?: string | null
+          starts_on?: string
+          status?: string
+          ticket_capacity?: number
+          title?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_images: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          sort_order?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_images_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_sections: {
+        Row: {
+          body: string
+          created_at: string
+          event_id: string
+          id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          event_id: string
+          id?: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_sections_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_orders: {
+        Row: {
+          amount_paid: number
+          attendee_name: string
+          contact_email: string | null
+          contact_phone: string
+          created_at: string
+          event_id: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_status: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: string
+          tickets: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          attendee_name: string
+          contact_email?: string | null
+          contact_phone: string
+          created_at?: string
+          event_id: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          tickets: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          attendee_name?: string
+          contact_email?: string | null
+          contact_phone?: string
+          created_at?: string
+          event_id?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          tickets?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_orders_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          balance_after: number
+          booking_id: string | null
+          created_at: string
+          id: string
+          points: number
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          balance_after: number
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          points: number
+          reason: string
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          points?: number
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -802,6 +1385,10 @@ export type Database = {
       }
       user_unread_notification_count: {
         Args: { p_user_id: string }
+        Returns: number
+      }
+      wallet_adjust: {
+        Args: { p_booking_id?: string | null; p_points: number; p_reason: string; p_user_id: string }
         Returns: number
       }
     }

@@ -54,7 +54,7 @@ export async function listCourtTypes(filters: { venue?: string; sport?: string }
   let query = supabaseAdmin
     .from('court_types')
     .select(
-      `id, slug, name, surface_type, is_indoor, has_ac, is_active, sort_order,
+      `id, slug, name, surface_type, is_indoor, has_ac, max_players, is_active, sort_order,
        venue_id, sport_id, venues ( name ), sports ( name ), facilities ( count ),
        court_type_slot_options ( duration_minutes, price, is_active )`
     )
@@ -77,7 +77,7 @@ export async function getCourtType(id: string) {
   const { data, error } = await supabaseAdmin
     .from('court_types')
     .select(
-      `id, slug, name, description, surface_type, is_indoor, has_ac,
+      `id, slug, name, description, surface_type, is_indoor, has_ac, max_players,
        sort_order, is_active, venue_id, sport_id`
     )
     .eq('id', id)
@@ -154,7 +154,10 @@ export async function listCatalogOptions() {
   const [venues, sports, courtTypes, courts] = await Promise.all([
     supabaseAdmin.from('venues').select('id, name, is_active').order('name'),
     supabaseAdmin.from('sports').select('id, name, is_active').order('name'),
-    supabaseAdmin.from('court_types').select('id, name, venue_id, sport_id, is_active').order('sort_order'),
+    supabaseAdmin
+      .from('court_types')
+      .select('id, name, venue_id, sport_id, is_active, surface_type, is_indoor, has_ac, venues ( name )')
+      .order('sort_order'),
     supabaseAdmin.from('facilities').select('id, name, venue_id').order('name'),
   ]);
   return {

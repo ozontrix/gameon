@@ -16,6 +16,9 @@ const createBookingSchema = z.object({
   contactName: z.string().trim().max(100).optional(),
   contactPhone: z.string().trim().max(20).optional(),
   notes: z.string().trim().max(200).optional(),
+  // How many GameOn Points the player chose in the wallet block; clamped
+  // server-side against their actual balance and this booking's price.
+  walletPointsToUse: z.number().int().min(0).max(200_000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -34,12 +37,15 @@ export async function POST(request: Request) {
       // Call service to lock the slot using the authenticated user's ID
       const booking = await BookingService.createBooking(user.id, validation.data);
 
+      const walletPointsUsed = Number(booking.wallet_points_used ?? 0);
       return NextResponse.json({
         success: true,
         message: 'Slot locked successfully for 10 minutes. Proceed to payment.',
         bookingId: booking.id, // Mobile app will use this to initialize payment
         amount: Number(booking.amount_paid),
         expiresAt: booking.expires_at,
+        walletPointsUsed,
+        remainingPayable: Number(booking.amount_paid) - walletPointsUsed,
       }, { status: 201 });
 
     } catch (error) {
@@ -129,7 +135,7 @@ function toAppBooking(b: UserBooking, now: Date) {
     qrValidTill: `${date}, ${formatTime(b.end_time)}`,
     invoice: {
       orderId: b.razorpay_order_id ?? `INV-${b.id.substring(0, 8).toUpperCase()}`,
-      paymentMethod: 'Razorpay',
+      paymentMethod: b.payment_method === 'WALLET' ? 'GameOn Wallet' : 'Razorpay',
       amountPaid: amount,
     },
     hoursUntilSlot: Math.floor((startsAt.getTime() - now.getTime()) / (1000 * 60 * 60)),

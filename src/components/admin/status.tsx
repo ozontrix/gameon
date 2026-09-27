@@ -33,6 +33,19 @@ export function ActiveBadge({ active }: { active: boolean | null }) {
   return active === false ? <Badge tone="neutral">Inactive</Badge> : <Badge tone="green">Active</Badge>;
 }
 
+const EVENT_STATUS_TONES: Record<string, BadgeTone> = {
+  draft: 'neutral',
+  published: 'green',
+  registration_closed: 'amber',
+  completed: 'blue',
+  cancelled: 'red',
+};
+
+/** A tournament's or event's own lifecycle — draft through cancelled. */
+export function EventStatusBadge({ status }: { status: string }) {
+  return <Badge tone={EVENT_STATUS_TONES[status] ?? 'neutral'}>{titleCase(status.replace('_', ' '))}</Badge>;
+}
+
 /** A booking cancelled after payment that has not been refunded yet. */
 export function needsRefund(booking: { status: string; payment_status: string }) {
   return booking.status === 'CANCELLED' && booking.payment_status === 'PAID';

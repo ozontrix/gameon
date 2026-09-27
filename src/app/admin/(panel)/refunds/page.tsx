@@ -26,14 +26,23 @@ export default async function RefundsPage({
   let query = supabaseAdmin
     .from('bookings')
     .select(
-      'id, booking_date, start_time, end_time, amount_paid, payment_method, razorpay_payment_id, contact_name, contact_phone, cancel_reason, cancelled_at, refunded_at, refund_reference, facilities ( name )',
+      `id, booking_date, start_time, end_time, amount_paid, payment_method, razorpay_payment_id,
+       contact_name, contact_phone, cancel_reason, cancelled_at, refunded_at, refund_reference,
+       refund_percent, refund_due_amount, facilities ( name )`,
       { count: 'exact' }
     )
     .eq('status', 'CANCELLED');
 
   query = showDone
     ? query.eq('payment_status', 'REFUNDED').order('refunded_at', { ascending: false })
-    : query.eq('payment_status', 'PAID').order('cancelled_at', { ascending: true, nullsFirst: true });
+    : query
+        .eq('payment_status', 'PAID')
+        // A policy cancellation that computed 0% owes nothing — it doesn't
+        // belong in a queue of things to pay out. A null refund_percent
+        // (admin-initiated cancellation, judged by eye) always shows, since
+        // there's no computed entitlement to rule it out by.
+        .or('refund_percent.is.null,refund_percent.gt.0')
+        .order('cancelled_at', { ascending: true, nullsFirst: true });
 
   const { data: bookings, count, error } = await query.range(from, from + PAGE_SIZE - 1);
   if (error) throw error;
@@ -104,7 +113,18 @@ export default async function RefundsPage({
                       <div className="text-zinc-900">{booking.contact_name || '—'}</div>
                       <div className="text-xs text-zinc-500">{booking.contact_phone}</div>
                     </Td>
-                    <Td className="text-right font-medium tabular-nums">{formatMoney(booking.amount_paid)}</Td>
+                    <Td className="text-right font-medium tabular-nums">
+                      {booking.refund_percent === null ? (
+                        formatMoney(booking.amount_paid)
+                      ) : (
+                        <>
+                          {formatMoney(booking.refund_due_amount)}
+                          <div className="text-xs font-normal text-zinc-500">
+                            {booking.refund_percent}% of {formatMoney(booking.amount_paid)} paid
+                          </div>
+                        </>
+                      )}
+                    </Td>
                     <Td>
                       <div>{titleCase(booking.payment_method)}</div>
                       {booking.razorpay_payment_id ? (
@@ -131,7 +151,7 @@ export default async function RefundsPage({
                           hidden={{ bookingId: booking.id }}
                           trigger="Record refund"
                           title={`Record refund for ${shortBookingId(booking.id)}`}
-                          description={`Confirm you have refunded ${formatMoney(booking.amount_paid)} to ${booking.contact_name || 'the customer'}.`}
+                          description={`Confirm you have refunded ${formatMoney(booking.refund_percent === null ? booking.amount_paid : booking.refund_due_amount)} to ${booking.contact_name || 'the customer'}${booking.refund_percent === null ? '' : ` (${booking.refund_percent}% cancellation policy)`}.`}
                           confirmLabel="Record refund"
                           inputs={[{ name: 'reference', label: 'Refund reference', placeholder: 'rfnd_… or “Cash, receipt 142”', required: true }]}
                         />
