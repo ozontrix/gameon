@@ -12,7 +12,7 @@ Before testing or deploying the APIs, ensure you have configured your environmen
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"   # required — there is no fallback
 SUPABASE_JWT_SECRET="..."                           # signs phone-login tokens
-FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}'  # required for phone login
+FIREBASE_PROJECT_ID="gameon-multisports"            # optional — phone-login project, defaults to gameon-multisports
 RAZORPAY_KEY_ID="rzp_..."
 RAZORPAY_KEY_SECRET="..."
 RAZORPAY_WEBHOOK_SECRET="..."   # Razorpay Dashboard → Webhooks
@@ -20,6 +20,8 @@ CRON_SECRET="..."               # Vercel sends it to /api/cron/clear-expired
 ```
 
 Apply `supabase/migrations/20260917000000_booking_payment_hardening.sql` in the Supabase SQL Editor before deploying this API version.
+
+Phone sign-in (`POST /api/v1/auth/exchange`) verifies the Firebase ID token against Google's published signing keys, so no service-account JSON is needed — `FIREBASE_PROJECT_ID` only names the project whose tokens are accepted (or, as a fallback, the `project_id` of a legacy `FIREBASE_SERVICE_ACCOUNT`).
 
 To run the Next.js server on a custom port (e.g., 3001) to avoid conflicts:
 ```bash

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db/supabase';
-import { getFirebaseAdminAuth } from '@/lib/firebase-admin';
+import { verifyFirebaseIdToken } from '@/lib/firebase-token';
 import { withRateLimit } from '@/lib/middlewares/rate-limiter';
 
 const exchangeSchema = z.object({
@@ -42,44 +42,40 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'Missing firebaseToken' }, { status: 400 });
       }
 
-      // STEP A: Verify Firebase Token — never trust one we could not verify
-      const firebaseAuth = getFirebaseAdminAuth();
-      if (!firebaseAuth) {
-        console.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT is not configured; refusing phone sign-in.');
-        return NextResponse.json(
-          { success: false, error: 'Phone sign-in is not available right now.' },
-          { status: 503 }
-        );
-      }
-
-      let phoneNumber: string | undefined;
-      try {
-        const decodedToken = await firebaseAuth.verifyIdToken(validation.data.firebaseToken);
-        phoneNumber = decodedToken.phone_number;
-      } catch (e) {
-        console.warn('Firebase token rejected:', e);
+      // STEP A: Verify the Firebase token — never trust a number we could not verify
+      const firebaseUser = await verifyFirebaseIdToken(validation.data.firebaseToken);
+      if (!firebaseUser) {
         return NextResponse.json(
           { success: false, error: 'Phone verification failed or expired. Please try again.' },
           { status: 401 }
         );
       }
 
-      if (!phoneNumber) {
-        return NextResponse.json({ success: false, error: 'Token missing phone_number' }, { status: 400 });
-      }
-
       // Standardize to E.164 (ensure + prefix)
+      const { phoneNumber } = firebaseUser;
       const e164Phone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
 
       // STEP B: Supabase Identity Resolution
       const userId = await findOrCreatePhoneUser(e164Phone);
 
-      // STEP C: The profile row bookings belong to. Only the verified phone is
-      // written, so a name the player chose is never overwritten.
-      const { error: profileError } = await supabaseAdmin
+      // STEP C: The profile row bookings belong to. `handle_new_user` created it,
+      // with its referral code, when the auth user above appeared — so this only
+      // records the verified phone in E.164. An insert is deliberately avoided:
+      // `profiles.referral_code` is NOT NULL and only the database mints one, so
+      // proposing a row without it fails the whole exchange.
+      const { data: profiled, error: profileError } = await supabaseAdmin
         .from('profiles')
-        .upsert({ id: userId, phone: e164Phone }, { onConflict: 'id' });
+        .update({ phone: e164Phone })
+        .eq('id', userId)
+        .select('id');
       if (profileError) throw profileError;
+
+      if (!profiled?.length) {
+        // An auth user the trigger never saw (one created before it existed).
+        // Sign-in still works; the missing row has to be backfilled before the
+        // player's profile screens have anything to read.
+        console.error(`No profiles row for auth user ${userId} — run the profile backfill.`);
+      }
 
       // STEP D: Token Minting
       const jwtSecret = process.env.SUPABASE_JWT_SECRET;
