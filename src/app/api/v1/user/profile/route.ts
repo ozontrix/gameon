@@ -2,21 +2,18 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/middlewares/auth';
 import { supabaseAdmin } from '@/lib/db/supabase';
-
-/** The columns the app is told about. Referral columns stay server-side. */
-const PROFILE_COLUMNS =
-  'id, full_name, email, phone, city, gender, date_of_birth, preferred_sports, created_at, updated_at';
+import { loadProfileIdentity, PROFILE_COLUMNS, profileContactSchema, profileResponse } from '@/lib/profile';
 
 /**
  * Only the columns a player owns.
  *
- * `email` and `phone` are deliberately absent: they are verified identity,
- * written by `/auth/exchange` and the confirmation flow, so changing either
- * needs a verification step rather than a PATCH. `referral_code`, `referred_by`
+ * Non-login contact details are editable but never verified by a PATCH.
+ * The authenticated login contact is locked. `referral_code`, `referred_by`
  * and `referral_bonus_paid` are absent too — the database mints or pays them,
  * and column privileges now block a client from writing them at all.
  */
 const updateProfileSchema = z.object({
+  ...profileContactSchema,
   fullName: z.string().trim().min(2, 'Please enter your full name').max(80).optional(),
   city: z.string().trim().max(60).nullish(),
   gender: z.string().trim().max(40).nullish(),
@@ -39,7 +36,7 @@ const updateProfileSchema = z.object({
     .array(z.string().trim().toLowerCase().regex(/^[a-z][a-z0-9-]{1,30}$/, 'Invalid sport'))
     .max(8)
     .optional(),
-});
+}).strict();
 
 /**
  * The caller's own profile.
@@ -53,28 +50,28 @@ const updateProfileSchema = z.object({
 export async function GET(request: Request) {
   return withAuth(request, ['USER', 'ADMIN', 'STAFF'], async (_req, user) => {
     try {
+      const { auth, identity } = await loadProfileIdentity(user.id, user.provider);
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .select(PROFILE_COLUMNS)
         .eq('id', user.id)
         .maybeSingle();
       if (error) throw error;
-      if (data) return NextResponse.json({ success: true, data });
+      if (data) return NextResponse.json({ success: true, data: await profileResponse(data, identity) });
 
       // No row — heal it. `full_name` comes from the auth metadata the sign-up
       // screens set, so the player never lands on an empty profile.
       // `referral_code` is left out: the column defaults to
       // `generate_referral_code()`, so the database mints a unique code.
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(user.id);
-      const metaName = (authUser?.user?.user_metadata?.full_name as string | undefined) ?? '';
+      const metaName = typeof auth.user_metadata?.full_name === 'string' ? auth.user_metadata.full_name : '';
 
       const { data: created, error: insertError } = await supabaseAdmin
         .from('profiles')
         .insert({
           id: user.id,
           full_name: metaName.trim(),
-          email: authUser?.user?.email ?? null,
-          phone: authUser?.user?.phone ?? null,
+          email: identity.email,
+          phone: identity.phone,
         })
         .select(PROFILE_COLUMNS)
         .maybeSingle();
@@ -86,11 +83,11 @@ export async function GET(request: Request) {
           .select(PROFILE_COLUMNS)
           .eq('id', user.id)
           .maybeSingle();
-        if (existing) return NextResponse.json({ success: true, data: existing });
+        if (existing) return NextResponse.json({ success: true, data: await profileResponse(existing, identity) });
         throw insertError;
       }
 
-      return NextResponse.json({ success: true, data: created });
+      return NextResponse.json({ success: true, data: created ? await profileResponse(created, identity) : null });
     } catch (error) {
       console.error('Get Profile Error:', error);
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
@@ -117,15 +114,24 @@ export async function PATCH(request: Request) {
       }
 
       const input = parsed.data;
+      const { identity } = await loadProfileIdentity(user.id, user.provider);
+      if ((identity.loginProvider === 'email' && input.email !== undefined) ||
+          (identity.loginProvider === 'phone' && input.phone !== undefined)) {
+        return NextResponse.json({ success: false, error: 'Your sign-in contact cannot be changed here.' }, { status: 400 });
+      }
       // Only what was sent, so omitting a field never clears it. An explicit
       // empty string or null clears it.
       const patch: {
+        email?: string | null;
+        phone?: string | null;
         full_name?: string;
         city?: string | null;
         gender?: string | null;
         date_of_birth?: string | null;
         preferred_sports?: string[];
       } = {};
+      if (input.email !== undefined) patch.email = input.email;
+      if (input.phone !== undefined) patch.phone = input.phone;
       if (input.fullName !== undefined) patch.full_name = input.fullName;
       if (input.city !== undefined) patch.city = input.city || null;
       if (input.gender !== undefined) patch.gender = input.gender || null;
@@ -148,7 +154,7 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ success: false, error: 'Profile not found' }, { status: 404 });
       }
 
-      return NextResponse.json({ success: true, data });
+      return NextResponse.json({ success: true, data: await profileResponse(data, identity) });
     } catch (error) {
       console.error('Update Profile Error:', error);
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });

@@ -791,6 +791,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
           city: string | null
           created_at: string
           date_of_birth: string | null
@@ -806,6 +807,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_path?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -821,6 +823,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_path?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -1455,7 +1458,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      account_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          category: string
+          created_at: string
+          title: string
+          subtitle: string
+          booking_id: string | null
+          amount: number | null
+          currency: string | null
+          points: number
+          reason: string | null
+          status: string
+          payment_reference: string | null
+          points_used: number
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_team_members: {
