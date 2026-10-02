@@ -20,7 +20,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { ArrowRight, CalendarDays, MapPin, Trophy, Users, Zap } from "lucide-react";
 import { SPORTS, formatINR, scheduleLabel, type EntryMode } from "@/components/league/data";
-import { LEAGUE_PRIZE_POOL } from "@/lib/league/constants";
+import { LEAGUE_HELP_PHONE, LEAGUE_PRIZE_POOL } from "@/lib/league/constants";
 import { Button, Chip, IconTile, Kicker, Panel } from "@/components/league/ui";
 
 type Filter = "all" | EntryMode;
@@ -147,7 +147,7 @@ export function LeagueLanding() {
       <Panel className="mt-4 border-go-brand/20 bg-go-brand/[0.07]">
         <Kicker>Not sure where you fit?</Kicker>
         <p className="mt-2 text-[13px] text-go-off/70">
-          Call the front desk on <span className="font-semibold text-go-white">+91 98110 00000</span>{" "}
+          Call the front desk on <a href={`tel:${LEAGUE_HELP_PHONE.replace(/\s/g, "")}`} className="font-semibold text-go-white underline underline-offset-4 transition-colors hover:text-go-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-brand">{LEAGUE_HELP_PHONE}</a>{" "}
           and we will slot you into the right bracket.
         </p>
       </Panel>

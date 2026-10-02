@@ -9,7 +9,7 @@ export const LEAGUE_NAME = "Game On Multisports League";
 export const LEAGUE_TAGLINE = "Season 1 · 17 & 18 October 2026";
 export const LEAGUE_PRIZE_POOL = "₹3 lakh+";
 export const LEAGUE_VENUE = "GameOn Multisports Complex, Sector 70, Gurugram";
-export const LEAGUE_HELP_PHONE = "+91 98110 00000";
+export const LEAGUE_HELP_PHONE = "+91 74948 25740";
 export const LEAGUE_HELP_EMAIL = "info@gameonmultisports.com";
 
 export interface LeagueMatchDay {

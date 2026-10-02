@@ -60,14 +60,24 @@ test("Badminton has exactly the seven requested categories, dates and fees", () 
   ]);
 });
 
-test("Pickleball has five requested categories and preserves existing format fees", () => {
+test("Pickleball has five requested categories with fees matching badminton", () => {
   assert.deepEqual(findSport("pickleball").categories.map(({ name, date, fee }) => [name, date, fee]), [
-    ["Under 14 Singles", "2026-10-17", 800],
-    ["Under 14 Doubles", "2026-10-17", 1500],
-    ["Open Mixed Doubles", "2026-10-17", 800],
-    ["Open Singles", "2026-10-18", 800],
-    ["Open Doubles", "2026-10-18", 1500],
+    ["Under 14 Singles", "2026-10-17", 1000],
+    ["Under 14 Doubles", "2026-10-17", 2000],
+    ["Open Mixed Doubles", "2026-10-17", 2000],
+    ["Open Singles", "2026-10-18", 1000],
+    ["Open Doubles", "2026-10-18", 2000],
   ]);
+});
+
+test("Pickleball checkout totals use the new singles and doubles fees", () => {
+  const ids = findSport("pickleball").categories.map(({ id }) => id);
+  const result = parseLeagueEntry(payload("pickleball", ids, "2026-10-17"));
+  assert.equal(result.ok, true);
+  assert.equal(result.quote.entryFee, 8000);
+  assert.equal(result.quote.total, 8000);
+  assert.equal(result.entry.squadSize, 8);
+  assert.deepEqual(result.entry.dates, ["2026-10-17", "2026-10-18"]);
 });
 
 test("Team formats/fees remain unchanged with Football on 17th and Cricket on 18th", () => {

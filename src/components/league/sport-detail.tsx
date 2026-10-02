@@ -82,7 +82,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         </div>
         <p className="relative mt-3 text-[12px] leading-relaxed text-go-off/75">
           Dates are fixed for each category. Exact match timings will be shared by the organisers.
-          {sport.id === "badminton" ? " Singles: ₹1,000/person. Doubles and mixed doubles: ₹2,000/team." : ""}
+          {sport.id === "badminton" || sport.id === "pickleball" ? " Singles: ₹1,000/person. Doubles and mixed doubles: ₹2,000/team." : ""}
         </p>
       </Panel>
 
