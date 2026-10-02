@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { withRateLimit } from "@/lib/middlewares/rate-limiter";
 import { getRazorpay } from "@/lib/razorpay";
 import { parseLeagueEntry } from "@/lib/league/entry";
-import { LEAGUE_NAME, matchDayLabel } from "@/lib/league/constants";
+import { LEAGUE_NAME } from "@/lib/league/constants";
+import { formatDayLabel, scheduleLabel } from "@/components/league/data";
 
 export const runtime = "nodejs";
 
@@ -48,8 +49,8 @@ export async function POST(request: Request) {
         notes: {
           league: LEAGUE_NAME,
           sport: entry.sport.name,
-          categories: entry.categories.map((category) => category.name).join(", "),
-          match_day: matchDayLabel(entry.date),
+          categories: entry.categories.map((category) => `${category.name} (${formatDayLabel(category.date)})`).join(", ").slice(0, 256),
+          match_day: scheduleLabel(entry.categories),
           contact: entry.phone,
         },
       });

@@ -22,8 +22,9 @@ import {
   Users,
 } from "lucide-react";
 import { findSport, formatINR } from "@/components/league/data";
-import { LEAGUE_CONFIRMATION_KEY, confirmationBrackets, type LeagueConfirmation } from "@/lib/league/confirmation";
-import { LEAGUE_HELP_PHONE, LEAGUE_VENUE, matchDayLabel } from "@/lib/league/constants";
+import { LEAGUE_CONFIRMATION_KEY, confirmationBrackets, confirmationSchedule, type LeagueConfirmation } from "@/lib/league/confirmation";
+import { LEAGUE_HELP_PHONE, LEAGUE_VENUE } from "@/lib/league/constants";
+import { CategorySchedule } from "./category-schedule";
 import { Button, Chip, EmptyState, InfoRow, Kicker, Panel } from "./ui";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +98,7 @@ export function LeagueConfirmationScreen() {
   const { entry, quote } = confirmation;
   const sport = findSport(entry.sport);
   const brackets = confirmationBrackets(entry);
-  const day = matchDayLabel(entry.date);
+  const day = confirmationSchedule(entry);
   const paidAt = new Date(confirmation.paidAt).toLocaleString("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -158,6 +159,8 @@ export function LeagueConfirmationScreen() {
           </span>
         </div>
 
+        <div className="mt-4"><CategorySchedule categories={entry.categories} fallbackDate={entry.date} /></div>
+
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { label: "Match day", value: day.replace(/,\s\d{4}$/, "") },
@@ -170,7 +173,7 @@ export function LeagueConfirmationScreen() {
               className="rounded-[16px] border border-white/[0.08] bg-go-black/35 px-3 py-2.5"
             >
               <p className="text-[10px] uppercase tracking-wider text-go-off/40">{tile.label}</p>
-              <p className="mt-0.5 truncate text-[12.5px] font-semibold text-go-white">
+              <p className="mt-0.5 break-words text-[12.5px] font-semibold text-go-white">
                 {tile.value}
               </p>
             </div>
@@ -288,7 +291,7 @@ export function LeagueConfirmationScreen() {
             {
               icon: Clock,
               title: "Match timing on WhatsApp",
-              copy: `Your exact slot is scheduled by the organisers and shared 24 hours before ${day}.`,
+              copy: "Your exact match times are scheduled by the organisers and shared 24 hours before each category's match day.",
             },
             {
               icon: Users,

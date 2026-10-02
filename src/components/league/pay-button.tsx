@@ -15,7 +15,8 @@ import { Loader2, Lock } from "lucide-react";
 import { Button } from "./ui";
 import { useLeagueBooking } from "./booking-context";
 import { LEAGUE_CONFIRMATION_KEY, type LeagueConfirmation } from "@/lib/league/confirmation";
-import { LEAGUE_NAME, matchDayLabel } from "@/lib/league/constants";
+import { LEAGUE_NAME } from "@/lib/league/constants";
+import { formatDayLabel, scheduleLabel } from "./data";
 
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 const ORDER_API = "/api/v1/public/league/entries/order";
@@ -129,7 +130,7 @@ export function LeaguePayButton({
         name: LEAGUE_NAME,
         description: `${sport?.name ?? "Entry"} · ${categories
           .map((item) => item.name)
-          .join(" + ")} · ${matchDayLabel(draft.date)}`,
+          .join(" + ")} · ${scheduleLabel(categories)}`,
         image: "/game_on_favicon.png",
         prefill: {
           name: draft.captainName || draft.teamName,
@@ -138,8 +139,8 @@ export function LeaguePayButton({
         },
         notes: {
           sport: sport?.name ?? "",
-          category: categories.map((item) => item.name).join(", "),
-          match_day: matchDayLabel(draft.date),
+          category: categories.map((item) => `${item.name} (${formatDayLabel(item.date)})`).join(", ").slice(0, 256),
+          match_day: scheduleLabel(categories),
         },
         theme: { color: "#F38F2F" },
         retry: { enabled: true },

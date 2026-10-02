@@ -1,13 +1,11 @@
 /**
  * Game On Multisports League — content for the booking flow.
  *
- * UI/UX prototype: every sport, category, fee, slot and add-on lives in this
- * one file so the screens can never drift apart. When the flow goes live these
- * constants are swapped for API responses (/api/v1/public/sports/catalog).
+ * Shared catalog used by the registration screens and server-side payment quote.
  *
  * Fees mirror the Game On Multisports League registration sheet:
  *   Pickleball  MS ₹800 · MD ₹1,500 · WS ₹800 · WD ₹1,500 · XD ₹800
- *   Badminton   MS ₹1,000 · MD ₹1,800 · WS ₹1,000 · WD ₹1,800 · XD ₹1,800
+ *   Badminton   Singles ₹1,000/person · Doubles ₹2,000/team
  *   Cricket     7v7 · 6 overs a side · ₹2,000 per team
  *   Football    6v6 · 30 minutes full time · ₹2,000 per team
  */
@@ -23,6 +21,8 @@ export interface Category {
   /** Two-word label for tight cards, e.g. "Men's · Doubles". */
   short: string;
   fee: number;
+  /** Fixed tournament day, not a player-selectable booking date. */
+  date: string;
   /** Who can enter and how many entries the bracket holds. */
   format: string;
   /** How many people one entry covers (1 singles, 2 doubles, 7 cricket…). */
@@ -57,13 +57,15 @@ export const SPORTS: Sport[] = [
     description: "5 courts — 2 AC wooden courts and 3 synthetic indoor courts.",
     mode: "individual",
     slotLength: "60 min per match slot",
-    capacity: "104 player entries",
+    capacity: "7 categories",
     categories: [
-      { id: "mens-singles", name: "Men's Singles", short: "Men's · Singles", fee: 1000, format: "32 entries", squadSize: 1 },
-      { id: "mens-doubles", name: "Men's Doubles", short: "Men's · Doubles", fee: 1800, format: "32 entries", squadSize: 2 },
-      { id: "womens-singles", name: "Women's Singles", short: "Women's · Singles", fee: 1000, format: "16 entries", squadSize: 1 },
-      { id: "womens-doubles", name: "Women's Doubles", short: "Women's · Doubles", fee: 1800, format: "8 entries", squadSize: 2 },
-      { id: "mixed-doubles", name: "Mixed Doubles", short: "Mixed · Doubles", fee: 1800, format: "16 entries", squadSize: 2 },
+      { id: "u13-boys-singles", name: "U-13 Singles Boys", short: "U-13 Boys · Singles", fee: 1000, date: "2026-10-17", format: "Under 13 · Boys", squadSize: 1 },
+      { id: "u13-girls-singles", name: "U-13 Singles Girls", short: "U-13 Girls · Singles", fee: 1000, date: "2026-10-17", format: "Under 13 · Girls", squadSize: 1 },
+      { id: "u17-boys-singles", name: "U-17 Singles Boys", short: "U-17 Boys · Singles", fee: 1000, date: "2026-10-17", format: "Under 17 · Boys", squadSize: 1 },
+      { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 2000, date: "2026-10-17", format: "Open · Mixed pair", squadSize: 2 },
+      { id: "mens-singles", name: "Open Singles Men", short: "Men · Singles", fee: 1000, date: "2026-10-18", format: "Open · Men", squadSize: 1 },
+      { id: "womens-singles", name: "Open Singles Women", short: "Women · Singles", fee: 1000, date: "2026-10-18", format: "Open · Women", squadSize: 1 },
+      { id: "mens-doubles", name: "Doubles Men", short: "Men · Doubles", fee: 2000, date: "2026-10-18", format: "Open · Men", squadSize: 2 },
     ],
   },
   {
@@ -75,13 +77,13 @@ export const SPORTS: Sport[] = [
     description: "4 courts — 2 indoor AC and 2 outdoor courts.",
     mode: "individual",
     slotLength: "60 min per match slot",
-    capacity: "80 player entries",
+    capacity: "5 categories",
     categories: [
-      { id: "mens-singles", name: "Men's Singles", short: "Men's · Singles", fee: 800, format: "32 entries", squadSize: 1 },
-      { id: "mens-doubles", name: "Men's Doubles", short: "Men's · Doubles", fee: 1500, format: "16 entries", squadSize: 2 },
-      { id: "womens-singles", name: "Women's Singles", short: "Women's · Singles", fee: 800, format: "16 entries", squadSize: 1 },
-      { id: "womens-doubles", name: "Women's Doubles", short: "Women's · Doubles", fee: 1500, format: "8 entries", squadSize: 2 },
-      { id: "mixed-doubles", name: "Mixed Doubles", short: "Mixed · Doubles", fee: 800, format: "8 entries", squadSize: 2 },
+      { id: "u14-singles", name: "Under 14 Singles", short: "Under 14 · Singles", fee: 800, date: "2026-10-17", format: "Under 14", squadSize: 1 },
+      { id: "u14-doubles", name: "Under 14 Doubles", short: "Under 14 · Doubles", fee: 1500, date: "2026-10-17", format: "Under 14", squadSize: 2 },
+      { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 800, date: "2026-10-17", format: "Open · Mixed pair", squadSize: 2 },
+      { id: "open-singles", name: "Open Singles", short: "Open · Singles", fee: 800, date: "2026-10-18", format: "Open category", squadSize: 1 },
+      { id: "open-doubles", name: "Open Doubles", short: "Open · Doubles", fee: 1500, date: "2026-10-18", format: "Open category", squadSize: 2 },
     ],
   },
   {
@@ -100,6 +102,7 @@ export const SPORTS: Sport[] = [
         name: "Team Entry (7v7)",
         short: "Team · 7v7",
         fee: 2000,
+        date: "2026-10-18",
         format: "12 teams · 6 overs a side",
         squadSize: 7,
       },
@@ -121,6 +124,7 @@ export const SPORTS: Sport[] = [
         name: "Team Entry (6v6)",
         short: "Team · 6v6",
         fee: 2000,
+        date: "2026-10-17",
         format: "8 teams · 30 minutes full time",
         squadSize: 6,
       },
@@ -147,7 +151,7 @@ export function findCategory(
  */
 export function findCategories(sport: Sport | null, ids: string[]): Category[] {
   if (!sport) return [];
-  return ids
+  return [...new Set(ids)]
     .map((id) => sport.categories.find((category) => category.id === id) ?? null)
     .filter((category): category is Category => category !== null);
 }
@@ -160,6 +164,20 @@ export function entryTickets(categories: Category[]): number {
 /** Entry fee for a set of brackets — the sum of their fees. */
 export function entryFees(categories: Category[]): number {
   return categories.reduce((sum, category) => sum + category.fee, 0);
+}
+
+/** Sorted match days; a multi-category entry can span both tournament days. */
+export function categoryDates(categories: { date: string }[]): string[] {
+  return [...new Set(categories.map((category) => category.date))].sort();
+}
+
+export function categoryFeeUnit(category: Pick<Category, "squadSize">): string {
+  return category.squadSize === 1 ? "person" : "team";
+}
+
+export function scheduleLabel(categories: { date: string }[]): string {
+  const dates = categoryDates(categories);
+  return dates.length ? dates.map(formatDayLabel).join(" & ") : "Select a category";
 }
 
 /* ────────────────────────────── Money ────────────────────────────── */
@@ -348,7 +366,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     kicker: "Game On Multisports League · Season 1",
     title: "4 Sports.",
     highlight: "One Arena.",
-    copy: "204 entries, 8 categories, trophies, medals and jerseys to win.",
+    copy: "4 sports, 14 categories and a ₹3 lakh+ overall prize pool on 17 & 18 October 2026.",
     cta: "See all sports",
     href: "/gameon-multisports-league/sports",
   },
@@ -378,8 +396,8 @@ export interface FlowStep {
 export const FLOW_STEPS: FlowStep[] = [
   { step: "01", title: "Pick your sport", copy: "Badminton, pickleball, box cricket or football." },
   { step: "02", title: "Choose a category", copy: "Singles, doubles, mixed doubles or a team entry." },
-  { step: "03", title: "Lock your slot", copy: "Pick a date and a match slot that suits your squad." },
-  { step: "04", title: "Pay & get your pass", copy: "UPI, card, netbanking — or pay at the venue." },
+  { step: "03", title: "Review your entry", copy: "Check each category's fixed match day, your details and entry fees." },
+  { step: "04", title: "Pay & get your pass", copy: "Pay securely through Razorpay and get your confirmation pass." },
 ];
 
 export interface OlympicsEvent {
@@ -401,11 +419,11 @@ export const OLYMPICS_EVENTS: OlympicsEvent[] = [
     id: "badminton-open",
     name: "Badminton Open",
     sport: "Badminton",
-    period: "12 – 13 Dec 2026",
+    period: "17 – 18 Oct 2026",
     day: "Sat & Sun",
     venue: "Indoor Courts · Zone A",
     entry: "from ₹1,000",
-    bracket: "MS · MD · WS · WD · XD",
+    bracket: "U-13 · U-17 · Open singles & doubles",
     filled: 64,
     status: "Registration open",
     href: "/gameon-multisports-league/sports/badminton",
@@ -414,11 +432,11 @@ export const OLYMPICS_EVENTS: OlympicsEvent[] = [
     id: "pickleball-championship",
     name: "Pickleball Championship",
     sport: "Pickleball",
-    period: "13 – 14 Dec 2026",
-    day: "Sun & Mon",
+    period: "17 – 18 Oct 2026",
+    day: "Sat & Sun",
     venue: "Indoor + Outdoor · Zone B",
     entry: "from ₹800",
-    bracket: "MS · MD · WS · WD · XD",
+    bracket: "Under 14 · Open singles, doubles & mixed doubles",
     filled: 52,
     status: "Registration open",
     href: "/gameon-multisports-league/sports/pickleball",
@@ -427,8 +445,8 @@ export const OLYMPICS_EVENTS: OlympicsEvent[] = [
     id: "box-cricket-league",
     name: "Box Cricket 7v7 League",
     sport: "Cricket",
-    period: "19 – 20 Dec 2026",
-    day: "Sat & Sun",
+    period: "18 Oct 2026",
+    day: "Sun",
     venue: "Astro Turf Arena · Zone C",
     entry: "₹2,000 / team",
     bracket: "12 teams · 6 overs a side",
@@ -440,8 +458,8 @@ export const OLYMPICS_EVENTS: OlympicsEvent[] = [
     id: "football-6v6-cup",
     name: "Football 6v6 Cup",
     sport: "Football",
-    period: "26 – 27 Dec 2026",
-    day: "Sat & Sun",
+    period: "17 Oct 2026",
+    day: "Sat",
     venue: "Astro Turf Arena · Zone C",
     entry: "₹2,000 / team",
     bracket: "8 teams · 30 minutes full time",
@@ -458,9 +476,9 @@ export interface EventStat {
 
 /** Straight from the Olympics registration sheet. */
 export const EVENT_STATS: EventStat[] = [
-  { value: "204", label: "Player entries" },
+  { value: "₹3 lakh+", label: "Overall prize pool" },
   { value: "4", label: "Sports" },
-  { value: "8", label: "Categories" },
+  { value: String(SPORTS.reduce((sum, sport) => sum + sport.categories.length, 0)), label: "Categories" },
   { value: "20", label: "Teams on the turf" },
 ];
 
@@ -472,7 +490,7 @@ export interface Faq {
 export const FAQS: Faq[] = [
   {
     q: "Who can register for Game On Multisports League?",
-    a: "Anyone 14 and above. Pick an individual bracket (singles, doubles, mixed doubles) or bring a squad for box cricket 7v7 and football 6v6.",
+    a: "Choose an age-appropriate category: U-13 Boys/Girls or U-17 Boys in badminton, Under 14 in pickleball, or an open category. Team entries are box cricket 7v7 and football 6v6.",
   },
   {
     q: "What is included in the entry fee?",
@@ -483,8 +501,8 @@ export const FAQS: Faq[] = [
     a: "Every entry is guaranteed a minimum of two league matches. Doubles entries are guaranteed at least three games per match.",
   },
   {
-    q: "Can I change my slot after booking?",
-    a: "Yes — you can move to another open slot up to 24 hours before your first match from My Bookings, subject to availability.",
+    q: "When will I play?",
+    a: "Every category has a fixed date, shown before you register. Football is on 17 October and Cricket on 18 October 2026. Badminton and pickleball categories run across both days. Organisers share exact match timings separately.",
   },
   {
     q: "Do you offer refunds?",

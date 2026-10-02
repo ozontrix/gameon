@@ -8,7 +8,7 @@ import {
   matchDayLabel,
 } from "./constants";
 import type { LeagueConfirmation } from "./confirmation";
-import { confirmationBrackets } from "./confirmation";
+import { confirmationBrackets, confirmationSchedule } from "./confirmation";
 
 /**
  * The paid-entry confirmation email.
@@ -73,7 +73,7 @@ interface EmailContext {
 
 function describe(confirmation: LeagueConfirmation): EmailContext {
   const { entry, quote } = confirmation;
-  const day = matchDayLabel(entry.date);
+  const day = confirmationSchedule(entry);
   const brackets = confirmationBrackets(entry);
 
   return {
@@ -86,6 +86,7 @@ function describe(confirmation: LeagueConfirmation): EmailContext {
       entry.teamName ? row("Team", entry.teamName) : "",
       row("Sport", entry.sportName),
       row("Category", brackets),
+      ...entry.categories.map((category) => row(category.name, matchDayLabel(category.date ?? entry.date))),
       row("Match day", day),
       row("Entry", `${entry.squadSize > 1 ? `${entry.squadSize} tickets` : "1 ticket"} · one pass per player`),
       row("Venue", LEAGUE_VENUE),
@@ -131,7 +132,7 @@ function bodyHtml(confirmation: LeagueConfirmation, context: EmailContext): stri
               <tr><td style="padding:18px 20px;font-family:${FONT};">
                 <p style="margin:0 0 12px;font-size:11px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:#9a9388;">What happens next</p>
                 <p style="margin:0 0 9px;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F38F2F;">1.</strong> We schedule your exact match timing &mdash; it reaches you on WhatsApp <strong>24 hours before</strong> ${escapeHtml(
-                  context.day
+                  "each category's match day"
                 )}.</p>
                 <p style="margin:0 0 9px;font-size:13px;color:#1a1d23;line-height:1.6;"><strong style="color:#F38F2F;">2.</strong> Reach ${escapeHtml(
                   LEAGUE_VENUE
@@ -201,6 +202,7 @@ function buildText(confirmation: LeagueConfirmation, context: EmailContext): str
     `Reference: ${confirmation.reference}`,
     `Venue: ${LEAGUE_VENUE}`,
     `Match day: ${context.day}`,
+    ...entry.categories.map((category) => `${category.name}: ${matchDayLabel(category.date ?? entry.date)}`),
     `Entry: ${context.tickets} (one pass per player)`,
     entry.teamName ? `Team: ${entry.teamName}` : "",
     `Player: ${entry.captainName}`,
@@ -209,7 +211,7 @@ function buildText(confirmation: LeagueConfirmation, context: EmailContext): str
     `Total paid: ${formatINR(confirmation.amount)}`,
     `Razorpay payment id: ${confirmation.paymentId}`,
     "",
-    `Your exact match timing is shared on WhatsApp 24 hours before ${context.day}.`,
+    "Your exact match timing is shared on WhatsApp 24 hours before each category's match day.",
     "Reach the venue 15 minutes early with a photo ID.",
     "Free cancellation up to 72 hours before your match day.",
     "",

@@ -254,8 +254,8 @@ export function ScreenHeader({
 
 export const BOOKING_STEPS = [
   { id: "details", label: "Details", href: "/gameon-multisports-league/book/details" },
-  { id: "review", label: "Review", href: "/gameon-multisports-league/book/review" },
-  { id: "payment", label: "Payment", href: "/gameon-multisports-league/book/payment" },
+  { id: "review", label: "Review & pay", href: "/gameon-multisports-league/book/review" },
+  { id: "success", label: "Confirmation", href: "/gameon-multisports-league/book/success" },
 ] as const;
 
 export type BookingStepId = (typeof BOOKING_STEPS)[number]["id"];

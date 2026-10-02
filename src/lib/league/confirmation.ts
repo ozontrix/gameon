@@ -7,6 +7,7 @@
  */
 
 import type { EntryQuote } from "./entry";
+import { scheduleLabel } from "@/components/league/data";
 
 export const LEAGUE_CONFIRMATION_KEY = "go-league-confirmation";
 
@@ -32,8 +33,10 @@ export interface LeagueConfirmation {
     sport: string;
     sportName: string;
     /** Every bracket the entry holds — one entry can cover several. */
-    categories: { id: string; name: string }[];
+    categories: { id: string; name: string; date?: string; fee?: number; squadSize?: number }[];
     date: string;
+    /** Optional for receipts saved before per-category scheduling was introduced. */
+    dates?: string[];
     squadSize: number;
     teamName: string;
     captainName: string;
@@ -50,4 +53,8 @@ export interface LeagueConfirmation {
 /** "Men's Doubles + Men's Singles" — the brackets of an entry in one label. */
 export function confirmationBrackets(entry: LeagueConfirmation["entry"]): string {
   return entry.categories.map((category) => category.name).join(" + ");
+}
+
+export function confirmationSchedule(entry: LeagueConfirmation["entry"]): string {
+  return scheduleLabel(entry.categories.map((category) => ({ date: category.date ?? entry.date })));
 }

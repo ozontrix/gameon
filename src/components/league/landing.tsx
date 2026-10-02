@@ -18,8 +18,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ArrowRight, MapPin, Users, Zap } from "lucide-react";
-import { SPORTS, formatINR, type EntryMode } from "@/components/league/data";
+import { ArrowRight, CalendarDays, MapPin, Trophy, Users, Zap } from "lucide-react";
+import { SPORTS, formatINR, scheduleLabel, type EntryMode } from "@/components/league/data";
+import { LEAGUE_PRIZE_POOL } from "@/lib/league/constants";
 import { Button, Chip, IconTile, Kicker, Panel } from "@/components/league/ui";
 
 type Filter = "all" | EntryMode;
@@ -57,15 +58,18 @@ export function LeagueLanding() {
         <h1 className="mt-4 font-display text-3xl uppercase leading-[0.95] text-go-white sm:text-4xl">
           Pick your sport.
           <br />
-          <span className="text-go-brand">Book your slot.</span>
+          <span className="text-go-brand">Enter the league.</span>
         </h1>
         <p className="mt-2.5 max-w-xl text-[13.5px] leading-relaxed text-go-off/60">
-          Four sports, eight categories and live slot availability at Game On Arena. Choose a
-          category below, see what&apos;s open and book your slot in a couple of taps.
+          Four sports. {SPORTS.reduce((sum, sport) => sum + sport.categories.length, 0)} categories.
+          One arena. Join us on 17 &amp; 18 October 2026 — choose your sport, check your category&apos;s
+          match day and register in a few taps.
         </p>
 
         <div className="mt-3.5 flex flex-wrap gap-2">
           <Chip icon={MapPin}>Sector 70, Gurugram</Chip>
+          <Chip icon={CalendarDays}>17 &amp; 18 October 2026</Chip>
+          <Chip icon={Trophy} tone="brand">{LEAGUE_PRIZE_POOL} overall prize pool</Chip>
           <Chip icon={Zap} tone="brand">
             Instant confirmation
           </Chip>
@@ -80,8 +84,9 @@ export function LeagueLanding() {
             key={option.value}
             type="button"
             data-active={filter === option.value}
+            aria-pressed={filter === option.value}
             onClick={() => setFilter(option.value)}
-            className="pill-option flex-1"
+            className="pill-option min-h-11 flex-1 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-brand"
           >
             {option.label}
           </button>
@@ -119,6 +124,7 @@ export function LeagueLanding() {
 
             <div className="mt-3 flex flex-wrap gap-2">
               <Chip icon={Users}>{sport.capacity}</Chip>
+              <Chip icon={CalendarDays} tone="brand">{scheduleLabel(sport.categories)}</Chip>
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">

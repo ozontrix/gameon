@@ -11,7 +11,8 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Minus, Plus, Ticket, Users } from "lucide-react";
-import { ADD_ONS, entryTickets, formatDayLabel, formatINR } from "@/components/league/data";
+import { ADD_ONS, entryTickets, scheduleLabel, formatINR } from "@/components/league/data";
+import { CategorySchedule } from "@/components/league/category-schedule";
 import { useLeagueBooking } from "@/components/league/booking-context";
 import {
   Button,
@@ -68,9 +69,7 @@ export default function OlympicsDetailsPage() {
   const isTeam = sport?.mode === "team";
   /** Minimum squad for team sports; tickets across every bracket for individuals. */
   const squadSize = Math.max(1, entryTickets(categories));
-  /** "Men's Singles + Men's Doubles" — the brackets this entry covers. */
-  const brackets = categories.map((item) => item.name).join(" + ");
-
+  const brackets = categories.map((category) => category.name).join(" + ");
   const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(draft.email.trim());
   const missing = [
     isTeam && draft.teamName.trim().length < 2 ? "team name" : null,
@@ -87,13 +86,19 @@ export default function OlympicsDetailsPage() {
         title={isTeam ? "Team details" : "Player details"}
         subtitle={
           sport && categories.length > 0
-            ? `${sport.name} · ${brackets} · ${formatDayLabel(draft.date)}`
+             ? `${sport.name} · ${scheduleLabel(categories)}`
             : "Loading your entry…"
         }
         backHref={
           sport ? `/gameon-multisports-league/sports/${sport.id}` : "/gameon-multisports-league"
         }
       />
+
+      <Panel className="mb-4">
+        <Kicker>Your categories &amp; match days</Kicker>
+        <div className="mt-3"><CategorySchedule categories={categories} /></div>
+        <p className="mt-3 text-xs leading-relaxed text-go-off/75">Match dates are fixed. Exact timings will be shared by the organisers. Please enter only categories you are eligible for.</p>
+      </Panel>
 
       <Panel className="mb-4 space-y-3.5">
         {isTeam ? (

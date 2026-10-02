@@ -14,12 +14,13 @@ import { toast } from "sonner";
 import {
   ADD_ONS,
   COUPONS,
-  formatDayLabel,
+  scheduleLabel,
   formatINR,
   type Coupon,
 } from "@/components/league/data";
 import { useLeagueBooking } from "@/components/league/booking-context";
 import { LeaguePayButton } from "@/components/league/pay-button";
+import { CategorySchedule } from "@/components/league/category-schedule";
 import {
   Button,
   Chip,
@@ -85,10 +86,10 @@ export default function OlympicsReviewPage() {
               {sport?.name}
             </h2>
             <p className="mt-0.5 text-[13px] text-go-off/60">
-              {categories.map((item) => item.name).join(" + ")}
+              {categories.length} {categories.length === 1 ? "category" : "categories"} selected
             </p>
             <p className="mt-2 text-[12px] text-go-off/45">
-              {formatDayLabel(draft.date)} · {draft.slot ?? "slot to be confirmed"}
+              {scheduleLabel(categories)}
             </p>
           </div>
           <Link
@@ -100,6 +101,8 @@ export default function OlympicsReviewPage() {
             Edit
           </Link>
         </div>
+        <div className="mt-4"><CategorySchedule categories={categories} /></div>
+        <p className="mt-3 text-xs text-go-off/75">Exact match timings will be shared by the organisers.</p>
       </Panel>
 
       {/* ─── Squad ─── */}

@@ -10,6 +10,7 @@
 import { z } from "zod";
 import {
   ADD_ONS,
+  categoryDates,
   entryFees,
   entryTickets,
   findCategories,
@@ -27,7 +28,7 @@ export const LEAGUE_SPORT_IDS = ["badminton", "pickleball", "cricket", "football
 export const LeagueEntrySchema = z.object({
   sport: z.enum(LEAGUE_SPORT_IDS),
   /** Every bracket the player is entering — one entry can hold several. */
-  categoryIds: z.array(z.string().trim().min(1).max(40)).min(1).max(6),
+  categoryIds: z.array(z.string().trim().min(1).max(40)).min(1).max(7),
   date: z.string().trim().min(8).max(10),
   squadSize: z.number().int().min(1).max(30).optional(),
   teamName: z.string().trim().max(60).optional().default(""),
@@ -48,6 +49,7 @@ export interface LeagueEntry {
   /** The brackets in this entry, in the order the player picked them. */
   categories: Category[];
   date: string;
+  dates: string[];
   squadSize: number;
   teamName: string;
   captainName: string;
@@ -97,6 +99,10 @@ export function parseLeagueEntry(input: unknown): ParseResult {
   }
 
   if (!findMatchDay(data.date)) return { ok: false, error: "Please pick one of the two match days." };
+  const dates = categoryDates(categories);
+  if (data.date !== dates[0]) {
+    return { ok: false, error: "The match date does not match your categories. Please select your categories again." };
+  }
 
   if (sport.mode === "team" && data.teamName.trim().length < 2) {
     return { ok: false, error: "Please enter a team name." };
@@ -119,7 +125,8 @@ export function parseLeagueEntry(input: unknown): ParseResult {
   const entry: LeagueEntry = {
     sport,
     categories,
-    date: data.date,
+    date: dates[0],
+    dates,
     // Team sports: the minimum required squad. Individual brackets: one ticket
     // per player, summed across every bracket in the entry.
     squadSize: entryTickets(categories),

@@ -8,12 +8,8 @@
  * mounts above every screen. It is mirrored into sessionStorage so a refresh or
  * deep link during the flow keeps the entry.
  *
- * There is no date screen: the player never picks a match day, so the draft is
- * always pinned to the season's first day. Per-category match days will be shown
- * on the sport page and set here instead.
- *
- * UI only: nothing here talks to the API yet. When the flow goes live the
- * `pricing` block below is replaced by the server's quote.
+ * Match days are derived from the selected categories, including entries that
+ * span both days. Pricing uses the same quote function as the payment API.
  */
 
 import {
@@ -27,6 +23,7 @@ import {
 } from "react";
 import {
   ADD_ONS,
+  categoryDates,
   entryFees,
   entryTickets,
   findCategories,
@@ -36,7 +33,6 @@ import {
   type Sport,
   type SportId,
 } from "./data";
-import { LEAGUE_MATCH_DAYS } from "@/lib/league/constants";
 import { quoteEntry } from "@/lib/league/entry";
 
 export interface Draft {
@@ -59,16 +55,10 @@ export interface Draft {
   paymentMethod: string | null;
 }
 
-/**
- * The match day every entry is pinned to while the player never chooses one.
- * Per-category days will replace this once they are fixed.
- */
-const DEFAULT_MATCH_DAY = LEAGUE_MATCH_DAYS[0].iso;
-
 const EMPTY_DRAFT: Draft = {
   sport: null,
   categoryIds: [],
-  date: DEFAULT_MATCH_DAY,
+  date: null,
   slot: null,
   squadSize: 1,
   teamName: "",
@@ -124,13 +114,27 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
     try {
       const stored = window.sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
-        // Re-pin the match day: nothing in the flow chooses it, so a stale draft
-        // must not be able to leave the entry without a valid day.
+        const saved = JSON.parse(stored) as Partial<Draft>;
+        const savedSport = findSport(saved.sport);
+        const savedIds = Array.isArray(saved.categoryIds)
+          ? saved.categoryIds.filter((id): id is string => typeof id === "string")
+          : [];
+        const savedCategories = findCategories(savedSport, savedIds);
+        // Invalidate an outdated selection rather than silently drop paid-for
+        // categories removed from the catalog. Contact details can be retained.
+        const valid = savedCategories.length === new Set(savedIds).size;
+        const restoredCategories = valid ? savedCategories : [];
         // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore of client-only storage
         setDraft({
           ...EMPTY_DRAFT,
-          ...(JSON.parse(stored) as Partial<Draft>),
-          date: DEFAULT_MATCH_DAY,
+          ...saved,
+          sport: savedSport?.id ?? null,
+          categoryIds: restoredCategories.map((category) => category.id),
+          date: categoryDates(restoredCategories)[0] ?? null,
+          squadSize: Math.max(1, entryTickets(restoredCategories)),
+          slot: null,
+          paymentMethod: null,
+          addons: valid ? saved.addons ?? {} : {},
         });
       }
     } catch {
@@ -167,10 +171,10 @@ export function LeagueBookingProvider({ children }: { children: ReactNode }) {
         sport: sportId,
         categoryIds: nextCategories.map((category) => category.id),
         squadSize: Math.max(1, entryTickets(nextCategories)),
-        // The player never picks a match day — every entry is pinned to the
-        // season's first day. Switching sports invalidates the slot that was held.
-        date: DEFAULT_MATCH_DAY,
-        slot: sportChanged ? null : current.slot,
+        // `date` is the earliest day for API compatibility. All category dates
+        // remain available from the catalog; exact match times are assigned later.
+        date: categoryDates(nextCategories)[0] ?? null,
+        slot: null,
         addons: sportChanged ? {} : current.addons,
       };
     });
