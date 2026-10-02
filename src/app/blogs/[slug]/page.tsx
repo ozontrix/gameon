@@ -23,20 +23,20 @@ export default async function BlogArticlePage({ params }: Props) {
   if (!post) notFound();
   const url = absoluteUrl(`/blogs/${post.slug}`);
   return <>
-    <Breadcrumbs items={[{ name: 'Home', path: '/' }, { name: 'GameOn Blogs', path: '/blogs' }, { name: post.title, path: `/blogs/${post.slug}` }]} />
+    <Breadcrumbs tone="light" items={[{ name: 'Home', path: '/' }, { name: 'GameOn Blogs', path: '/blogs' }, { name: post.title, path: `/blogs/${post.slug}` }]} />
     <JsonLd data={{ '@context': 'https://schema.org', '@type': 'BlogPosting', '@id': `${url}#article`, mainEntityOfPage: url, url, headline: post.title, description: post.excerpt, image: absoluteUrl(post.cover_image_url || '/social-preview'), datePublished: post.published_at, dateModified: post.updated_at, author: { '@type': 'Person', name: post.author_name }, publisher: { '@type': 'Organization', name: SITE_NAME, url: absoluteUrl('/'), logo: { '@type': 'ImageObject', url: absoluteUrl('/game_on.png') } }, articleSection: post.category, inLanguage: 'en-IN', isAccessibleForFree: true }} />
     <article className="mx-auto max-w-3xl">
       <header>
-        <p className="text-sm font-semibold uppercase tracking-widest text-go-brand">{post.category}</p>
-        <h1 className="mt-4 font-display text-4xl leading-tight text-go-white sm:text-5xl">{post.title}</h1>
-        <p className="mt-5 text-lg leading-8 text-go-off/85">{post.excerpt}</p>
-        <p className="mt-5 text-sm text-go-off/75">By {post.author_name} · <time dateTime={post.published_at!}>{blogDate(post.published_at!)}</time> · {readingMinutes(post.content)} min read</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-go-brand-dark">{post.category}</p>
+        <h1 className="mt-4 font-display text-4xl leading-tight text-go-black sm:text-5xl">{post.title}</h1>
+        <p className="mt-5 text-lg leading-8 text-go-navy">{post.excerpt}</p>
+        <p className="mt-5 text-sm text-go-navy">By {post.author_name} · <time dateTime={post.published_at!}>{blogDate(post.published_at!)}</time> · {readingMinutes(post.content)} min read</p>
         {post.cover_image_url ?
           // eslint-disable-next-line @next/next/no-img-element -- validated Supabase media uploads
           <img src={post.cover_image_url} alt={post.cover_image_alt} width={1200} height={675} fetchPriority="high" className="mt-8 aspect-video w-full rounded-3xl object-cover" /> : null}
       </header>
-      <div className="mt-10"><BlogContent content={post.content} /></div>
-      <footer className="mt-12 border-t border-white/10 pt-6"><Link href="/blogs" className="inline-flex min-h-11 items-center text-go-brand hover:underline focus-visible:outline-2 focus-visible:outline-go-brand">← All GameOn Blogs</Link></footer>
+      <div className="mt-10"><BlogContent tone="light" content={post.content} /></div>
+      <footer className="mt-12 border-t border-go-black/10 pt-6"><Link href="/blogs" className="inline-flex min-h-11 items-center text-go-brand-dark hover:underline focus-visible:outline-2 focus-visible:outline-go-brand-dark">← All GameOn Blogs</Link></footer>
     </article>
   </>;
 }

@@ -35,6 +35,7 @@
 
 @theme inline {
   --color-go-brand: var(--go-brand);
+  --color-go-brand-dark: #A9470A;
   --color-go-navy: #1A1D23;
   --color-go-white: #FFFFFF;
   --color-go-off: #F3F2ED;

@@ -12,7 +12,7 @@ export default function BlogLayout({ children }: { children: ReactNode }) {
         </nav>
       </div>
     </header>
-    <main className="mx-auto min-h-[65vh] max-w-6xl px-6 py-10 sm:py-16">{children}</main>
-    <footer><SiteLinks /><div className="mx-auto flex max-w-6xl flex-wrap gap-6 px-6 pb-8 text-sm text-go-off/75"><Link href="/privacy">Privacy Policy</Link><Link href="/terms">Terms of Use</Link></div></footer>
+    <main className="mx-auto min-h-[65vh] max-w-6xl px-6 py-10 text-go-black sm:py-16">{children}</main>
+    <footer><SiteLinks tone="light" /><div className="mx-auto flex max-w-6xl flex-wrap gap-6 px-6 pb-8 text-sm text-go-navy"><Link href="/privacy" className="hover:text-go-brand-dark focus-visible:outline-2 focus-visible:outline-go-brand-dark">Privacy Policy</Link><Link href="/terms" className="hover:text-go-brand-dark focus-visible:outline-2 focus-visible:outline-go-brand-dark">Terms of Use</Link></div></footer>
   </>;
 }

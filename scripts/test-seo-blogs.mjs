@@ -68,6 +68,38 @@ test('Markdown renders full text, semantic headings/lists and escapes HTML', () 
   assert.doesNotMatch(html, /href="javascript:|<script>/);
   assert.match(html, /&lt;script&gt;/);
 });
+test('Blog light surfaces use dark text and orange while dark previews retain light text', async () => {
+  const { BlogContent } = load('src/components/blogs/blog-content.tsx');
+  const content = '## Heading\n\nParagraph with [link](/blogs) and `code`.\n\n> Quote';
+  const light = renderToStaticMarkup(createElement(BlogContent, { content, tone: 'light' }));
+  assert.match(light, /text-go-navy/);
+  assert.match(light, /text-go-black/);
+  assert.match(light, /text-go-brand-dark/);
+  assert.match(light, /bg-go-black\/5/);
+  assert.doesNotMatch(light, /text-go-white|text-go-off/);
+  const dark = renderToStaticMarkup(createElement(BlogContent, { content }));
+  assert.match(dark, /text-go-off\/85/);
+  assert.match(dark, /text-go-white/);
+  assert.doesNotMatch(dark, /go-brand-dark/);
+  const layout = load('src/app/blogs/layout.tsx').default;
+  const html = renderToStaticMarkup(createElement(layout, null, 'Blog body'));
+  assert.match(html, /<main[^>]*text-go-black/);
+  const footer = html.slice(html.indexOf('<footer'));
+  assert.match(footer, /text-go-navy/);
+  assert.doesNotMatch(footer, /text-go-white|text-go-off/);
+  const listing = loader({ '@/lib/blogs/queries': { getPublishedBlogs: async () => ({ posts: [], count: 0 }) } })('src/app/blogs/page.tsx').default;
+  const listingHtml = renderToStaticMarkup(await listing({ searchParams: Promise.resolve({}) }));
+  assert.match(listingHtml, /text-go-brand-dark/);
+  assert.doesNotMatch(listingHtml, /text-go-white|text-go-off/);
+  const luminance = hex => {
+    const values = hex.match(/../g).map(value => parseInt(value, 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
+  };
+  const css = readFileSync(resolve(root, 'src/app/globals.css'), 'utf8');
+  const orange = css.match(/--color-go-brand-dark:\s*#([0-9A-F]{6})/i)?.[1];
+  assert.ok(orange);
+  for (const color of ['0B0B0C', '1A1D23', orange]) assert.ok(1.05 / (luminance(color) + 0.05) >= 4.5, `Insufficient contrast: ${color}`);
+});
 test('SEO helpers emit canonical and route-specific sharing metadata; JSON-LD is script-safe', () => {
   const result = seo.pageMetadata({ title: 'Blogs', description: 'Stories', path: '/blogs' });
   assert.equal(result.alternates.canonical, `${seo.SITE_URL}/blogs`);
@@ -211,6 +243,8 @@ test('Published article renders its full body, breadcrumbs and BlogPosting metad
   assert.match(html, /The final paragraph must also be present/);
   assert.match(html, /BlogPosting/); assert.match(html, /BreadcrumbList/);
   assert.match(html, /<h1/); assert.match(html, /<h2/);
+  assert.match(html, /text-go-brand-dark/);
+  assert.doesNotMatch(html, /text-go-white|text-go-off/);
 });
 test('Unavailable and draft articles resolve to not found for both metadata and page', async () => {
   const page = loader({ '@/lib/blogs/queries': { getPublishedBlog: async () => null }, 'next/navigation': { notFound: () => { throw new Error('NOT_FOUND'); } } })('src/app/blogs/[slug]/page.tsx');
