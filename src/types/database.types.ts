@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      league_bookings: {
+        Row: {
+          id: string
+          status: string
+          sport: string
+          captain_name: string
+          team_name: string
+          email: string
+          phone: string
+          entry: Json
+          quote: Json
+          amount_paise: number
+          currency: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          reference: string | null
+          paid_at: string | null
+          email_status: string
+          email_attempted_at: string | null
+          email_sent_at: string | null
+          email_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          status?: string
+          sport: string
+          captain_name: string
+          team_name?: string
+          email: string
+          phone: string
+          entry: Json
+          quote: Json
+          amount_paise: number
+          currency?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          reference?: string | null
+          paid_at?: string | null
+          email_status?: string
+          email_attempted_at?: string | null
+          email_sent_at?: string | null
+          email_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['league_bookings']['Insert']>
+        Relationships: []
+      }
       admin_audit_log: {
         Row: {
           action: string

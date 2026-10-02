@@ -143,7 +143,7 @@ function bodyHtml(confirmation: LeagueConfirmation, context: EmailContext): stri
 
             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 26px;">
               <tr><td align="center" style="border-radius:999px;background-color:#F38F2F;">
-                <a href="https://game-on.in/gameon-multisports-league/bookings" style="display:inline-block;padding:14px 34px;font-family:${FONT};font-size:14px;font-weight:800;color:#0B0B0C;text-decoration:none;letter-spacing:0.6px;">View my entry</a>
+                <a href="https://gameonmultisports.com/gameon-multisports-league/bookings" style="display:inline-block;padding:14px 34px;font-family:${FONT};font-size:14px;font-weight:800;color:#0B0B0C;text-decoration:none;letter-spacing:0.6px;">View my entry</a>
               </td></tr>
             </table>
           </td></tr>`;
@@ -247,6 +247,9 @@ export async function sendLeagueConfirmationEmail(
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 15000,
       auth: { user: SMTP_USER, pass: SMTP_APP_PASSWORD },
     });
 

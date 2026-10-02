@@ -4,6 +4,7 @@ import { getRazorpay } from "@/lib/razorpay";
 import { parseLeagueEntry } from "@/lib/league/entry";
 import { LEAGUE_NAME } from "@/lib/league/constants";
 import { formatDayLabel, scheduleLabel } from "@/components/league/data";
+import { attachLeagueOrder, createLeagueBooking } from "@/lib/league/bookings";
 
 export const runtime = "nodejs";
 
@@ -42,11 +43,14 @@ export async function POST(request: Request) {
         );
       }
 
+      // Persist first. Never open checkout without a durable entry snapshot.
+      const booking = await createLeagueBooking(entry, quote);
       const order = await getRazorpay().orders.create({
         amount,
         currency: "INR",
-        receipt: `lge_${Date.now().toString(36)}${Math.floor(Math.random() * 46656).toString(36)}`.slice(0, 40),
+        receipt: `lge_${booking.id}`,
         notes: {
+          league_booking_id: booking.id,
           league: LEAGUE_NAME,
           sport: entry.sport.name,
           categories: entry.categories.map((category) => `${category.name} (${formatDayLabel(category.date)})`).join(", ").slice(0, 256),
@@ -54,6 +58,7 @@ export async function POST(request: Request) {
           contact: entry.phone,
         },
       });
+      await attachLeagueOrder(booking.id, order.id);
 
       return NextResponse.json(
         {

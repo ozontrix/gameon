@@ -3,6 +3,7 @@ import { isValidWebhookSignature } from '@/lib/razorpay';
 import { BookingError, BookingService } from '@/lib/services/booking.service';
 import { EventError, EventService } from '@/lib/services/event.service';
 import { TournamentError, TournamentService } from '@/lib/services/tournament.service';
+import { confirmLeaguePayment, LeagueBookingError } from '@/lib/league/bookings';
 
 /**
  * Razorpay webhook (Dashboard → Settings → Webhooks), subscribed to
@@ -12,7 +13,7 @@ import { TournamentError, TournamentService } from '@/lib/services/tournament.se
  * app never gets to call its own /payments/verify — the app was closed, or
  * the network dropped, right after the money was taken. Confirmation is
  * idempotent, so receiving both events (or the app's verify call as well) is
- * harmless. An order belongs to exactly one of the three tables, so each is
+ * harmless. An order belongs to exactly one of the four tables, so each is
  * tried in turn and a 404 from one just means "try the next."
  */
 export async function POST(request: Request) {
@@ -51,6 +52,16 @@ export async function POST(request: Request) {
   const orderId = payment?.order_id ?? event.payload?.order?.entity?.id;
   if (!orderId || !payment?.id) {
     return NextResponse.json({ received: true });
+  }
+
+  try {
+    await confirmLeaguePayment(orderId, payment.id);
+    return NextResponse.json({ received: true, outcome: 'league_confirmed' });
+  } catch (error) {
+    if (!(error instanceof LeagueBookingError && error.status === 404)) {
+      console.error('Razorpay Webhook Error (league):', error);
+      return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+    }
   }
 
   try {

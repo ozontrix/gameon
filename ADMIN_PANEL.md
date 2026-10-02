@@ -35,6 +35,7 @@ role can write. Removing the role takes effect on the next page load.
 |---|:-:|:-:|
 | Dashboard, schedule, check-in | ✓ | ✓ |
 | Bookings: list, search, filter, CSV export, detail | ✓ | ✓ |
+| Website Multisports League entries, payment details, CSV export, retry email | | ✓ |
 | Front-desk booking (walk-in / phone), record a pay-at-venue payment | ✓ | ✓ |
 | Customers and their history | ✓ | ✓ |
 | Cancel a booking, refund queue, record a refund | | ✓ |
@@ -79,6 +80,46 @@ role can write. Removing the role takes effect on the next page load.
   Apply the blog migration before using it. See `SEO_AND_BLOGS.md` for setup.
 
 ## Security model
+
+### Website Multisports League bookings
+
+Open **Events & tournaments → Multisports League** at `/admin/multisports-league`.
+This is separate from regular court bookings and the mobile tournament catalogue.
+The list supports contact/reference/payment-ID search, sport and payment-status
+filters, pagination and CSV export. Open an entry for its saved categories and
+match dates, contact/team details, notes, player tickets, add-ons, coupon and full
+price breakdown, payment identifiers and email delivery status. Admins can retry
+failed confirmation emails from the detail page; retries are audited.
+
+The migration `supabase/migrations/20261002091456_league_bookings.sql` was applied
+to the connected GameOn project on October 2, 2026. The service-role-only
+`league_bookings` table stores each checkout before Razorpay opens. Pending
+means unpaid/unconfirmed; confirmed means the captured payment's order, amount
+and currency were checked against the saved checkout. Browser resubmissions
+cannot replace the saved entry or price. Repeated confirmations/webhooks converge
+on one record, with a leased email attempt to prevent concurrent duplicate sends.
+SMTP failure never removes a paid entry. A stale sending lease can be retried
+after ten minutes; as with SMTP generally, a process crash after successful send
+but before saving delivery status may result in another email on recovery.
+
+Deploy the changed APIs and panel together. Keep `RAZORPAY_KEY_ID`,
+`RAZORPAY_KEY_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_USER` and
+`SMTP_APP_PASSWORD` configured in Vercel. `NOTIFY_RECIPIENTS` retains the desk's
+email copies. For recovery if the customer closes the browser after payment,
+configure Razorpay to send `payment.captured` and `order.paid` to
+`https://gameonmultisports.com/api/v1/webhooks/razorpay` and set the matching
+`RAZORPAY_WEBHOOK_SECRET`. The application implements this endpoint, but does not
+change the external Razorpay dashboard configuration.
+
+Previously paid email-only entries are **not automatically imported**: the old
+flow did not persist their complete details. Reconcile those using the existing
+desk emails and Razorpay records before claiming a complete historical ledger.
+This release does not add refunds, automatic category capacity enforcement or
+cross-device guest booking history. A stored email status of SENT means SMTP
+accepted the message, not proof that it reached the customer's inbox.
+
+Validation uses mocked gateway/auth/email services and a rolled-back database
+constraint test; no real payments or confirmation emails are sent by tests.
 
 - `src/proxy.ts` refreshes the Supabase session and sends anyone without a
   staff role to the login page. It is an optimistic check only.

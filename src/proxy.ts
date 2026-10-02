@@ -5,6 +5,7 @@ const LOGIN_PATH = '/admin/login';
 
 /** Sections only admins may open. Pages check this again on the server. */
 const ADMIN_ONLY = [
+  '/admin/multisports-league',
   '/admin/refunds',
   '/admin/venues',
   '/admin/courts',
