@@ -81,7 +81,7 @@ test('Blog light surfaces use dark text and orange while dark previews retain li
   assert.match(dark, /text-go-off\/85/);
   assert.match(dark, /text-go-white/);
   assert.doesNotMatch(dark, /go-brand-dark/);
-  const layout = load('src/app/blogs/layout.tsx').default;
+  const layout = loader({ '@/components/Navigation': { Navigation: () => createElement('nav', { 'aria-label': 'Primary' }) } })('src/app/blogs/layout.tsx').default;
   const html = renderToStaticMarkup(createElement(layout, null, 'Blog body'));
   assert.match(html, /<main[^>]*text-go-black/);
   const footer = html.slice(html.indexOf('<footer'));

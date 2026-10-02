@@ -10,8 +10,7 @@ import {
   LayoutGrid,
   Building,
   Calendar,
-  Users,
-  Sparkles,
+  Trophy,
   Handshake,
   MapPin,
   ArrowUp,
@@ -29,6 +28,7 @@ type NavItem = {
   icon: ComponentType<{ className?: string }>;
   href?: string;
   desc?: string;
+  highlighted?: boolean;
 };
 
 // ─── All the sections that exist on the site (in page order) ───
@@ -36,12 +36,9 @@ const desktopSections: NavItem[] = [
   { id: "hero", label: "Home", icon: Home },
   { id: "sports", label: "Sports", icon: LayoutGrid },
   { id: "zones", label: "Zones", icon: Building },
-  { id: "audience", label: "For You", icon: Users },
-  { id: "community", label: "Community", icon: Sparkles },
-  { id: "sponsorship", label: "Sponsorship", icon: Handshake, href: "/sponsorship" },
+  { id: "sponsorship", label: "Sponsorships", icon: Handshake, href: "/sponsorship" },
   { id: "blogs", label: "Blogs", icon: BookOpen, href: "/blogs" },
-  { id: "booking", label: "Book", icon: Calendar },
-  { id: "location", label: "Location", icon: MapPin },
+  { id: "league", label: "Gameon Multi Sports League", icon: Trophy, href: "/gameon-multisports-league", highlighted: true },
 ];
 
 // Primary tabs always visible in the mobile bottom bar
@@ -50,22 +47,24 @@ type MobileTab = {
   label: string;
   icon?: ComponentType<{ className?: string }>;
   image?: string;
+  href?: string;
+  highlighted?: boolean;
+  ariaLabel?: string;
 };
 
 const mobileTabs: MobileTab[] = [
   { id: "hero", label: "Home", icon: Home },
   { id: "sports", label: "Sports", icon: LayoutGrid },
   { id: "zones", label: "Zones", icon: Building },
-  { id: "booking", label: "Book", icon: Calendar },
+  { id: "league", label: "GML", icon: Trophy, href: "/gameon-multisports-league", highlighted: true, ariaLabel: "Gameon Multi Sports League" },
   { id: "more", label: "More", image: "/game_on_favicon.png" },
 ];
 
 // Secondary items tucked behind the "More" sheet
 const moreItems: NavItem[] = [
-  { id: "audience", label: "For You", icon: Users, desc: "Built for every kind of player" },
-  { id: "community", label: "Community", icon: Sparkles, desc: "Real moments from Game On" },
-  { id: "sponsorship", label: "Sponsorship", icon: Handshake, href: "/sponsorship", desc: "Partner your brand with Game On" },
-  { id: "blogs", label: "GameOn Blogs", icon: BookOpen, href: "/blogs", desc: "Sports guides and stories from the court" },
+  { id: "sponsorship", label: "Sponsorships", icon: Handshake, href: "/sponsorship", desc: "Partner your brand with Game On" },
+  { id: "blogs", label: "Blogs", icon: BookOpen, href: "/blogs", desc: "Sports guides and stories from the court" },
+  { id: "booking", label: "Book", icon: Calendar, desc: "Reserve your next game" },
   { id: "location", label: "Location", icon: MapPin, desc: "Sector 70, Gurugram" },
 ];
 
@@ -90,20 +89,18 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
 
   // The nav item that owns the current route (e.g. "Sponsorship" on /sponsorship)
   const routeSection = desktopSections.find((s) => s.href && (s.href === pathname || pathname.startsWith(`${s.href}/`)));
+  const currentSection = routeSection?.id ?? (onHome ? activeSection : "");
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 60);
       setShowBackToTop(window.scrollY > 600);
 
-      // On an inner page, highlight the nav item that matches that route
-      if (routeSection) {
-        setActiveSection(routeSection.id);
-        return;
-      }
+      // Inner-page active states are derived directly from the route.
+      if (!onHome) return;
 
       // Otherwise determine the active section by scroll position
-      const sections = desktopSections.filter((s) => !s.href).map((s) => s.id);
+      const sections = [...desktopSections, ...moreItems].filter((s) => !s.href).map((s) => s.id);
       const scrollPos = window.scrollY + 120;
 
       for (let i = sections.length - 1; i >= 0; i--) {
@@ -118,7 +115,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [routeSection]);
+  }, [onHome]);
 
   // Coming back from an inner page (e.g. /#sports) — land on the section asked for
   useEffect(() => {
@@ -195,11 +192,12 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
       >
         <div className="mx-auto max-w-[1400px] px-4 xl:px-6">
           <nav
+            aria-label="Primary desktop"
             className={cn(
               "flex items-center justify-between gap-4 rounded-full py-2 pl-5 pr-2 border border-white/[0.06] transition-all duration-500",
               scrolled
                 ? "bg-[rgba(14,17,22,0.85)] backdrop-blur-[20px] saturate-[160%] shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
-                : "bg-[rgba(14,17,22,0.4)] backdrop-blur-[12px] saturate-[140%]"
+                : "bg-[rgba(14,17,22,0.85)] backdrop-blur-[12px] saturate-[140%]"
             )}
           >
             {/* Brand */}
@@ -211,7 +209,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
               <span className="text-base font-display font-bold tracking-tight text-go-white transition-colors group-hover:text-go-off">
                 GAME<span className="text-go-brand">ON</span>
               </span>
-              <span className="hidden xl:block text-[9px] uppercase tracking-[0.22em] text-go-off/30 font-medium pt-0.5">
+              <span className="hidden 2xl:block text-[9px] uppercase tracking-[0.22em] text-go-off/60 font-medium pt-0.5">
                 Where the City Unplugs
               </span>
             </Link>
@@ -219,14 +217,16 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
             {/* Section links */}
             <div className="flex items-center gap-0.5">
               {desktopSections.map((section) => {
-                const isActive = activeSection === section.id;
+                const isActive = currentSection === section.id;
                 const itemClass = cn(
-                  "relative flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wider uppercase transition-colors cursor-pointer",
-                  isActive ? "text-go-black" : "text-go-off/50 hover:text-go-white"
+                  "relative flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wider uppercase transition-colors cursor-pointer",
+                  section.highlighted
+                    ? "bg-go-brand text-go-black shadow-[0_0_20px_rgba(243,143,47,0.2)] hover:bg-go-brand/90"
+                    : isActive ? "text-go-black" : "text-go-off/75 hover:text-go-white"
                 );
                 const itemContent = (
                   <>
-                    {isActive && (
+                    {isActive && !section.highlighted && (
                       <motion.div
                         layoutId="nav-pill"
                         className="absolute inset-0 rounded-full bg-go-brand"
@@ -236,7 +236,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                     <section.icon
                       className={cn(
                         "w-3.5 h-3.5 relative z-10 transition-transform",
-                        isActive ? "text-go-black" : "text-go-brand/70",
+                        isActive || section.highlighted ? "text-go-black" : "text-go-brand",
                         isActive && "scale-110"
                       )}
                     />
@@ -258,6 +258,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                   <Link
                     key={section.id}
                     href={section.id === 'hero' ? '/' : `/#${section.id}`}
+                    aria-current={isActive ? "location" : undefined}
                     className={itemClass}
                   >
                     {itemContent}
@@ -291,23 +292,17 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
       >
         <div className="pointer-events-auto mx-auto max-w-md px-3 pb-[max(env(safe-area-inset-bottom),10px)]">
           <div className="flex items-center justify-between gap-0.5 rounded-[28px] border border-white/[0.08] bg-[rgba(14,17,22,0.82)] backdrop-blur-[24px] saturate-[160%] px-2 py-1.5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-            {mobileTabs.map(({ id, label, icon: Icon, image }) => {
-              const isActive = activeSection === id || (id === "more" && mobileMoreOpen);
-              return (
-                <button
-                  key={id}
-                  onClick={() => {
-                    if (id === "more") setMobileMoreOpen((v) => !v);
-                    else goTo(id);
-                  }}
-                  className={cn(
-                    "relative flex flex-1 flex-col items-center justify-center gap-1 py-2 rounded-2xl transition-colors cursor-pointer select-none",
-                    isActive ? "text-go-brand" : "text-go-off/40 active:text-go-off/70"
-                  )}
-                  aria-label={label}
-                  aria-expanded={id === "more" ? mobileMoreOpen : undefined}
-                >
-                  {isActive && (
+            {mobileTabs.map(({ id, label, icon: Icon, image, href, highlighted, ariaLabel }) => {
+              const isActive = currentSection === id || (id === "more" && (mobileMoreOpen || moreItems.some((item) => item.id === currentSection)));
+              const itemClass = cn(
+                "relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 rounded-2xl transition-colors cursor-pointer select-none",
+                highlighted
+                  ? "bg-go-brand text-go-black shadow-[0_0_18px_rgba(243,143,47,0.25)] hover:bg-go-brand/90"
+                  : isActive ? "text-go-brand" : "text-go-off/75 hover:text-go-white active:text-go-white"
+              );
+              const itemContent = (
+                <>
+                  {isActive && !highlighted && (
                     <motion.div
                       layoutId="mobile-tab-indicator"
                       className="absolute inset-0 rounded-2xl bg-go-brand/15 border border-go-brand/20"
@@ -317,7 +312,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                   {image ? (
                     <Image
                       src={image}
-                      alt={label}
+                      alt=""
                       width={150}
                       height={150}
                       className={cn("w-5 h-5 relative z-10 object-contain transition-transform", isActive && "scale-110")}
@@ -326,7 +321,31 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                     Icon && <Icon className={cn("w-5 h-5 relative z-10 transition-transform", isActive && "scale-110")} />
                   )}
                   <span className="relative z-10 text-[9px] font-semibold uppercase tracking-wider">{label}</span>
+                </>
+              );
+              return id === "more" ? (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setMobileMoreOpen((v) => !v)}
+                  className={itemClass}
+                  aria-label={label}
+                  aria-expanded={mobileMoreOpen}
+                  aria-controls="mobile-more-menu"
+                >
+                  {itemContent}
                 </button>
+              ) : (
+                <Link
+                  key={id}
+                  href={href ?? (id === "hero" ? "/" : `/#${id}`)}
+                  onClick={closeMore}
+                  className={itemClass}
+                  aria-label={ariaLabel ?? label}
+                  aria-current={isActive ? (href ? "page" : "location") : undefined}
+                >
+                  {itemContent}
+                </Link>
               );
             })}
           </div>
@@ -351,6 +370,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
               transition={{ type: "spring", stiffness: 320, damping: 32 }}
               className="fixed left-3 right-3 bottom-[max(env(safe-area-inset-bottom),10px)] z-[90] lg:hidden rounded-[28px] border border-white/[0.08] bg-[rgba(14,17,22,0.92)] backdrop-blur-[24px] saturate-[160%] p-4 pb-5 shadow-2xl"
               role="dialog"
+              id="mobile-more-menu"
               aria-label="More sections"
             >
               {/* Grab handle */}
@@ -362,8 +382,11 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
 
               <div className="flex flex-col gap-1">
                 {moreItems.map(({ id, label, icon: Icon, desc, href }) => {
-                  const itemClass =
-                    "flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-go-white-glass transition-colors text-left cursor-pointer";
+                  const isActive = currentSection === id;
+                  const itemClass = cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-go-white-glass transition-colors text-left cursor-pointer",
+                    isActive && "bg-go-brand/10"
+                  );
                   const itemContent = (
                     <>
                       <span className="w-9 h-9 rounded-xl bg-go-brand/10 border border-go-brand/15 flex items-center justify-center shrink-0">
@@ -371,14 +394,14 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                       </span>
                       <span className="flex-1">
                         <span className="block text-sm font-medium text-go-off/80">{label}</span>
-                        {desc && <span className="block text-[10px] text-go-off/40 mt-0.5">{desc}</span>}
+                        {desc && <span className="block text-[10px] text-go-off/65 mt-0.5">{desc}</span>}
                       </span>
                     </>
                   );
 
                   // Route items (e.g. Sponsorship) open a page; section items scroll
                   return href ? (
-                    <Link key={id} href={href} onClick={closeMore} className={itemClass}>
+                    <Link key={id} href={href} onClick={closeMore} className={itemClass} aria-current={isActive ? "page" : undefined}>
                       {itemContent}
                     </Link>
                   ) : (
