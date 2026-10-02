@@ -9,6 +9,7 @@ const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 interface RateLimitOptions {
   limit: number; // e.g., 5 requests
   windowMs: number; // e.g., 60000 (1 minute)
+  keyPrefix?: string; // Isolate a form's limit from unrelated API traffic.
 }
 
 export function withRateLimit(
@@ -22,14 +23,15 @@ export function withRateLimit(
              'unknown-ip';
              
   const now = Date.now();
-  const windowData = rateLimitMap.get(ip);
+  const key = options.keyPrefix ? `${options.keyPrefix}:${ip}` : ip;
+  const windowData = rateLimitMap.get(key);
 
   if (!windowData) {
-    rateLimitMap.set(ip, { count: 1, lastReset: now });
+    rateLimitMap.set(key, { count: 1, lastReset: now });
   } else {
     // Reset window if time passed
     if (now - windowData.lastReset > options.windowMs) {
-      rateLimitMap.set(ip, { count: 1, lastReset: now });
+      rateLimitMap.set(key, { count: 1, lastReset: now });
     } else {
       windowData.count++;
       if (windowData.count > options.limit) {

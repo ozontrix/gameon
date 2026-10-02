@@ -3,12 +3,13 @@ import type { ReactNode } from "react";
 
 interface LegalPageShellProps {
   title: string;
-  updated: string;
+  updated?: string;
+  eyebrow?: string;
   children: ReactNode;
 }
 
 // Shared shell for formal legal pages (Terms of Use, Privacy Policy, etc.)
-export function LegalPageShell({ title, updated, children }: LegalPageShellProps) {
+export function LegalPageShell({ title, updated, eyebrow = "Legal", children }: LegalPageShellProps) {
   return (
     <main className="min-h-screen bg-go-black text-go-off">
       {/* Header */}
@@ -30,9 +31,9 @@ export function LegalPageShell({ title, updated, children }: LegalPageShellProps
 
       {/* Content */}
       <article className="mx-auto max-w-4xl px-6 sm:px-8 py-12 lg:py-16">
-        <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">Legal</span>
+        <span className="text-xs tracking-[0.2em] uppercase text-go-brand font-medium">{eyebrow}</span>
         <h1 className="mt-2 text-3xl lg:text-4xl font-display font-bold text-go-white">{title}</h1>
-        <p className="text-xs text-go-off/40 mt-3">Last updated: {updated}</p>
+        {updated ? <p className="text-xs text-go-off/40 mt-3">Last updated: {updated}</p> : null}
 
         <div className="mt-10 space-y-10">{children}</div>
       </article>
@@ -43,12 +44,15 @@ export function LegalPageShell({ title, updated, children }: LegalPageShellProps
           <p className="text-xs text-go-off/40">
             © {new Date().getFullYear()} Game On Multisports Complex. All rights reserved.
           </p>
-          <div className="flex items-center gap-5 text-xs">
+          <div className="flex flex-wrap items-center justify-center gap-5 text-xs">
             <Link href="/terms" className="text-go-off/50 hover:text-go-brand transition-colors">
               Terms of Use
             </Link>
             <Link href="/privacy" className="text-go-off/50 hover:text-go-brand transition-colors">
               Privacy Policy
+            </Link>
+            <Link href="/delete-account" className="text-go-off/70 hover:text-go-brand transition-colors focus-visible:outline-2 focus-visible:outline-go-brand">
+              Delete Account
             </Link>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
   Briefcase,
   Heart,
   Shield,
+  UserRoundMinus,
   MessageCircle,
   Sparkles,
   Send,
@@ -44,6 +45,7 @@ const settingsRows: FooterLink[][] = [
   ],
   [
     { label: "Privacy Policy", icon: Heart, href: "/privacy", desc: "How we handle your data" },
+    { label: "Delete Account", icon: UserRoundMinus, href: "/delete-account", desc: "Request account & data deletion" },
   ],
 ];
 
