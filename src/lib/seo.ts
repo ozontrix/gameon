@@ -29,9 +29,6 @@ export function pageMetadata({ title, description, path, image = '/social-previe
 export const PUBLIC_PAGES = [
   { path: '/', label: 'Home', description: SITE_DESCRIPTION },
   { path: '/gameon-multisports-league', label: 'GameOn Multisports League', description: 'Sports, categories, match dates and entry fees for the GameOn Multisports League.' },
-  { path: '/gameon-olympics', label: 'GameOn Olympics', description: 'Explore the GameOn Olympics sports and registration information.' },
-  { path: '/gameon-olympics/sports', label: 'Olympics sports', description: 'Badminton, pickleball, box cricket and football categories and fees.' },
-  { path: '/gameon-olympics/events', label: 'Olympics events', description: 'Explore the GameOn Olympics event line-up and schedule in Gurugram.' },
   { path: '/sponsorship', label: 'Sponsorship', description: 'Partner with GameOn for brand visibility and sports community sponsorships in Gurugram.' },
   { path: '/blogs', label: 'GameOn Blogs', description: 'Sports guides, player stories, tournament news and updates from GameOn Multisports in Gurugram.' },
   { path: '/privacy', label: 'Privacy Policy', description: 'How GameOn collects, uses and protects your personal information.' },

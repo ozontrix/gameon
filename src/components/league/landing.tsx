@@ -3,9 +3,7 @@
 /**
  * Game On Multisports League — landing page body.
  *
- * Hand-written (the generator script only copies the app screens), and the copy
- * of the Olympics sports list with the app chrome stripped: an inline brand
- * hero and the same sport cards showing only the entry price the sport starts
+ * A standalone inline brand hero and sport cards showing the entry price each sport starts
  * from — the per-category (slot type) breakdown lives on the category page
  * behind "Select Sport". No header, tab bar or footer.
  *

@@ -2,7 +2,6 @@ import Link from 'next/link';
 
 const links = [
   { href: '/gameon-multisports-league', label: 'Multisports League' },
-  { href: '/gameon-olympics', label: 'GameOn Olympics' },
   { href: '/sponsorship', label: 'Sponsorship' },
   { href: '/blogs', label: 'GameOn Blogs' },
   { href: '/site-map', label: 'Site directory' },

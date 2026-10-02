@@ -400,7 +400,7 @@ export const FLOW_STEPS: FlowStep[] = [
   { step: "04", title: "Pay & get your pass", copy: "Pay securely through Razorpay and get your confirmation pass." },
 ];
 
-export interface OlympicsEvent {
+export interface LeagueEvent {
   id: string;
   name: string;
   sport: string;
@@ -414,7 +414,7 @@ export interface OlympicsEvent {
   href: string;
 }
 
-export const OLYMPICS_EVENTS: OlympicsEvent[] = [
+export const LEAGUE_EVENTS: LeagueEvent[] = [
   {
     id: "badminton-open",
     name: "Badminton Open",
@@ -474,7 +474,7 @@ export interface EventStat {
   label: string;
 }
 
-/** Straight from the Olympics registration sheet. */
+/** Multisports League registration statistics. */
 export const EVENT_STATS: EventStat[] = [
   { value: "₹3 lakh+", label: "Overall prize pool" },
   { value: "4", label: "Sports" },
@@ -510,7 +510,7 @@ export const FAQS: Faq[] = [
   },
 ];
 
-export const OLYMPICS_PROMO = {
+export const LEAGUE_PROMO = {
   code: "EARLYBIRD",
   title: "Get 15% Off Your Entry",
   copy: "Use code EARLYBIRD on entries above ₹1,500.",

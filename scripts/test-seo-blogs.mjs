@@ -172,8 +172,29 @@ test('Sitemap contains public routes only and article update timestamps', async 
   const sitemap = loader({ '@/lib/blogs/queries': { getBlogSitemapEntries: async () => [{ slug: 'published-post', updated_at: '2026-10-02T12:00:00Z', cover_image_url: 'https://media.example/cover.webp' }] } })('src/app/sitemap.ts').default;
   const entries = await sitemap();
   assert.ok(entries.some(entry => entry.url.endsWith('/blogs/published-post') && entry.lastModified === '2026-10-02T12:00:00Z'));
-  for (const entry of entries) assert.doesNotMatch(entry.url, /\/admin|\/api-docs|\/book\/|\/bookings|\/account/);
+  for (const entry of entries) assert.doesNotMatch(entry.url, /\/admin|\/api-docs|\/book\/|\/bookings|\/account|\/gameon-olympics/);
   assert.equal(new Set(entries.map(entry => entry.url)).size, entries.length);
+});
+
+test('Removed Olympics pages and their exclusive components are deleted and absent from public links', () => {
+  for (const relative of [
+    'src/app/gameon-olympics',
+    'src/components/olympics',
+    'scripts/create-multisports-league-flow.mjs',
+    'src/app/gameon-olympics/page.tsx',
+    'src/app/gameon-olympics/sports/page.tsx',
+    'src/app/gameon-olympics/events/page.tsx',
+    'src/app/gameon-olympics/sports/[sport]/page.tsx',
+    ...['home-page', 'sports-page', 'events-page', 'sport-detail'].map(name => `src/components/olympics/${name}.tsx`),
+  ]) assert.equal(existsSync(resolve(root, relative)), false, relative);
+  assert.ok(seo.PUBLIC_PAGES.every(page => !page.path.startsWith('/gameon-olympics')));
+  const directory = load('src/app/site-map/page.tsx').default;
+  const links = load('src/components/seo/site-links.tsx').SiteLinks;
+  for (const component of [directory, links]) {
+    const html = renderToStaticMarkup(createElement(component));
+    assert.doesNotMatch(html, /href="\/gameon-olympics/);
+    assert.match(html, /href="\/gameon-multisports-league/);
+  }
 });
 
 test('Published article renders its full body, breadcrumbs and BlogPosting metadata on the server', async () => {

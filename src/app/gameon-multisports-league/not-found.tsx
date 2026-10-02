@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/league/ui";
 
-export default function OlympicsNotFound() {
+export default function LeagueNotFound() {
   return (
     <EmptyState
       emoji="🤔"

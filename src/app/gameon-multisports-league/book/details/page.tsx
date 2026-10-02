@@ -49,7 +49,7 @@ function Field({
 const inputClass =
   "w-full rounded-[14px] border border-white/[0.09] bg-white/[0.03] px-3.5 py-3 text-[14px] text-go-white placeholder:text-go-off/25 focus:border-go-brand/60 focus:outline-none";
 
-export default function OlympicsDetailsPage() {
+export default function LeagueDetailsPage() {
   const router = useRouter();
   const { draft, ready, sport, categories, pricing, update, toggleAddOn, setAddOnQty } =
     useLeagueBooking();

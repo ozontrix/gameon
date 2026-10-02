@@ -39,7 +39,7 @@ function hasEligibleEntry(coupon: Coupon, entryFee: number) {
   return entryFee >= coupon.minSubtotal;
 }
 
-export default function OlympicsReviewPage() {
+export default function LeagueReviewPage() {
   const { draft, ready, sport, categories, pricing, applyCoupon, removeCoupon } =
     useLeagueBooking();
   const [code, setCode] = useState("");

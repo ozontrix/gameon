@@ -158,8 +158,8 @@ The admin **is** complete for courts/bookings; it has **zero surface for events,
 
 A **complete, separate** tournament flow already exists on the website:
 
-- Pages: `gameon/src/app/gameon-multisports-league/**` (sports, book/{details,slot,payment,review,success}, bookings) and `gameon/src/app/gameon-olympics/**`.
-- Catalog: **fixtures** — `src/components/league/data.ts`, `src/components/olympics/data.ts`.
+- Pages: `gameon/src/app/gameon-multisports-league/**` (sports, book/{details,slot,payment,review,success}, bookings). The separate Olympics section has been removed.
+- Catalog: **fixtures** — `src/components/league/data.ts`.
 - APIs: `POST /api/v1/public/league/entries/order` (creates a real Razorpay order) and `POST /api/v1/public/league/entries/confirm` (verifies the signature, then **emails** a pass via `lib/league/email.ts`).
 - **`confirm/route.ts:52-83` writes nothing to the database.** The only side effect is `sendLeagueConfirmationEmail`. If SMTP fails, a **paid entry is lost**. No fee reconciliation, no capacity enforcement, no admin view, no refund path.
 
@@ -167,7 +167,7 @@ So there are **three** unconnected events/tournaments stories sharing no data:
 
 1. `public.events` / `public.tournaments` — schema built (capacity triggers, registrations), **unused by any code**.
 2. The Expo app — fixtures only, with (until §13) a fake success screen.
-3. The website League/Olympics — fixtures + real money + **zero persistence**.
+3. The website Multisports League — fixtures + real money + **zero persistence**.
 
 This is the single most important architectural decision in the project — see §12 Q1.
 
@@ -366,7 +366,7 @@ Sequencing rule: **schema → API → admin → app**, per vertical. Never build
 
 ## 12. Decisions required
 
-1. **Events & tournaments — one source of truth?** Move the website League/Olympics onto `public.events`/`public.tournaments` (recommended), or keep them as a separate product and give the app its own path? *Everything in Phases 3–4 depends on this.*
+1. **Events & tournaments — one source of truth?** Move the website Multisports League onto `public.events`/`public.tournaments` (recommended), or keep it as a separate product and give the app its own path? *Everything in Phases 3–4 depends on this.*
 2. **Refund policy:** Points-only, as `constants/policies.ts` and the brief say — confirm, and confirm the live tiers (24h→100%, 12h→50%, <12h→0%).
 3. **Points rate:** `POINTS_PER_RUPEE = 1`? And where are Points earned — per booking, per rupee, on completion?
 4. **Referral reward:** 200 PTS per the current copy? Credited on the referee's *first confirmed booking* — confirm the trigger. `referral_settings` is currently seeded 0/0.

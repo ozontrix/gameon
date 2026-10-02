@@ -11,6 +11,8 @@ The initial direct database connection was blocked by local IPv6 connectivity. O
 
 ## What was implemented
 
+The entire GameOn Olympics route tree and its dedicated components have been deleted, including sports, events, account, bookings and checkout screens. Olympics links are removed from the sitemap, site directory and footer. The GameOn Multisports League and its nested pages remain. Regression checks require the deleted URLs to return 404.
+
 - Unique titles, descriptions, canonical URLs, Open Graph and Twitter cards for public pages, including sport detail pages.
 - A 1200×630 generated social preview, instead of treating the brand logo as a full-size share image.
 - Homepage WebSite and SportsActivityLocation structured data reflecting existing visible venue details. Update structured data alongside contact details, location and opening hours when they change.
