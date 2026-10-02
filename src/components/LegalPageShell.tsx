@@ -45,6 +45,8 @@ export function LegalPageShell({ title, updated, eyebrow = "Legal", children }: 
             © {new Date().getFullYear()} Game On Multisports Complex. All rights reserved.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-5 text-xs">
+            <Link href="/blogs" className="text-go-off/70 hover:text-go-brand focus-visible:outline-2 focus-visible:outline-go-brand">GameOn Blogs</Link>
+            <Link href="/site-map" className="text-go-off/70 hover:text-go-brand focus-visible:outline-2 focus-visible:outline-go-brand">Site directory</Link>
             <Link href="/terms" className="text-go-off/50 hover:text-go-brand transition-colors">
               Terms of Use
             </Link>

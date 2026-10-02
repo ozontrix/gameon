@@ -77,6 +77,63 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          excerpt: string
+          content: string
+          author_name: string
+          category: string
+          cover_image_url: string | null
+          cover_image_alt: string
+          seo_title: string | null
+          seo_description: string | null
+          status: string
+          published_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          excerpt: string
+          content: string
+          author_name?: string
+          category?: string
+          cover_image_url?: string | null
+          cover_image_alt?: string
+          seo_title?: string | null
+          seo_description?: string | null
+          status?: string
+          published_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          title?: string
+          excerpt?: string
+          content?: string
+          author_name?: string
+          category?: string
+          cover_image_url?: string | null
+          cover_image_alt?: string
+          seo_title?: string | null
+          seo_description?: string | null
+          status?: string
+          published_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           amount_paid: number | null

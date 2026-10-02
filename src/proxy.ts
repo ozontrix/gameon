@@ -11,6 +11,7 @@ const ADMIN_ONLY = [
   '/admin/sports',
   '/admin/closures',
   '/admin/banners',
+  '/admin/blogs',
   '/admin/notifications',
   '/admin/team',
   '/admin/activity',

@@ -16,6 +16,7 @@ import {
   MapPin,
   ArrowUp,
   Bell,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ const desktopSections: NavItem[] = [
   { id: "audience", label: "For You", icon: Users },
   { id: "community", label: "Community", icon: Sparkles },
   { id: "sponsorship", label: "Sponsorship", icon: Handshake, href: "/sponsorship" },
+  { id: "blogs", label: "Blogs", icon: BookOpen, href: "/blogs" },
   { id: "booking", label: "Book", icon: Calendar },
   { id: "location", label: "Location", icon: MapPin },
 ];
@@ -63,6 +65,7 @@ const moreItems: NavItem[] = [
   { id: "audience", label: "For You", icon: Users, desc: "Built for every kind of player" },
   { id: "community", label: "Community", icon: Sparkles, desc: "Real moments from Game On" },
   { id: "sponsorship", label: "Sponsorship", icon: Handshake, href: "/sponsorship", desc: "Partner your brand with Game On" },
+  { id: "blogs", label: "GameOn Blogs", icon: BookOpen, href: "/blogs", desc: "Sports guides and stories from the court" },
   { id: "location", label: "Location", icon: MapPin, desc: "Sector 70, Gurugram" },
 ];
 
@@ -86,7 +89,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
   // The nav item that owns the current route (e.g. "Sponsorship" on /sponsorship)
-  const routeSection = desktopSections.find((s) => s.href === pathname);
+  const routeSection = desktopSections.find((s) => s.href && (s.href === pathname || pathname.startsWith(`${s.href}/`)));
 
   useEffect(() => {
     const handleScroll = () => {
@@ -200,8 +203,8 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
             )}
           >
             {/* Brand */}
-            <button
-              onClick={() => goTo("hero")}
+            <Link
+              href="/"
               className="flex items-center gap-2 shrink-0 cursor-pointer group"
               aria-label="Game On — go to home"
             >
@@ -211,7 +214,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
               <span className="hidden xl:block text-[9px] uppercase tracking-[0.22em] text-go-off/30 font-medium pt-0.5">
                 Where the City Unplugs
               </span>
-            </button>
+            </Link>
 
             {/* Section links */}
             <div className="flex items-center gap-0.5">
@@ -252,13 +255,13 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                     {itemContent}
                   </Link>
                 ) : (
-                  <button
+                  <Link
                     key={section.id}
-                    onClick={() => goTo(section.id)}
+                    href={section.id === 'hero' ? '/' : `/#${section.id}`}
                     className={itemClass}
                   >
                     {itemContent}
-                  </button>
+                  </Link>
                 );
               })}
             </div>

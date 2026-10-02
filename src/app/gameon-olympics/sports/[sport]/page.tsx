@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SPORTS, findSport } from "@/components/olympics/data";
 import { SportDetail } from "@/components/olympics/sport-detail";
+import { pageMetadata } from '@/lib/seo';
+import { Breadcrumbs } from '@/components/seo/breadcrumbs';
 
 /** Every sport is known up front, so the brackets can be pre-rendered. */
 export function generateStaticParams() {
@@ -15,11 +17,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { sport } = await params;
   const data = findSport(sport);
-  if (!data) return { title: "Sport not found" };
-  return {
-    title: `${data.name} — Categories & Fees`,
+  if (!data) notFound();
+  return pageMetadata({
+    title: `${data.name} — GameOn Olympics`, path: `/gameon-olympics/sports/${data.id}`,
     description: data.description,
-  };
+  });
 }
 
 export default async function OlympicsSportPage({
@@ -31,5 +33,5 @@ export default async function OlympicsSportPage({
   const data = findSport(sport);
   if (!data) notFound();
 
-  return <SportDetail sportId={data.id} />;
+  return <><Breadcrumbs items={[{ name: 'Home', path: '/' }, { name: 'GameOn Olympics', path: '/gameon-olympics' }, { name: 'Sports', path: '/gameon-olympics/sports' }, { name: data.name, path: `/gameon-olympics/sports/${data.id}` }]} /><SportDetail sportId={data.id} /></>;
 }

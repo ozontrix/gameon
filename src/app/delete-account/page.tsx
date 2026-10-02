@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
+import { pageMetadata } from '@/lib/seo';
 import Link from "next/link";
 import { Mail, ShieldCheck, UserRoundMinus } from "lucide-react";
 import { LegalPageShell } from "@/components/LegalPageShell";
 import { DeleteAccountForm } from "@/components/DeleteAccountForm";
 import { ACCOUNT_DELETION_EMAIL } from "@/lib/account-deletion";
 
-export const metadata: Metadata = {
-  title: "Delete Account | Game On Multisports",
+export const metadata = pageMetadata({
+  title: 'Delete Account', path: '/delete-account',
   description: "Request deletion of your Game On account and related personal information using your registered phone number or email address. Receive an email copy of your request.",
-};
+});
 
 export default function DeleteAccountPage() {
   return (

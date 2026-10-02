@@ -1,61 +1,20 @@
-"use client";
+import HomePage from '@/components/HomePage';
+import { JsonLd } from '@/components/seo/json-ld';
+import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl, pageMetadata } from '@/lib/seo';
 
-import { useState } from "react";
+export const metadata = pageMetadata({ title: 'Sports Complex in Sector 70, Gurugram', description: SITE_DESCRIPTION, path: '/' });
 
-import { Navigation } from "@/components/Navigation";
-import { NotifyModal } from "@/components/NotifyModal";
-import { HeroSection } from "@/components/HeroSection";
-import { SportsSection } from "@/components/SportsSection";
-import { ZonesSection } from "@/components/ZonesSection";
-import { AudienceSection } from "@/components/AudienceSection";
-import { CommunitySection } from "@/components/CommunitySection";
-import { BookingSection } from "@/components/BookingSection";
-import { LocationSection } from "@/components/LocationSection";
-import { FooterSection } from "@/components/FooterSection";
-import { StackedCard } from "@/components/StackedCard";
-
-// ─── Main Page ───
 export default function Home() {
-  const [modalOpen, setModalOpen] = useState(false);
-
-  return (
-    <>
-      <Navigation onNotifyClick={() => setModalOpen(true)} />
-
-      <main className="relative">
-        <HeroSection onNotifyClick={() => setModalOpen(true)} />
-
-        {/* Stacked cards — each section slides up as a card with rounded top corners */}
-        <StackedCard index={0} totalCards={6}>
-          <SportsSection onReserve={() => {
-            document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" });
-          }} />
-        </StackedCard>
-
-        <StackedCard index={1} totalCards={6}>
-          <ZonesSection />
-        </StackedCard>
-
-        <StackedCard index={2} totalCards={6}>
-          <AudienceSection />
-        </StackedCard>
-
-        <StackedCard index={3} totalCards={6}>
-          <CommunitySection />
-        </StackedCard>
-
-        <StackedCard index={4} totalCards={6}>
-          <BookingSection />
-        </StackedCard>
-
-        <StackedCard index={5} totalCards={6}>
-          <LocationSection />
-        </StackedCard>
-
-        <FooterSection />
-      </main>
-
-      <NotifyModal open={modalOpen} onClose={() => setModalOpen(false)} />
-    </>
-  );
+  return <>
+    <JsonLd data={{ '@context': 'https://schema.org', '@graph': [
+      { '@type': 'WebSite', '@id': absoluteUrl('/#website'), name: SITE_NAME, alternateName: 'GameOn', url: absoluteUrl('/'), inLanguage: 'en-IN', publisher: { '@id': absoluteUrl('/#venue') } },
+      { '@type': 'SportsActivityLocation', '@id': absoluteUrl('/#venue'), name: SITE_NAME, url: absoluteUrl('/'), description: SITE_DESCRIPTION, image: absoluteUrl('/hero_background.png'), logo: absoluteUrl('/game_on.png'), telephone: '+91 90348 44654', email: 'info@gameonmultisports.com',
+        address: { '@type': 'PostalAddress', streetAddress: 'Sports Cube Campus, Sector 70', addressLocality: 'Gurugram', addressRegion: 'Haryana', postalCode: '122101', addressCountry: 'IN' },
+        geo: { '@type': 'GeoCoordinates', latitude: 28.394516, longitude: 77.0126389 },
+        openingHoursSpecification: [{ '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], opens: '06:00', closes: '23:00' }],
+        sameAs: ['https://www.instagram.com/gameonmultisports'],
+      },
+    ] }} />
+    <HomePage />
+  </>;
 }

@@ -2,6 +2,7 @@
 
 import {
   Building2,
+  BookOpen,
   CalendarDays,
   CalendarX2,
   CirclePlus,
@@ -77,8 +78,9 @@ function navGroups(refundsPending: number): NavGroup[] {
       ],
     },
     {
-      label: 'App content',
+      label: 'App & website content',
       items: [
+        { href: '/admin/blogs', label: 'GameOn Blogs', icon: BookOpen, adminOnly: true },
         { href: '/admin/banners', label: 'Home banners', icon: Images, adminOnly: true },
         { href: '/admin/notifications', label: 'Notifications', icon: Megaphone, adminOnly: true },
       ],

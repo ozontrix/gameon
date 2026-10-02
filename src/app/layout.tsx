@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Anton, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, isPreviewDeployment } from '@/lib/seo';
 
 // ─── Typography — self-hosted via next/font so every device renders the same fonts ───
 // Anton      → display / major headings
@@ -28,12 +29,13 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const siteUrl = "https://game-on.in";
-
 export const metadata: Metadata = {
-  title: "GAME ON — Premium Sports Destination | Gurugram",
-  description:
-    "Where the City Unplugs & GameOn Begins. A premium multi-sports destination in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  robots: isPreviewDeployment ? { index: false, follow: false } : { index: true, follow: true },
+  verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -47,14 +49,12 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    siteName: "Game On",
-    title: "GAME ON — Premium Sports Destination | Gurugram",
-    description:
-      "Where the City Unplugs & GameOn Begins. A premium multi-sports destination in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
-    url: siteUrl,
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
     images: [
       {
-        url: `${siteUrl}/game_on.png`,
+        url: '/social-preview',
         width: 1200,
         height: 630,
         alt: "Game On — Where the City Unplugs & GameOn Begins",
@@ -63,10 +63,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "GAME ON — Premium Sports Destination | Gurugram",
-    description:
-      "Where the City Unplugs & GameOn Begins. A premium multi-sports destination in Sector 70, Gurugram. Play. Perform. Belong. Grow. One address. Every sport.",
-    images: [`${siteUrl}/game_on.png`],
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: ['/social-preview'],
   },
 };
 

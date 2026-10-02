@@ -74,6 +74,9 @@ role can write. Removing the role takes effect on the next page load.
   deactivating a venue or court stops new bookings only. Adding a closure warns
   about confirmed bookings that fall inside it.
 - **Activity log** — every change made from the panel, with who and when.
+- **GameOn Blogs** — admin-only article creation, content preview, cover upload,
+  SEO fields, drafts, publishing/unpublishing and deletion for the public website.
+  Apply the blog migration before using it. See `SEO_AND_BLOGS.md` for setup.
 
 ## Security model
 

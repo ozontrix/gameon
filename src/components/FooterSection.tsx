@@ -21,6 +21,7 @@ import Image from "next/image";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { FaInstagram } from "react-icons/fa";
+import { SiteLinks } from '@/components/seo/site-links';
 
 type FooterLink = {
   label: string;
@@ -363,6 +364,7 @@ export function FooterSection() {
         </div>
       </div>
 
+      <SiteLinks />
       {/* Bottom safe area spacer for mobile tab bar */}
       <div className="h-24 lg:h-0 bg-go-navy" />
     </section>

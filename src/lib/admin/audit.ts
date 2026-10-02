@@ -19,7 +19,8 @@ export type AuditEntity =
   | 'event'
   | 'cancellation_policy'
   | 'wallet'
-  | 'referral';
+  | 'referral'
+  | 'blog';
 
 /**
  * Records a change made from the admin panel. Never throws: a failed audit

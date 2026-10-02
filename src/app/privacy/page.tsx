@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
+import { pageMetadata } from '@/lib/seo';
 import type { ReactNode } from "react";
 import { LegalPageShell } from "@/components/LegalPageShell";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy | GAME ON — Premium Sports Destination",
+export const metadata = pageMetadata({
+  title: 'Privacy Policy', path: '/privacy',
   description:
     "How Game On Multi Sports Complex collects, uses, and protects your personal information.",
-};
+});
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (

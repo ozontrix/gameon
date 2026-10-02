@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
+import { pageMetadata } from '@/lib/seo';
 import type { ReactNode } from "react";
 import { LegalPageShell } from "@/components/LegalPageShell";
 
-export const metadata: Metadata = {
-  title: "Terms of Use | GAME ON — Premium Sports Destination",
+export const metadata = pageMetadata({
+  title: 'Terms of Use', path: '/terms',
   description:
     "The Terms of Use governing the Game On website, bookings, and use of our multi-sports facilities in Sector 70, Gurugram.",
-};
+});
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
