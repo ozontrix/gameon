@@ -127,7 +127,9 @@ export function LeagueLanding() {
 
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
               <div>
-                <Kicker>Starts from</Kicker>
+                {sport.id !== "cricket" && sport.id !== "football" ? (
+                  <Kicker>Starts from</Kicker>
+                ) : null}
                 <p className="font-display text-lg text-go-white">
                   {formatINR(Math.min(...sport.categories.map((c) => c.fee)))}
                 </p>
