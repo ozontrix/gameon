@@ -1,17 +1,16 @@
 "use client";
 
 /**
- * Game On Multisports League — step 1: player / team details and add-ons.
+ * Game On Multisports League — step 1: player / team details.
  *
  * The player never picks a squad size: team sports (cricket, football) are
  * locked to the minimum required squad, and individual brackets (badminton,
- * pickleball) book one ticket per player. Add-ons are the league jersey and the
- * match photos & video recording.
+ * pickleball) book one ticket per player.
  */
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Minus, Plus, Ticket, Users } from "lucide-react";
-import { ADD_ONS, entryTickets, scheduleLabel, formatINR } from "@/components/league/data";
+import { ArrowRight, Ticket, Users } from "lucide-react";
+import { entryTickets, scheduleLabel, formatINR } from "@/components/league/data";
 import { CategorySchedule } from "@/components/league/category-schedule";
 import { useLeagueBooking } from "@/components/league/booking-context";
 import {
@@ -24,7 +23,6 @@ import {
   StepBar,
   StepFooter,
 } from "@/components/league/ui";
-import { cn } from "@/lib/utils";
 
 function Field({
   label,
@@ -51,7 +49,7 @@ const inputClass =
 
 export default function LeagueDetailsPage() {
   const router = useRouter();
-  const { draft, ready, sport, categories, pricing, update, toggleAddOn, setAddOnQty } =
+  const { draft, ready, sport, categories, pricing, update } =
     useLeagueBooking();
 
   if (ready && (!sport || categories.length === 0)) {
@@ -182,116 +180,14 @@ export default function LeagueDetailsPage() {
         </div>
       </Panel>
 
-      {/* ─── Add-ons ─── */}
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <Kicker>Optional extras</Kicker>
-          <h2 className="mt-1 font-display text-lg uppercase tracking-wide text-go-white">
-            Add-ons
-          </h2>
-        </div>
-        {pricing.addOnsTotal > 0 ? (
-          <Chip tone="brand">{formatINR(pricing.addOnsTotal)} added</Chip>
-        ) : (
-          <span className="text-[11px] text-go-off/35">Skip if you don&apos;t need them</span>
-        )}
-      </div>
-
-      <div className="space-y-2.5">
-        {ADD_ONS.map((addOn) => {
-          const qty = draft.addons[addOn.id] ?? 0;
-          const active = qty > 0;
-          const perPlayer = addOn.unit === "player";
-          const max = perPlayer ? squadSize + 2 : 1;
-
-          return (
-            <div
-              key={addOn.id}
-              className={cn(
-                "rounded-[20px] border px-4 py-3.5 transition-colors",
-                active
-                  ? "border-go-brand/50 bg-go-brand/[0.1]"
-                  : "border-white/[0.07] bg-white/[0.02]"
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl" aria-hidden>
-                  {addOn.emoji}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13.5px] font-semibold text-go-white">{addOn.name}</p>
-                  <p className="mt-0.5 text-[11.5px] leading-snug text-go-off/45">
-                    {addOn.description}
-                  </p>
-                  <p className="mt-1.5 font-mono text-[11.5px] text-go-brand">
-                    {formatINR(addOn.price)} / {perPlayer ? "player" : "team"}
-                  </p>
-                </div>
-
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleAddOn(addOn.id)}
-                    aria-pressed={active}
-                    aria-label={active ? `Remove ${addOn.name}` : `Add ${addOn.name}`}
-                    className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11.5px] font-semibold transition-colors active:scale-95",
-                      active
-                        ? "border-go-brand bg-go-brand text-go-black"
-                        : "border-white/15 bg-white/[0.05] text-go-off/70 hover:text-go-white"
-                    )}
-                  >
-                    {active ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                    {active ? "Added" : "Add"}
-                  </button>
-
-                  {active && perPlayer ? (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        aria-label="Fewer"
-                        onClick={() => setAddOnQty(addOn.id, qty - 1)}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-go-off/70 disabled:opacity-30"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <span className="w-6 text-center font-mono text-[12px] text-go-white">
-                        {qty}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label="More"
-                        disabled={qty >= max}
-                        onClick={() => setAddOnQty(addOn.id, Math.min(max, qty + 1))}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-go-brand/40 bg-go-brand/15 text-go-brand disabled:opacity-30"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {active ? (
-                    <span className="font-mono text-[11px] text-go-off/50">
-                      {formatINR(addOn.price * qty)}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       <StepFooter>
         <div className="flex items-center gap-3 lg:justify-between">
           <div className="min-w-0 flex-1 lg:flex-none">
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-go-off/40">
-              {pricing.addOnsTotal > 0
-                ? `Entry + ${formatINR(pricing.addOnsTotal)} add-ons`
-                : "Entry fee"}
+              Entry fee
             </p>
             <p className="font-display text-lg leading-tight text-go-white">
-              {formatINR(pricing.subtotal)}
+              {formatINR(pricing.entryFee)}
             </p>
             {!complete ? (
               <p className="text-[10.5px] text-amber-300/80">
@@ -301,8 +197,8 @@ export default function LeagueDetailsPage() {
           </div>
           <Button
             onClick={() => {
-              // Pin the draft to the format's squad size for the rest of the flow.
-              update({ squadSize });
+              // Pin squad size and discard extras from older saved drafts.
+              update({ squadSize, addons: {} });
               router.push("/gameon-multisports-league/book/review");
             }}
             disabled={!complete}
