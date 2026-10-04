@@ -124,7 +124,9 @@ export function LeagueLanding() {
             <p className="mt-3 text-[13px] leading-relaxed text-go-off/70">{sport.description}</p>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              <Chip icon={Users}>{sport.capacity}</Chip>
+              {sport.id !== "cricket" && sport.id !== "football" ? (
+                <Chip icon={Users}>{sport.capacity}</Chip>
+              ) : null}
               <Chip icon={CalendarDays} tone="brand">{scheduleLabel(sport.categories)}</Chip>
               {draft.selections.some((item) => item.sportId === sport.id) ? (
                 <Chip tone="success">{draft.selections.filter((item) => item.sportId === sport.id).length} in cart</Chip>
