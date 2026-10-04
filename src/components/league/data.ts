@@ -4,7 +4,8 @@
  * Shared catalog used by the registration screens and server-side payment quote.
  *
  * Fees mirror the Game On Multisports League registration sheet:
- *   Pickleball  Singles ₹1,000/person · Doubles & mixed doubles ₹2,000/team
+ *   Pickleball  U14 singles ₹1,000/person · U14 doubles ₹1,600/team
+ *               Open singles ₹1,200/person · Open doubles ₹2,400/team · Mixed doubles ₹2,000/team
  *   Badminton   Singles ₹1,000/person · Doubles ₹2,000/team
  *   Cricket     7v7 · 6 overs a side · ₹2,000 per team
  *   Football    6v6 · 30 minutes full time · ₹2,000 per team
@@ -80,10 +81,10 @@ export const SPORTS: Sport[] = [
     capacity: "5 categories",
     categories: [
       { id: "u14-singles", name: "Under 14 Singles", short: "Under 14 · Singles", fee: 1000, date: "2026-10-17", format: "Under 14", squadSize: 1 },
-      { id: "u14-doubles", name: "Under 14 Doubles", short: "Under 14 · Doubles", fee: 2000, date: "2026-10-17", format: "Under 14", squadSize: 2 },
+      { id: "u14-doubles", name: "Under 14 Doubles", short: "Under 14 · Doubles", fee: 1600, date: "2026-10-17", format: "Under 14", squadSize: 2 },
       { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 2000, date: "2026-10-17", format: "Open · Mixed pair", squadSize: 2 },
-      { id: "open-singles", name: "Open Singles", short: "Open · Singles", fee: 1000, date: "2026-10-18", format: "Open category", squadSize: 1 },
-      { id: "open-doubles", name: "Open Doubles", short: "Open · Doubles", fee: 2000, date: "2026-10-18", format: "Open category", squadSize: 2 },
+      { id: "open-singles", name: "Open Singles", short: "Open · Singles", fee: 1200, date: "2026-10-18", format: "Open category", squadSize: 1 },
+      { id: "open-doubles", name: "Open Doubles", short: "Open · Doubles", fee: 2400, date: "2026-10-18", format: "Open category", squadSize: 2 },
     ],
   },
   {

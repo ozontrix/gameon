@@ -60,13 +60,13 @@ test("Badminton has exactly the seven requested categories, dates and fees", () 
   ]);
 });
 
-test("Pickleball has five requested categories with fees matching badminton", () => {
+test("Pickleball has five requested categories with category-specific fees", () => {
   assert.deepEqual(findSport("pickleball").categories.map(({ name, date, fee }) => [name, date, fee]), [
     ["Under 14 Singles", "2026-10-17", 1000],
-    ["Under 14 Doubles", "2026-10-17", 2000],
+    ["Under 14 Doubles", "2026-10-17", 1600],
     ["Open Mixed Doubles", "2026-10-17", 2000],
-    ["Open Singles", "2026-10-18", 1000],
-    ["Open Doubles", "2026-10-18", 2000],
+    ["Open Singles", "2026-10-18", 1200],
+    ["Open Doubles", "2026-10-18", 2400],
   ]);
 });
 
@@ -74,10 +74,29 @@ test("Pickleball checkout totals use the new singles and doubles fees", () => {
   const ids = findSport("pickleball").categories.map(({ id }) => id);
   const result = parseLeagueEntry(payload("pickleball", ids, "2026-10-17"));
   assert.equal(result.ok, true);
-  assert.equal(result.quote.entryFee, 8000);
-  assert.equal(result.quote.total, 8000);
+  assert.equal(result.quote.entryFee, 8200);
+  assert.equal(result.quote.total, 8200);
   assert.equal(result.entry.squadSize, 8);
   assert.deepEqual(result.entry.dates, ["2026-10-17", "2026-10-18"]);
+});
+
+test("Updated Pickleball fees match rendered prices and individual checkout totals", () => {
+  const { CategorySchedule } = load("src/components/league/category-schedule.tsx");
+  const sport = findSport("pickleball");
+  for (const [id, fee, price, unit] of [
+    ["u14-doubles", 1600, "₹1,600", "team"],
+    ["open-singles", 1200, "₹1,200", "person"],
+    ["open-doubles", 2400, "₹2,400", "team"],
+  ]) {
+    const categories = findCategories(sport, [id]);
+    const result = parseLeagueEntry(payload("pickleball", [id], categories[0].date));
+    assert.equal(result.ok, true, id);
+    assert.equal(result.quote.entryFee, fee, id);
+    assert.equal(result.quote.total, fee, id);
+    const html = renderToStaticMarkup(createElement(CategorySchedule, { categories }));
+    assert.ok(html.includes(price), id);
+    assert.ok(html.includes(`per ${unit}`), id);
+  }
 });
 
 test("Team formats/fees remain unchanged with Football on 17th and Cricket on 18th", () => {
