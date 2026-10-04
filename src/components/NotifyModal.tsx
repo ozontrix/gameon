@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import confetti from "canvas-confetti";
+import { trackMetaEvent } from "@/lib/analytics/meta-pixel";
 
 // ─── Form Schema ───
 const formSchema = z.object({
@@ -61,22 +62,24 @@ function NotifyCard({ onClose }: { onClose: () => void }) {
     // Animate to success slide first
     await new Promise((r) => setTimeout(r, 400));
     try {
+      let saved = false;
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       if (supabaseUrl && supabaseKey && supabaseUrl !== "https://your-project.supabase.co") {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(supabaseUrl, supabaseKey);
-        await supabase.from("gameon_waitlist").insert({
+        const { error } = await supabase.from("gameon_waitlist").insert({
           name: data.name,
           email: data.email,
           phone: data.phone,
           created_at: new Date().toISOString(),
         });
+        saved = !error;
       }
 
       // Notify the Game On team by email (non-blocking — never blocks the success flow)
       try {
-        await fetch("/api/notify", {
+        const response = await fetch("/api/notify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -86,10 +89,12 @@ function NotifyCard({ onClose }: { onClose: () => void }) {
             phone: data.phone,
           }),
         });
+        saved = saved || response.ok;
       } catch {
         // ignore — the waitlist is saved, email delivery is best-effort
       }
 
+      if (saved) trackMetaEvent("Lead", { content_name: "GameOn early access" });
       fireConfetti();
       setSubmitted(true);
     } catch {

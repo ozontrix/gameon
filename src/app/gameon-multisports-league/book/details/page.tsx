@@ -1,5 +1,7 @@
 "use client";
 
+import { LeagueCheckoutTracking } from "@/components/league/checkout-tracking";
+
 /**
  * Game On Multisports League — step 1: player / team details.
  *
@@ -81,6 +83,7 @@ export default function LeagueDetailsPage() {
   return (
     <div>
       <StepBar current="details" />
+      <LeagueCheckoutTracking />
       <ScreenHeader
         title={multiSport ? "Your details" : isTeam ? "Team details" : "Player details"}
         subtitle={

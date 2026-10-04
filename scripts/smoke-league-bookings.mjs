@@ -20,6 +20,16 @@ try {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   assert.ok(ready, 'Production server did not start.');
+  for (const path of ['/', '/gameon-multisports-league', '/gameon-multisports-league/sports/pickleball', '/gameon-multisports-league/book/details']) {
+    const response = await get(path);
+    assert.equal(response.status, 200, path);
+    const html = await response.text();
+    assert.ok(html.includes('Marketing cookie preferences'), path);
+    assert.ok(html.includes('Accept marketing') && html.includes('Reject marketing'), path);
+    assert.doesNotMatch(html, /<script[^>]+src="https:\/\/connect\.facebook\.net/);
+    assert.doesNotMatch(html, /<img[^>]+src="https:\/\/www\.facebook\.com\/tr/);
+  }
+  console.log('PASS public website and league routes render consent controls without a pre-consent Pixel script or image.');
   for (const path of ['/admin/multisports-league', '/admin/multisports-league/coupons', '/admin/multisports-league/12345678-1234-4234-8234-123456789abc', '/admin/multisports-league/export']) {
     const response = await get(path);
     assert.equal(response.status, 307, path);

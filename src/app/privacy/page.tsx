@@ -100,6 +100,20 @@ export default function PrivacyPage() {
 
       <Section title="5. Cookies & Tracking Technologies">
         <P>
+          With your permission, our website loads Meta Pixel to measure page visits, selected league
+          categories, checkout activity and completed payments, and to improve Facebook and Instagram
+          advertising. Meta may receive your browser and device information, IP address, page address,
+          advertising-cookie identifiers and event data such as category identifiers, currency and
+          payment value. We do not include your name, phone number, email address or player details
+          in our Pixel event parameters or enable automatic form-field matching.
+        </P>
+        <P>
+          You can accept or reject marketing cookies using the website prompt, and change your choice
+          using Cookie settings. Rejecting or withdrawing marketing consent does not affect bookings
+          or payments. We also respect your browser&apos;s Global Privacy Control signal. Necessary
+          storage for bookings and cookie preferences remains available independently of marketing.
+        </P>
+        <P>
           The Website uses cookies and similar technologies to collect information about your browsing
           activity and to remember your preferences. Cookies are small text files stored on your device
           when you visit a website. They help us make the Website work properly, improve your experience,

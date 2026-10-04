@@ -22,6 +22,7 @@ function details(sportId, patch = {}) {
     "next/navigation": { useRouter: () => ({ push: (href) => pushed.push(href) }) },
     "next/link": { __esModule: true, default: ({ children, ...props }) => createElement("a", props, children) },
     "@/components/league/booking-context": { useLeagueBooking: () => booking },
+    "./booking-context": { useLeagueBooking: () => booking },
   };
   function load(filename) {
     if (cache.has(filename)) return cache.get(filename).exports;

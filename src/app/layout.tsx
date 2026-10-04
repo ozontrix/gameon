@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Anton, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
+import { MetaPixel } from "@/components/MetaPixel";
 import "./globals.css";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, isPreviewDeployment } from '@/lib/seo';
 
@@ -89,6 +90,7 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-go-black text-go-off font-sans antialiased">
         {children}
+        <MetaPixel enabled={process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview"} />
         <Toaster
           position="top-center"
           toastOptions={{

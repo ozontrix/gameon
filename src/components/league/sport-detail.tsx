@@ -23,6 +23,7 @@ import {
   StepFooter,
 } from "@/components/league/ui";
 import { cn } from "@/lib/utils";
+import { leagueEventParameters, trackMetaEvent } from "@/lib/analytics/meta-pixel";
 
 const BASE = "/gameon-multisports-league";
 
@@ -47,7 +48,13 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
 
   const chosen = findCategories(sport, selected);
 
-  const toggle = (id: string) => toggleSelection(sportId, id);
+  const toggle = (id: string) => {
+    const category = sport.categories.find(item => item.id === id);
+    if (category && !selected.includes(id)) {
+      trackMetaEvent("AddToCart", leagueEventParameters([{ ...category, sportId }], category.fee));
+    }
+    toggleSelection(sportId, id);
+  };
 
   const handleContinue = () => {
     if (categories.length === 0) return;

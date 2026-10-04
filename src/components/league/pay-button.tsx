@@ -17,6 +17,7 @@ import { useLeagueBooking } from "./booking-context";
 import { LEAGUE_CONFIRMATION_KEY, type LeagueConfirmation } from "@/lib/league/confirmation";
 import { LEAGUE_NAME } from "@/lib/league/constants";
 import { formatDayLabel, scheduleLabel } from "./data";
+import { trackLeaguePaymentInfo, trackLeaguePurchase } from "@/lib/analytics/meta-pixel";
 
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 const ORDER_API = "/api/v1/public/league/entries/order";
@@ -153,6 +154,7 @@ export function LeaguePayButton({
           },
         },
         handler: async (payment) => {
+          trackLeaguePaymentInfo(order.orderId, categories, order.amount);
           setStatus("verifying");
           try {
             const confirmRes = await fetch(CONFIRM_API, {
@@ -176,6 +178,7 @@ export function LeaguePayButton({
             }
 
             const confirmation = data.confirmation;
+            trackLeaguePurchase(confirmation);
             try {
               window.sessionStorage.setItem(LEAGUE_CONFIRMATION_KEY, JSON.stringify(confirmation));
             } catch {
