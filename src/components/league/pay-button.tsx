@@ -71,7 +71,7 @@ export function LeaguePayButton({
   className?: string;
 }) {
   const router = useRouter();
-  const { draft, sports, categories, ready, update, clearCart } = useLeagueBooking();
+  const { draft, sports, categories, ready, pricing, update, clearCart } = useLeagueBooking();
   const [status, setStatus] = useState<Status>("idle");
   const busy = status !== "idle";
 
@@ -99,6 +99,13 @@ export function LeaguePayButton({
     const entry = buildEntry();
 
     try {
+      // Load the widget before allocating a coupon/payment order.
+      const checkoutReady = await loadCheckout();
+      if (!checkoutReady || !window.Razorpay) {
+        toast.error("Could not reach Razorpay. Check your connection and try again.");
+        setStatus("idle");
+        return;
+      }
       const orderRes = await fetch(ORDER_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,11 +119,8 @@ export function LeaguePayButton({
         return;
       }
 
-      const ready = await loadCheckout();
-      if (!ready || !window.Razorpay) {
-        toast.error("Could not reach Razorpay. Check your connection and try again.");
-        setStatus("idle");
-        return;
+      if (order.amount !== Math.round(pricing.total * 100)) {
+        toast.message(`Your saved checkout total is ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(order.amount / 100)}. Razorpay shows the final amount before payment.`);
       }
 
       setStatus("paying");

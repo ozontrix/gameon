@@ -20,7 +20,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   assert.ok(ready, 'Production server did not start.');
-  for (const path of ['/admin/multisports-league', '/admin/multisports-league/12345678-1234-4234-8234-123456789abc', '/admin/multisports-league/export']) {
+  for (const path of ['/admin/multisports-league', '/admin/multisports-league/coupons', '/admin/multisports-league/12345678-1234-4234-8234-123456789abc', '/admin/multisports-league/export']) {
     const response = await get(path);
     assert.equal(response.status, 307, path);
     assert.match(response.headers.get('location'), /\/admin\/login/);
@@ -32,6 +32,13 @@ try {
     assert.equal((await response.json()).success, false);
     console.log(`PASS League ${endpoint}: invalid payload rejected before payment/database writes.`);
   }
+  const coupons = await get('/api/v1/public/league/coupons');
+  assert.equal(coupons.status, 200);
+  assert.equal(coupons.headers.get('cache-control'), 'no-store');
+  assert.ok(Array.isArray((await coupons.json()).coupons));
+  const invalidCoupon = await fetch(`${origin}/api/v1/public/league/coupons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(30000) });
+  assert.equal(invalidCoupon.status, 400);
+  console.log('PASS public coupon list loads with no-store; invalid preview is rejected.');
   const sitemap = await (await get('/sitemap.xml')).text();
   assert.doesNotMatch(sitemap, /\/admin\/multisports-league/);
   console.log('PASS League booking admin routes are absent from the public sitemap.');

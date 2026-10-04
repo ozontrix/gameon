@@ -30,3 +30,16 @@ const { error: denied } = await browser.from('league_bookings').select('id').lim
 assert.ok(denied, 'Anonymous clients must not read League bookings.');
 assert.equal(denied.code, '42501');
 console.log('PASS anonymous direct access to booking/contact data is denied.');
+const { data: inventory, error: inventoryError } = await server.rpc('league_coupon_inventory');
+assert.ifError(inventoryError);
+assert.ok(Array.isArray(inventory));
+console.log('PASS service role can load coupon inventory through live PostgREST.');
+for (const table of ['league_coupons', 'league_coupon_uses']) {
+  const { error: couponDenied } = await browser.from(table).select('*').limit(1);
+  assert.ok(couponDenied, `Anonymous access to ${table} must be denied.`);
+  assert.equal(couponDenied.code, '42501');
+}
+const { error: rpcDenied } = await browser.rpc('league_coupon_inventory');
+assert.ok(rpcDenied, 'Anonymous access to coupon inventory must be denied.');
+assert.equal(rpcDenied.code, '42501');
+console.log('PASS anonymous access to coupon rules, contact redemptions and inventory RPC is denied.');

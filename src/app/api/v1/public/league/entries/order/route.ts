@@ -4,7 +4,7 @@ import { getRazorpay } from "@/lib/razorpay";
 import { parseLeagueEntry } from "@/lib/league/entry";
 import { LEAGUE_NAME } from "@/lib/league/constants";
 import { formatDayLabel, scheduleLabel } from "@/components/league/data";
-import { attachLeagueOrder, createLeagueBooking } from "@/lib/league/bookings";
+import { attachLeagueOrder, createLeagueBooking, LeagueBookingError } from "@/lib/league/bookings";
 
 export const runtime = "nodejs";
 
@@ -24,8 +24,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: result.error }, { status: 400 });
       }
 
-      const { entry, quote } = result;
-      const amount = Math.round(quote.total * 100); // Razorpay works in paise
+      const { entry } = result;
+      let quote = result.quote;
+      let amount = Math.round(quote.total * 100); // Razorpay works in paise
 
       if (amount < 100) {
         return NextResponse.json(
@@ -45,6 +46,14 @@ export async function POST(request: Request) {
 
       // Persist first. Never open checkout without a durable entry snapshot.
       const booking = await createLeagueBooking(entry, quote);
+      // Coupon allocation and price are pinned atomically by Postgres.
+      if (entry.coupon) {
+        quote = booking.quote as unknown as typeof quote;
+        amount = booking.amount_paise;
+      }
+      if (booking.razorpay_order_id) {
+        return NextResponse.json({ success: true, orderId: booking.razorpay_order_id, amount, currency: "INR", keyId, quote }, { status: 201 });
+      }
       const order = await getRazorpay().orders.create({
         amount,
         currency: "INR",
@@ -72,6 +81,9 @@ export async function POST(request: Request) {
         { status: 201 }
       );
     } catch (error) {
+      if (error instanceof LeagueBookingError) {
+        return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+      }
       console.error("League create-order error:", error);
       return NextResponse.json(
         { success: false, error: "We could not start the payment. Please try again." },

@@ -99,6 +99,37 @@ The multi-sport migration was applied on October 4, 2026. Browser selections and
 contact details are retained in session storage while navigating or refreshing
 within the same tab. Optional extras are not offered in the new checkout.
 
+#### Admin-managed League coupons
+
+Open **Multisports League → Coupons** at
+`/admin/multisports-league/coupons`. Only admins can create or activate/deactivate
+codes. Set a percentage (1–99%) or a flat discount in rupees, an inclusive minimum
+entry-fee threshold, total allocation, and uses per contact. No default offers are
+seeded: the old hard-coded EARLYBIRD and TEAMUP codes are no longer accepted unless
+an admin creates them. Rules are fixed after creation; deactivate a code and create
+a new one to change its terms.
+
+The review page fetches active codes with remaining allocation, refreshes every
+30 seconds and when the browser regains focus, and validates applied codes against
+the entered contact details. Discounts apply to combined entry fees, not extras,
+and leave at least ₹1 payable. Final pricing and allocation are checked atomically
+in Postgres, never trusted from the browser.
+
+Inventory shows **paid uses**, **reserved uses**, and **available uses**. Starting a
+discounted payment reserves one allocation; a captured, confirmed payment changes
+it to a paid use exactly once. Closing the payment window does not release an
+issued order's reservation because that order may still be paid later. An exact
+checkout retry reuses its original order. Reservations without an attached order
+also stay blocked for desk reconciliation after a gateway/association failure;
+there is no automatic reservation expiry or admin release action in this release.
+Deactivation prevents new allocations but honours already-issued discounts.
+
+Per-contact limits match either the normalized email or the last ten phone digits,
+including reserved checkouts. Guest checkout cannot prove a unique person's
+identity. Exhausted, fully reserved, or inactive codes are hidden from public
+offers. The coupon tables and RPCs are service-role-only, with admin mutations
+audited. The coupon migration was applied on October 4, 2026.
+
 The migration `supabase/migrations/20261002091456_league_bookings.sql` was applied
 to the connected GameOn project on October 2, 2026. The service-role-only
 `league_bookings` table stores each checkout before Razorpay opens. Pending

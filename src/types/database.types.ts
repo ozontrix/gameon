@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      league_coupons: {
+        Row: {
+          id: string
+          code: string
+          discount_type: 'PERCENT' | 'FLAT'
+          discount_value: number
+          min_entry_fee: number
+          usage_limit: number
+          per_person_limit: number
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          discount_type: 'PERCENT' | 'FLAT'
+          discount_value: number
+          min_entry_fee: number
+          usage_limit: number
+          per_person_limit: number
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['league_coupons']['Insert']>
+        Relationships: []
+      }
+      league_coupon_uses: {
+        Row: { booking_id: string; coupon_id: string; email_key: string; phone_key: string; state: string; created_at: string; redeemed_at: string | null }
+        Insert: { booking_id: string; coupon_id: string; email_key: string; phone_key: string; state?: string; created_at?: string; redeemed_at?: string | null }
+        Update: Partial<Database['public']['Tables']['league_coupon_uses']['Insert']>
+        Relationships: []
+      }
       league_bookings: {
         Row: {
           id: string
@@ -1479,6 +1511,8 @@ export type Database = {
       }
     }
     Functions: {
+      league_coupon_inventory: { Args: never; Returns: Json }
+      league_create_coupon_booking: { Args: { p_entry: Json; p_quote: Json }; Returns: Database['public']['Tables']['league_bookings']['Row'] }
       admin_team_members: {
         Args: never
         Returns: {

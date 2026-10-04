@@ -42,6 +42,16 @@ export function bookingConfirmation(booking: LeagueBooking): LeagueConfirmation 
 }
 
 export async function createLeagueBooking(entry: LeagueEntry, quote: EntryQuote): Promise<LeagueBooking> {
+  if (entry.coupon) {
+    const { data, error } = await supabaseAdmin.rpc('league_create_coupon_booking', {
+      p_entry: entrySnapshot(entry) as unknown as Json, p_quote: quote as unknown as Json,
+    });
+    if (error) {
+      if (error.code === 'P0001') throw new LeagueBookingError(error.message, 409);
+      throw error;
+    }
+    return data;
+  }
   const { data, error } = await supabaseAdmin.from('league_bookings').insert({
     sport: entry.sports.length > 1 ? 'multisport' : entry.sport.id, captain_name: entry.captainName, team_name: entry.teamName,
     email: entry.email, phone: entry.phone, amount_paise: Math.round(quote.total * 100),

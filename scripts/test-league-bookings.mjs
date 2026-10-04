@@ -199,7 +199,7 @@ test('Order API saves first, associates gateway order, then exposes checkout; DB
     const route = loader({
       '@/lib/middlewares/rate-limiter': { withRateLimit: async (req, _options, callback) => callback(req) },
       '@/lib/razorpay': { getRazorpay: () => ({ orders: { create: async args => { events.push('gateway'); assert.equal(args.receipt.length, 40); return { id: 'order_valid' }; } } }) },
-      '@/lib/league/bookings': { createLeagueBooking: async () => { events.push('database'); if (fail) throw new Error('DB unavailable'); return { id }; }, attachLeagueOrder: async () => { events.push('attach'); } },
+      '@/lib/league/bookings': { LeagueBookingError: class extends Error {}, createLeagueBooking: async () => { events.push('database'); if (fail) throw new Error('DB unavailable'); return { id }; }, attachLeagueOrder: async () => { events.push('attach'); } },
     })('src/app/api/v1/public/league/entries/order/route.ts');
     const post = () => route.POST(new Request('https://example.com/api/order', { method: 'POST', body: JSON.stringify({ entry: input }) }));
     assert.equal((await post()).status, 201); assert.deepEqual(events, ['database', 'gateway', 'attach']);

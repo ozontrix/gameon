@@ -13,13 +13,13 @@ import {
   categoryDates,
   entryFees,
   entryTickets,
-  findCoupon,
   findSport,
   type Category,
   type Sport,
 } from "@/components/league/data";
 import { findMatchDay } from "./constants";
 import { cartCategories, normalizeSelections, type CartCategory } from "@/components/league/cart";
+import { couponDiscount, type PublicCoupon } from "./coupons";
 
 /* ───────────────────────────── Shape ───────────────────────────── */
 
@@ -156,6 +156,8 @@ export interface QuoteInput {
   categories: Category[] | null;
   addons: Record<string, number>;
   coupon: string | null;
+  /** A code alone never changes the price. */
+  couponDefinition?: PublicCoupon | null;
 }
 
 /**
@@ -172,9 +174,9 @@ export function quoteEntry(input: QuoteInput): EntryQuote {
   }, 0);
   const subtotal = entryFee + addOnsTotal;
 
-  const coupon = input.coupon ? findCoupon(input.coupon) : null;
-  const eligible = coupon !== null && entryFee >= coupon.minSubtotal;
-  const discount = eligible && coupon ? Math.round((subtotal * coupon.percent) / 100) : 0;
+  const coupon = input.couponDefinition?.code === input.coupon ? input.couponDefinition : null;
+  const eligible = Boolean(coupon && entryFee >= coupon.min_entry_fee);
+  const discount = couponDiscount(entryFee, eligible ? coupon : null);
 
   return {
     entryFee,

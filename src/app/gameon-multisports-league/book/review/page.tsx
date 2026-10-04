@@ -13,10 +13,8 @@ import { Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   ADD_ONS,
-  COUPONS,
   scheduleLabel,
   formatINR,
-  type Coupon,
 } from "@/components/league/data";
 import { useLeagueBooking } from "@/components/league/booking-context";
 import { LeaguePayButton } from "@/components/league/pay-button";
@@ -35,14 +33,11 @@ import {
 } from "@/components/league/ui";
 import { cn } from "@/lib/utils";
 
-function hasEligibleEntry(coupon: Coupon, entryFee: number) {
-  return entryFee >= coupon.minSubtotal;
-}
-
 export default function LeagueReviewPage() {
-  const { draft, ready, sport, sports, categories, pricing, applyCoupon, removeCoupon } =
+  const { draft, ready, sport, sports, categories, pricing, coupons, couponsLoading, couponError, applyCoupon, removeCoupon } =
     useLeagueBooking();
   const [code, setCode] = useState("");
+  const [applying, setApplying] = useState(false);
 
   if (ready && (!sport || categories.length === 0)) {
     return (
@@ -56,14 +51,13 @@ export default function LeagueReviewPage() {
     );
   }
 
-  const handleApply = (value: string) => {
-    const result = applyCoupon(value);
-    if (result.ok) {
-      toast.success(result.message);
-      setCode("");
-    } else {
-      toast.error(result.message);
-    }
+  const handleApply = async (value: string) => {
+    setApplying(true);
+    try {
+      const result = await applyCoupon(value);
+      if (result.ok) { toast.success(result.message); setCode(""); }
+      else toast.error(result.message);
+    } finally { setApplying(false); }
   };
 
   const addOnLines = ADD_ONS.filter((addOn) => (draft.addons[addOn.id] ?? 0) > 0);
@@ -157,9 +151,11 @@ export default function LeagueReviewPage() {
       <Panel className="mb-3">
         <div className="mb-3 flex items-center gap-2">
           <Tag className="h-4 w-4 text-go-brand" />
-          <Kicker>Coffee? No — coupon</Kicker>
+          <Kicker>League coupons</Kicker>
         </div>
 
+        {couponError ? <p role="alert" className="mb-3 text-sm text-amber-300">{couponError}</p> : null}
+        {draft.coupon && !pricing.couponCode ? <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-go-off/80"><span>{draft.coupon}: not currently applied to this total.</span><button type="button" onClick={removeCoupon} className="min-h-11 cursor-pointer text-go-brand focus-visible:outline-2 focus-visible:outline-go-brand">Remove code</button></div> : null}
         {pricing.couponCode ? (
           <div className="flex items-center justify-between gap-3 rounded-[16px] border border-go-brand/45 bg-go-brand/[0.1] px-3.5 py-3">
             <div className="min-w-0">
@@ -174,7 +170,7 @@ export default function LeagueReviewPage() {
               type="button"
               onClick={() => removeCoupon()}
               aria-label="Remove coupon"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-go-off/60 transition-colors hover:text-go-white"
+              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-go-off/80 transition-colors hover:text-go-white focus-visible:outline-2 focus-visible:outline-go-brand"
             >
               <X className="h-4 w-4" />
             </button>
@@ -186,24 +182,29 @@ export default function LeagueReviewPage() {
                 value={code}
                 onChange={(event) => setCode(event.target.value.toUpperCase())}
                 placeholder="Enter code"
+                aria-label="Coupon code"
+                maxLength={20}
+                disabled={applying}
                 className="h-11 min-w-0 flex-1 rounded-[14px] border border-white/[0.09] bg-white/[0.03] px-3.5 font-mono text-[13px] tracking-[0.1em] text-go-white placeholder:text-go-off/25 focus:border-go-brand/60 focus:outline-none"
               />
-              <Button onClick={() => handleApply(code)} disabled={code.trim().length < 3}>
-                Apply
+              <Button onClick={() => handleApply(code)} disabled={applying || code.trim().length < 3}>
+                {applying ? 'Checking…' : 'Apply'}
               </Button>
             </div>
 
             <div className="mt-3 space-y-2">
-              {COUPONS.map((coupon) => {
-                const eligible = hasEligibleEntry(coupon, pricing.entryFee);
+              {couponsLoading ? <p role="status" className="text-sm text-go-off/80">Loading available coupons…</p> : null}
+              {!couponsLoading && !couponError && !coupons?.length ? <p className="text-sm text-go-off/80">No available coupons right now.</p> : null}
+              {(coupons ?? []).map((coupon) => {
+                const eligible = pricing.entryFee >= coupon.min_entry_fee;
                 return (
                   <button
                     key={coupon.code}
                     type="button"
-                    disabled={!eligible}
+                    disabled={!eligible || applying}
                     onClick={() => handleApply(coupon.code)}
                     className={cn(
-                      "flex w-full items-center justify-between gap-3 rounded-[16px] border px-3.5 py-2.5 text-left transition-colors",
+                      "flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-[16px] border px-3.5 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-go-brand disabled:cursor-not-allowed",
                       eligible
                         ? "border-white/[0.08] bg-white/[0.02] hover:border-go-brand/40 hover:bg-go-brand/[0.07]"
                         : "cursor-not-allowed border-white/[0.05] bg-white/[0.01] opacity-50"
@@ -213,7 +214,7 @@ export default function LeagueReviewPage() {
                       <span className="block font-mono text-[12px] tracking-[0.12em] text-go-white">
                         {coupon.code}
                       </span>
-                      <span className="block text-[11px] text-go-off/45">{coupon.label}</span>
+                      <span className="block text-xs text-go-off/80">{coupon.label} · {coupon.per_person_limit} use(s) per contact</span>
                     </span>
                     <Chip tone={eligible ? "brand" : "neutral"}>
                       {eligible ? "Tap to apply" : "Not eligible"}
@@ -225,6 +226,8 @@ export default function LeagueReviewPage() {
           </>
         )}
       </Panel>
+
+      <p className="mb-3 text-xs text-go-off/80">Coupons are checked again when payment starts. A use is reserved for your payment order and counted as redeemed only after successful payment.</p>
 
       {/* ─── Price breakdown ─── */}
       <Panel className="mb-4">

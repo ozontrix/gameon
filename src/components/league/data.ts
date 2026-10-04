@@ -218,24 +218,6 @@ export const ADD_ONS: AddOn[] = [
   },
 ];
 
-/* ────────────────────────────── Coupons ────────────────────────────── */
-
-export interface Coupon {
-  code: string;
-  label: string;
-  percent: number;
-  minSubtotal: number;
-}
-
-export const COUPONS: Coupon[] = [
-  { code: "EARLYBIRD", label: "15% off entries above ₹1,500", percent: 15, minSubtotal: 1500 },
-];
-
-export function findCoupon(code: string): Coupon | null {
-  const clean = code.trim().toUpperCase();
-  return COUPONS.find((coupon) => coupon.code === clean) ?? null;
-}
-
 /* ────────────────────────────── Slots ────────────────────────────── */
 
 export type SlotPeriod = "Morning" | "Afternoon" | "Evening" | "Night";

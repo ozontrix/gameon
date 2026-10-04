@@ -168,11 +168,12 @@ test("Repeated category IDs do not cause duplicate fees", () => {
 
 test("Add-ons and coupon totals use the updated fees", () => {
   const categories = findCategories(findSport("badminton"), ["mens-singles", "mens-doubles"]);
-  const quote = quoteEntry({ categories, addons: { jersey: 3 }, coupon: "EARLYBIRD" });
+  const couponDefinition = { code: "ADMIN15", discount_type: "PERCENT", discount_value: 15, min_entry_fee: 1500, per_person_limit: 1, label: "15% off entries" };
+  const quote = quoteEntry({ categories, addons: { jersey: 3 }, coupon: "ADMIN15", couponDefinition });
   assert.equal(quote.entryFee, 3000);
   assert.equal(quote.addOnsTotal, 1500);
-  assert.equal(quote.discount, 675);
-  assert.equal(quote.total, 3825);
+  assert.equal(quote.discount, 450);
+  assert.equal(quote.total, 4050);
 });
 
 test("Confirmation and email include category-specific dates for both days", () => {
