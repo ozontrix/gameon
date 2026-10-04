@@ -41,14 +41,19 @@ function details(sportId, patch = {}) {
   }
   const data = load(resolve(root, "src/components/league/data.ts"));
   const { quoteEntry } = load(resolve(root, "src/lib/league/entry.ts"));
-  const sport = data.findSport(sportId);
-  const categories = sport ? [sport.categories[0]] : [];
+  const cart = load(resolve(root, "src/components/league/cart.ts"));
+  const initialSport = data.findSport(sportId);
+  const selections = patch.selections ?? (initialSport ? [{ sportId, categoryId: initialSport.categories[0].id }] : []);
+  const categories = cart.cartCategories(selections);
+  const sports = [...new Set(categories.map((item) => item.sportId))].map((id) => data.findSport(id));
+  const sport = sports[0] ?? null;
   const draft = {
     teamName: "Test Team", captainName: "Test Player", phone: "9811000000",
-    email: "player@example.com", city: "Gurugram", addons: {}, coupon: null, ...patch,
+    email: "player@example.com", city: "Gurugram", addons: {}, coupon: null, selections, ...patch,
   };
   booking = {
-    draft, ready: true, sport, categories,
+    draft, ready: true, sport, sports, categories,
+    removeSelection: (selection) => updates.push({ removed: selection }),
     pricing: quoteEntry({ categories, addons: draft.addons, coupon: draft.coupon }),
     update: (value) => updates.push(value),
   };
@@ -98,4 +103,21 @@ test("Details without a category still direct the player to browse sports", () =
   const { html } = details(null);
   assert.match(html, /Nothing to fill in yet/);
   assert.match(html, /Browse sports/);
+});
+
+test("Mixed sports use one contact form and require a team name for any team sport", () => {
+  const selections = [
+    { sportId: "badminton", categoryId: "u13-boys-singles" },
+    { sportId: "pickleball", categoryId: "open-doubles" },
+    { sportId: "cricket", categoryId: "team" },
+    { sportId: "football", categoryId: "team" },
+  ];
+  const { html, buttons } = details(null, { selections, teamName: "" });
+  for (const text of ["Your details", "4 categories selected across 4 sports", "Badminton", "Pickleball", "Box Cricket 7v7", "Football 6v6", "₹7,400"]) assert.ok(html.includes(text), text);
+  assert.equal((html.match(/placeholder="Full name"/g) ?? []).length, 1);
+  assert.equal((html.match(/type="email"/g) ?? []).length, 1);
+  assert.equal((html.match(/inputMode="tel"/g) ?? []).length, 1);
+  assert.match(html, /Add team name to continue/);
+  assert.equal(buttons.find(({ children }) => children[0] === "Review").disabled, true);
+  assert.doesNotMatch(html, /20-a-side/);
 });

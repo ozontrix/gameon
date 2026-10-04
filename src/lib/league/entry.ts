@@ -13,22 +13,26 @@ import {
   categoryDates,
   entryFees,
   entryTickets,
-  findCategories,
   findCoupon,
   findSport,
   type Category,
   type Sport,
 } from "@/components/league/data";
 import { findMatchDay } from "./constants";
+import { cartCategories, normalizeSelections, type CartCategory } from "@/components/league/cart";
 
 /* ───────────────────────────── Shape ───────────────────────────── */
 
 export const LEAGUE_SPORT_IDS = ["badminton", "pickleball", "cricket", "football"] as const;
 
 export const LeagueEntrySchema = z.object({
-  sport: z.enum(LEAGUE_SPORT_IDS),
+  sport: z.enum(LEAGUE_SPORT_IDS).optional(),
   /** Every bracket the player is entering — one entry can hold several. */
-  categoryIds: z.array(z.string().trim().min(1).max(40)).min(1).max(7),
+  categoryIds: z.array(z.string().trim().min(1).max(40)).min(1).max(7).optional(),
+  selections: z.array(z.object({
+    sportId: z.enum(LEAGUE_SPORT_IDS),
+    categoryId: z.string().trim().min(1).max(40),
+  })).min(1).max(14).optional(),
   date: z.string().trim().min(8).max(10),
   squadSize: z.number().int().min(1).max(30).optional(),
   teamName: z.string().trim().max(60).optional().default(""),
@@ -46,8 +50,9 @@ export type LeagueEntryInput = z.infer<typeof LeagueEntrySchema>;
 /** The normalised entry that the APIs, the email and the pass all agree on. */
 export interface LeagueEntry {
   sport: Sport;
+  sports: Sport[];
   /** The brackets in this entry, in the order the player picked them. */
-  categories: Category[];
+  categories: CartCategory[];
   date: string;
   dates: string[];
   squadSize: number;
@@ -88,15 +93,15 @@ export function parseLeagueEntry(input: unknown): ParseResult {
   }
 
   const data = parsed.data;
-  const sport = findSport(data.sport);
-  if (!sport) return { ok: false, error: "That sport and category combination is not on the board." };
-
-  // The same bracket twice is one bracket, and every id must belong to the sport.
-  const ids = [...new Set(data.categoryIds)];
-  const categories = findCategories(sport, ids);
-  if (categories.length !== ids.length) {
-    return { ok: false, error: "That sport and category combination is not on the board." };
+  const requested = data.selections ?? (data.categoryIds ?? []).map((categoryId) => ({ sportId: data.sport, categoryId }));
+  const selections = normalizeSelections(requested);
+  const requestedKeys = new Set(requested.map((item) => `${item.sportId}:${item.categoryId}`));
+  if (!selections.length || selections.length !== requestedKeys.size) {
+    return { ok: false, error: "One of your sport categories is no longer on the board." };
   }
+  const categories = cartCategories(selections);
+  const sports = [...new Set(categories.map((item) => item.sportId))].map((id) => findSport(id)!);
+  const sport = sports[0];
 
   if (!findMatchDay(data.date)) return { ok: false, error: "Please pick one of the two match days." };
   const dates = categoryDates(categories);
@@ -104,7 +109,7 @@ export function parseLeagueEntry(input: unknown): ParseResult {
     return { ok: false, error: "The match date does not match your categories. Please select your categories again." };
   }
 
-  if (sport.mode === "team" && data.teamName.trim().length < 2) {
+  if (sports.some((item) => item.mode === "team") && data.teamName.trim().length < 2) {
     return { ok: false, error: "Please enter a team name." };
   }
 
@@ -124,6 +129,7 @@ export function parseLeagueEntry(input: unknown): ParseResult {
 
   const entry: LeagueEntry = {
     sport,
+    sports,
     categories,
     date: dates[0],
     dates,
@@ -136,11 +142,11 @@ export function parseLeagueEntry(input: unknown): ParseResult {
     email: data.email.trim().toLowerCase(),
     city: data.city.trim(),
     notes: data.notes.trim(),
-    addons,
+    addons: data.selections ? [] : addons,
     coupon: data.coupon?.trim().toUpperCase() || null,
   };
 
-  return { ok: true, entry, quote: quoteEntry({ categories: entry.categories, addons: data.addons, coupon: entry.coupon }) };
+  return { ok: true, entry, quote: quoteEntry({ categories: entry.categories, addons: data.selections ? {} : data.addons, coupon: entry.coupon }) };
 }
 
 /* ───────────────────────────── Money ───────────────────────────── */

@@ -42,10 +42,10 @@ const parsed = parseLeagueEntry(input);
 assert.equal(parsed.ok, true);
 const id = '12345678-1234-4234-8234-123456789abc';
 
-function harness({ payment = {}, mail = { sent: true }, failWrite = false } = {}) {
+function harness({ payment = {}, mail = { sent: true }, failWrite = false, entryResult = parsed } = {}) {
   const rows = [];
   const calls = { emails: 0, fetches: 0, capturedBeforeEmail: false };
-  const gatewayPayment = { id: 'pay_valid', order_id: 'order_valid', amount: parsed.quote.total * 100, currency: 'INR', status: 'captured', ...payment };
+  const gatewayPayment = { id: 'pay_valid', order_id: 'order_valid', amount: entryResult.quote.total * 100, currency: 'INR', status: 'captured', ...payment };
   const db = { from(table) {
     assert.equal(table, 'league_bookings');
     let operation = 'select', payload, filters = [], lease = false;
@@ -81,7 +81,7 @@ function harness({ payment = {}, mail = { sent: true }, failWrite = false } = {}
     './email': { sendLeagueConfirmationEmail: async () => { calls.emails++; calls.capturedBeforeEmail = rows[0].status === 'CONFIRMED'; return mail; } },
   });
   const bookings = modules('src/lib/league/bookings.ts');
-  async function seed() { const row = await bookings.createLeagueBooking(parsed.entry, parsed.quote); await bookings.attachLeagueOrder(row.id, 'order_valid'); return row; }
+  async function seed() { const row = await bookings.createLeagueBooking(entryResult.entry, entryResult.quote); await bookings.attachLeagueOrder(row.id, 'order_valid'); return row; }
   return { ...bookings, rows, calls, seed };
 }
 
@@ -105,6 +105,29 @@ test('Captured payment is durable before email, and duplicate confirmations retu
   assert.equal(first.entry.captainName, input.captainName);
   assert.equal(h.calls.capturedBeforeEmail, true);
   assert.equal(h.calls.emails, 1); assert.equal(h.calls.fetches, 1);
+});
+
+test('Multi-sport checkout persists every qualified category under one captured payment', async () => {
+  const selections = [
+    { sportId: 'badminton', categoryId: 'mixed-doubles' },
+    { sportId: 'pickleball', categoryId: 'mixed-doubles' },
+    { sportId: 'cricket', categoryId: 'team' },
+    { sportId: 'football', categoryId: 'team' },
+  ];
+  const entryResult = parseLeagueEntry({ ...input, selections });
+  assert.equal(entryResult.ok, true);
+  const h = harness({ entryResult }); await h.seed();
+  assert.equal(h.rows.length, 1);
+  assert.equal(h.rows[0].sport, 'multisport');
+  assert.equal(h.rows[0].amount_paise, 800000);
+  assert.deepEqual(h.rows[0].entry.categories.map(c => [c.sportId, c.id]), selections.map(c => [c.sportId, c.categoryId]));
+  const confirmation = await h.confirmLeaguePayment('order_valid', 'pay_valid');
+  assert.equal(confirmation.amount, 8000);
+  assert.equal(confirmation.entry.sports.length, 4);
+  assert.equal(confirmation.entry.categories.length, 4);
+  assert.equal(h.calls.emails, 1);
+  const email = load('src/lib/league/email.ts').renderLeagueConfirmationEmail(confirmation);
+  for (const text of ['Badminton · Open Mixed Doubles', 'Pickleball · Open Mixed Doubles', 'Box Cricket 7v7 · Team Entry (7v7)', 'Football 6v6 · Team Entry (6v6)', '₹8,000']) assert.ok(email.text.includes(text), text);
 });
 
 test('Concurrent browser/webhook confirmations produce one payment and one email', async () => {

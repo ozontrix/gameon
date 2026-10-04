@@ -91,6 +91,14 @@ match dates, contact/team details, notes, player tickets, add-ons, coupon and fu
 price breakdown, payment identifiers and email delivery status. Admins can retry
 failed confirmation emails from the detail page; retries are audited.
 
+League checkout supports one shared cart across badminton, pickleball, cricket
+and football. Each saved category includes its sport, match date and frozen fee;
+one payment covers the entire cart. Sport filters include combined bookings
+containing that sport, and CSV exports identify the sport of each category.
+The multi-sport migration was applied on October 4, 2026. Browser selections and
+contact details are retained in session storage while navigating or refreshing
+within the same tab. Optional extras are not offered in the new checkout.
+
 The migration `supabase/migrations/20261002091456_league_bookings.sql` was applied
 to the connected GameOn project on October 2, 2026. The service-role-only
 `league_bookings` table stores each checkout before Razorpay opens. Pending

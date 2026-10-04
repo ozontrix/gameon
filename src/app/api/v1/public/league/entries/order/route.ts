@@ -52,8 +52,8 @@ export async function POST(request: Request) {
         notes: {
           league_booking_id: booking.id,
           league: LEAGUE_NAME,
-          sport: entry.sport.name,
-          categories: entry.categories.map((category) => `${category.name} (${formatDayLabel(category.date)})`).join(", ").slice(0, 256),
+          sport: entry.sports.map(sport => sport.name).join(" + ").slice(0, 256),
+          categories: entry.categories.map((category) => `${category.sportName}: ${category.name} (${formatDayLabel(category.date)})`).join(", ").slice(0, 256),
           match_day: scheduleLabel(entry.categories),
           contact: entry.phone,
         },

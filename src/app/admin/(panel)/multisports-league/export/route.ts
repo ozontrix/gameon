@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const { bookings } = await listLeagueBookings(filters, page, 500);
     for (const booking of bookings) {
       const { entry, quote } = leagueDetails(booking);
-      rows.push([booking.id, booking.reference, booking.status, entry.sportName, entry.categories.map(c => c.name).join(' + '), entry.categories.map(c => `${c.name}: ${c.date ?? entry.date}`).join('; '), entry.squadSize, booking.captain_name, booking.team_name, booking.email, booking.phone, entry.city, entry.notes, entry.addons.map(a => `${a.name} x ${a.qty}: ${a.amount}`).join('; '), quote.entryFee, quote.addOnsTotal, quote.subtotal, quote.discount, quote.couponCode, booking.amount_paise / 100, booking.razorpay_order_id, booking.razorpay_payment_id, booking.created_at, booking.paid_at, booking.email_status, booking.email_sent_at]);
+      rows.push([booking.id, booking.reference, booking.status, entry.sportName, entry.categories.map(c => `${c.sportName ? `${c.sportName} · ` : ''}${c.name}`).join(' + '), entry.categories.map(c => `${c.sportName ? `${c.sportName} · ` : ''}${c.name}: ${c.date ?? entry.date}`).join('; '), entry.squadSize, booking.captain_name, booking.team_name, booking.email, booking.phone, entry.city, entry.notes, entry.addons.map(a => `${a.name} x ${a.qty}: ${a.amount}`).join('; '), quote.entryFee, quote.addOnsTotal, quote.subtotal, quote.discount, quote.couponCode, booking.amount_paise / 100, booking.razorpay_order_id, booking.razorpay_payment_id, booking.created_at, booking.paid_at, booking.email_status, booking.email_sent_at]);
     }
     if (bookings.length < 500) break;
   }

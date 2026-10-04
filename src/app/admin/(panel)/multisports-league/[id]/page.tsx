@@ -35,7 +35,7 @@ export default async function LeagueEntryPage({ params }: { params: Promise<{ id
         { label: 'Total / INR', value: formatMoney(booking.amount_paise / 100) },
         { label: 'Created', value: formatDateTime(booking.created_at) }, { label: 'Confirmed', value: formatDateTime(booking.paid_at) },
       ]} /></CardBody></Card>
-      <Card><CardHeader title={`${entry.sportName} categories`} /><Table><thead><tr><Th>Category</Th><Th>Match date</Th><Th>Entry fee</Th><Th>Players</Th></tr></thead><tbody>{entry.categories.map(category => <tr key={category.id}><Td>{category.name}</Td><Td>{formatDate(category.date ?? entry.date)}</Td><Td>{formatMoney(category.fee)}</Td><Td>{category.squadSize ?? '—'}</Td></tr>)}</tbody></Table></Card>
+      <Card><CardHeader title={`${entry.sportName} categories`} /><Table><thead><tr><Th>Sport / Category</Th><Th>Match date</Th><Th>Entry fee</Th><Th>Players</Th></tr></thead><tbody>{entry.categories.map(category => <tr key={`${category.sportId ?? entry.sport}:${category.id}`}><Td>{category.sportName ? `${category.sportName} · ` : ''}{category.name}</Td><Td>{formatDate(category.date ?? entry.date)}</Td><Td>{formatMoney(category.fee)}</Td><Td>{category.squadSize ?? '—'}</Td></tr>)}</tbody></Table></Card>
       <Card><CardHeader title="Price breakdown" /><CardBody><DetailList items={[
         { label: 'Entry fees', value: formatMoney(quote.entryFee) }, { label: 'Add-ons', value: formatMoney(quote.addOnsTotal) },
         { label: 'Subtotal', value: formatMoney(quote.subtotal) }, { label: 'Discount', value: formatMoney(quote.discount) },

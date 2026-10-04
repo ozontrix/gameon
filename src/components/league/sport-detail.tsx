@@ -8,12 +8,12 @@
  * with explicit dates and per-person/per-team pricing on every option.
  */
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarDays, Check, Trophy, Users } from "lucide-react";
-import { categoryDates, categoryFeeUnit, findCategories, entryFees, entryTickets, findSport, formatDayLabel, formatINR, scheduleLabel, type SportId } from "@/components/league/data";
+import { categoryDates, categoryFeeUnit, findCategories, findSport, formatDayLabel, formatINR, scheduleLabel, type SportId } from "@/components/league/data";
 import { LEAGUE_PRIZE_POOL } from "@/lib/league/constants";
 import { useLeagueBooking } from "./booking-context";
+import { LeagueCartSummary } from "./cart-summary";
 import {
   Button,
   Chip,
@@ -39,24 +39,18 @@ function Bloom({ accent }: { accent: string }) {
 
 export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
   const router = useRouter();
-  const { draft, ready, startBooking } = useLeagueBooking();
+  const { draft, ready, toggleSelection, categories, pricing } = useLeagueBooking();
   const sport = findSport(sportId);
-  // A local override wins; otherwise fall back to the brackets already in the draft.
-  const [override, setOverride] = useState<string[] | null>(null);
-  const selected = (override ?? (draft.sport === sportId ? draft.categoryIds : []))
-    .filter((id) => sport?.categories.some((category) => category.id === id));
+  const selected = draft.selections.filter((item) => item.sportId === sportId).map((item) => item.categoryId);
 
   if (!sport) return null;
 
   const chosen = findCategories(sport, selected);
-  const tickets = entryTickets(chosen);
 
-  const toggle = (id: string) =>
-    setOverride(selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]);
+  const toggle = (id: string) => toggleSelection(sportId, id);
 
   const handleContinue = () => {
-    if (chosen.length === 0) return;
-    startBooking(sport.id, selected);
+    if (categories.length === 0) return;
     router.push(`${BASE}/book/details`);
   };
 
@@ -91,6 +85,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         <h2 className="font-display text-lg uppercase tracking-wide text-go-white">
           Pick your categories
         </h2>
+        <p className="mt-1 text-xs text-go-off/70">Tap to add or remove a category. Your cart is saved immediately, even when you go back.</p>
         <p className="mt-0.5 text-[12px] text-go-off/70">
           {sport.categories.length} {sport.categories.length === 1 ? "category" : "categories"} · fee
           covers one person for singles or one team for doubles/team sports · select multiple categories if eligible
@@ -115,6 +110,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
               type="button"
               onClick={() => toggle(item.id)}
               aria-pressed={active}
+              aria-label={`${item.name}, ${formatINR(item.fee)} per ${categoryFeeUnit(item)}, ${formatDayLabel(item.date)}`}
               disabled={!ready}
               className={cn(
                 "flex w-full cursor-pointer items-center gap-3 rounded-[20px] border px-3 py-3.5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-brand disabled:cursor-wait sm:px-4",
@@ -167,27 +163,29 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         </Panel>
       ) : null}
 
+      <div className="mt-4">
+        <Button href={BASE} size="lg">Add another sport</Button>
+      </div>
+      <LeagueCartSummary />
       <StepFooter>
         <div className="flex items-center gap-3 lg:justify-between">
           <div className="min-w-0 flex-1 lg:flex-none">
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-go-off/40">
-              {chosen.length > 0
-                ? `${chosen.length} ${chosen.length === 1 ? "bracket" : "brackets"} · ${tickets} ${
-                    tickets === 1 ? "ticket" : "tickets"
-                  }`
+              {categories.length > 0
+                ? `${categories.length} ${categories.length === 1 ? "category" : "categories"} in cart · ${chosen.length} selected here`
                 : "Select a category"}
             </p>
             <p className="font-display text-lg leading-tight text-go-white">
-              {chosen.length > 0 ? formatINR(entryFees(chosen)) : "—"}
+              {categories.length > 0 ? formatINR(pricing.total) : "—"}
             </p>
           </div>
           <Button
             onClick={handleContinue}
-            disabled={!ready || chosen.length === 0}
+            disabled={!ready || categories.length === 0}
             size="lg"
             className="flex-1 lg:flex-none"
           >
-            Continue
+            Checkout
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

@@ -16,8 +16,10 @@ export class LeagueBookingError extends Error {
 /** Frozen at order creation: confirmations never trust a replacement browser entry. */
 export function entrySnapshot(entry: LeagueEntry): LeagueConfirmation['entry'] {
   return {
-    sport: entry.sport.id, sportName: entry.sport.name,
-    categories: entry.categories.map(({ id, name, date, fee, squadSize }) => ({ id, name, date, fee, squadSize })),
+    sport: entry.sports.length > 1 ? 'multisport' : entry.sport.id,
+    sportName: entry.sports.map(sport => sport.name).join(' + '),
+    sports: entry.sports.map(({ id, name }) => ({ id, name })),
+    categories: entry.categories.map(({ id, name, date, fee, squadSize, sportId, sportName }) => ({ id, name, date, fee, squadSize, sportId, sportName })),
     date: entry.date, dates: entry.dates, squadSize: entry.squadSize,
     teamName: entry.teamName, captainName: entry.captainName,
     email: entry.email, phone: entry.phone, city: entry.city, notes: entry.notes,
@@ -41,7 +43,7 @@ export function bookingConfirmation(booking: LeagueBooking): LeagueConfirmation 
 
 export async function createLeagueBooking(entry: LeagueEntry, quote: EntryQuote): Promise<LeagueBooking> {
   const { data, error } = await supabaseAdmin.from('league_bookings').insert({
-    sport: entry.sport.id, captain_name: entry.captainName, team_name: entry.teamName,
+    sport: entry.sports.length > 1 ? 'multisport' : entry.sport.id, captain_name: entry.captainName, team_name: entry.teamName,
     email: entry.email, phone: entry.phone, amount_paise: Math.round(quote.total * 100),
     entry: entrySnapshot(entry) as unknown as Json, quote: quote as unknown as Json,
   }).select('*').single();

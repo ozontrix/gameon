@@ -40,7 +40,7 @@ function hasEligibleEntry(coupon: Coupon, entryFee: number) {
 }
 
 export default function LeagueReviewPage() {
-  const { draft, ready, sport, categories, pricing, applyCoupon, removeCoupon } =
+  const { draft, ready, sport, sports, categories, pricing, applyCoupon, removeCoupon } =
     useLeagueBooking();
   const [code, setCode] = useState("");
 
@@ -83,10 +83,10 @@ export default function LeagueReviewPage() {
           <IconTile emoji={sport?.emoji ?? "🏸"} accent={sport?.accent ?? "#F38F2F"} />
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-lg uppercase leading-tight text-go-white">
-              {sport?.name}
+              {sports.map((item) => item.name).join(" + ")}
             </h2>
             <p className="mt-0.5 text-[13px] text-go-off/60">
-              {categories.length} {categories.length === 1 ? "category" : "categories"} selected
+              {categories.length} {categories.length === 1 ? "category" : "categories"} selected · {sports.length} {sports.length === 1 ? "sport" : "sports"}
             </p>
             <p className="mt-2 text-[12px] text-go-off/45">
               {scheduleLabel(categories)}
@@ -94,7 +94,7 @@ export default function LeagueReviewPage() {
           </div>
           <Link
             href={
-              sport ? `/gameon-multisports-league/sports/${sport.id}` : "/gameon-multisports-league"
+              "/gameon-multisports-league"
             }
             className="shrink-0 text-[12px] font-semibold text-go-brand"
           >
@@ -123,9 +123,9 @@ export default function LeagueReviewPage() {
           {draft.email ? <InfoRow label="Email" value={draft.email} /> : null}
           {draft.city ? <InfoRow label="City" value={draft.city} /> : null}
           <InfoRow
-            label={sport?.mode === "team" ? "Squad size" : "Tickets"}
+            label={sports.length === 1 && sport?.mode === "team" ? "Squad size" : "Player tickets across categories"}
             value={
-              sport?.mode === "team"
+              sports.length === 1 && sport?.mode === "team"
                 ? `${draft.squadSize} players`
                 : `${draft.squadSize} ${draft.squadSize === 1 ? "ticket" : "tickets"}`
             }
@@ -232,8 +232,8 @@ export default function LeagueReviewPage() {
         <div className="mt-2">
           {categories.map((item) => (
             <InfoRow
-              key={item.id}
-              label={`Entry fee · ${item.name}`}
+              key={`${item.sportId}:${item.id}`}
+              label={`Entry fee · ${item.sportName} · ${item.name}`}
               value={formatINR(item.fee)}
             />
           ))}

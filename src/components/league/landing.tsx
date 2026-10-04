@@ -20,6 +20,8 @@ import { ArrowRight, CalendarDays, MapPin, Trophy, Users, Zap } from "lucide-rea
 import { SPORTS, formatINR, scheduleLabel, type EntryMode } from "@/components/league/data";
 import { LEAGUE_HELP_PHONE, LEAGUE_PRIZE_POOL } from "@/lib/league/constants";
 import { Button, Chip, IconTile, Kicker, Panel } from "@/components/league/ui";
+import { LeagueCartSummary } from "./cart-summary";
+import { useLeagueBooking } from "./booking-context";
 
 type Filter = "all" | EntryMode;
 
@@ -33,6 +35,7 @@ const BASE = "/gameon-multisports-league";
 
 export function LeagueLanding() {
   const [filter, setFilter] = useState<Filter>("all");
+  const { draft } = useLeagueBooking();
   const visible = SPORTS.filter((sport) => filter === "all" || sport.mode === filter);
 
   return (
@@ -60,8 +63,8 @@ export function LeagueLanding() {
         </h1>
         <p className="mt-2.5 max-w-xl text-[13.5px] leading-relaxed text-go-off/60">
           Four sports. {SPORTS.reduce((sum, sport) => sum + sport.categories.length, 0)} categories.
-          One arena. Join us on 17 &amp; 18 October 2026 — choose your sport, check your category&apos;s
-          match day and register in a few taps.
+          One arena. Join us on 17 &amp; 18 October 2026 — add categories from any sport
+          to your cart, check match days and pay together in one checkout.
         </p>
 
         <div className="mt-3.5 flex flex-wrap gap-2">
@@ -123,6 +126,9 @@ export function LeagueLanding() {
             <div className="mt-3 flex flex-wrap gap-2">
               <Chip icon={Users}>{sport.capacity}</Chip>
               <Chip icon={CalendarDays} tone="brand">{scheduleLabel(sport.categories)}</Chip>
+              {draft.selections.some((item) => item.sportId === sport.id) ? (
+                <Chip tone="success">{draft.selections.filter((item) => item.sportId === sport.id).length} in cart</Chip>
+              ) : null}
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
@@ -143,6 +149,7 @@ export function LeagueLanding() {
         ))}
       </div>
 
+      <LeagueCartSummary footer />
       {/* ─── Help strip ─── */}
       <Panel className="mt-4 border-go-brand/20 bg-go-brand/[0.07]">
         <Kicker>Not sure where you fit?</Kicker>

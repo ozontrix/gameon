@@ -71,13 +71,12 @@ export function LeaguePayButton({
   className?: string;
 }) {
   const router = useRouter();
-  const { draft, sport, categories, update } = useLeagueBooking();
+  const { draft, sports, categories, ready, update, clearCart } = useLeagueBooking();
   const [status, setStatus] = useState<Status>("idle");
   const busy = status !== "idle";
 
   const buildEntry = () => ({
-    sport: draft.sport,
-    categoryIds: draft.categoryIds,
+    selections: draft.selections,
     date: draft.date,
     squadSize: draft.squadSize,
     teamName: draft.teamName,
@@ -86,12 +85,12 @@ export function LeaguePayButton({
     email: draft.email,
     city: draft.city,
     notes: draft.notes,
-    addons: draft.addons,
+    addons: {},
     coupon: draft.coupon,
   });
 
   const handlePay = async () => {
-    if (!draft.sport || draft.categoryIds.length === 0 || !draft.date) {
+    if (!ready || categories.length === 0 || !draft.date) {
       toast.error("Pick a sport and a category first.");
       return;
     }
@@ -128,9 +127,7 @@ export function LeaguePayButton({
         currency: order.currency,
         order_id: order.orderId,
         name: LEAGUE_NAME,
-        description: `${sport?.name ?? "Entry"} · ${categories
-          .map((item) => item.name)
-          .join(" + ")} · ${scheduleLabel(categories)}`,
+        description: `${categories.length} categories · ${sports.map((item) => item.name).join(" + ")} · ${scheduleLabel(categories)}`,
         image: "/game_on_favicon.png",
         prefill: {
           name: draft.captainName || draft.teamName,
@@ -138,8 +135,8 @@ export function LeaguePayButton({
           contact: draft.phone,
         },
         notes: {
-          sport: sport?.name ?? "",
-          category: categories.map((item) => `${item.name} (${formatDayLabel(item.date)})`).join(", ").slice(0, 256),
+          sport: sports.map((item) => item.name).join(" + "),
+          category: categories.map((item) => `${item.sportName}: ${item.name} (${formatDayLabel(item.date)})`).join(", ").slice(0, 256),
           match_day: scheduleLabel(categories),
         },
         theme: { color: "#F38F2F" },
@@ -181,6 +178,7 @@ export function LeaguePayButton({
               // Private mode — the confirmation screen still derives what it can.
             }
 
+            clearCart();
             update({ paymentMethod: "RAZORPAY" });
             toast.success(`Payment received — ${confirmation.reference} is confirmed!`);
             router.push("/gameon-multisports-league/book/success");
@@ -210,7 +208,7 @@ export function LeaguePayButton({
           : "Confirming your entry…";
 
   return (
-    <Button onClick={handlePay} disabled={busy} size="lg" className={className}>
+    <Button onClick={handlePay} disabled={busy || !ready || !categories.length} size="lg" className={className}>
       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
       {text}
     </Button>

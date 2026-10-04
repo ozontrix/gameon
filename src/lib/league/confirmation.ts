@@ -32,8 +32,9 @@ export interface LeagueConfirmation {
   entry: {
     sport: string;
     sportName: string;
+    sports?: { id: string; name: string }[];
     /** Every bracket the entry holds — one entry can cover several. */
-    categories: { id: string; name: string; date?: string; fee?: number; squadSize?: number }[];
+    categories: { id: string; name: string; sportId?: string; sportName?: string; date?: string; fee?: number; squadSize?: number }[];
     date: string;
     /** Optional for receipts saved before per-category scheduling was introduced. */
     dates?: string[];
@@ -52,7 +53,7 @@ export interface LeagueConfirmation {
 
 /** "Men's Doubles + Men's Singles" — the brackets of an entry in one label. */
 export function confirmationBrackets(entry: LeagueConfirmation["entry"]): string {
-  return entry.categories.map((category) => category.name).join(" + ");
+  return entry.categories.map((category) => `${category.sportName ? `${category.sportName} · ` : ""}${category.name}`).join(" + ");
 }
 
 export function confirmationSchedule(entry: LeagueConfirmation["entry"]): string {

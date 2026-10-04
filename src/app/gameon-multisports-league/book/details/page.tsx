@@ -49,7 +49,7 @@ const inputClass =
 
 export default function LeagueDetailsPage() {
   const router = useRouter();
-  const { draft, ready, sport, categories, pricing, update } =
+  const { draft, ready, sport, sports, categories, pricing, update, removeSelection } =
     useLeagueBooking();
 
   if (ready && (!sport || categories.length === 0)) {
@@ -64,7 +64,8 @@ export default function LeagueDetailsPage() {
     );
   }
 
-  const isTeam = sport?.mode === "team";
+  const isTeam = sports.some((item) => item.mode === "team");
+  const multiSport = sports.length > 1;
   /** Minimum squad for team sports; tickets across every bracket for individuals. */
   const squadSize = Math.max(1, entryTickets(categories));
   const brackets = categories.map((category) => category.name).join(" + ");
@@ -81,20 +82,25 @@ export default function LeagueDetailsPage() {
     <div>
       <StepBar current="details" />
       <ScreenHeader
-        title={isTeam ? "Team details" : "Player details"}
+        title={multiSport ? "Your details" : isTeam ? "Team details" : "Player details"}
         subtitle={
           sport && categories.length > 0
-             ? `${sport.name} · ${scheduleLabel(categories)}`
+             ? `${categories.length} categories · ${sports.length} sports · ${scheduleLabel(categories)}`
             : "Loading your entry…"
         }
         backHref={
-          sport ? `/gameon-multisports-league/sports/${sport.id}` : "/gameon-multisports-league"
+          "/gameon-multisports-league"
         }
       />
 
       <Panel className="mb-4">
         <Kicker>Your categories &amp; match days</Kicker>
-        <div className="mt-3"><CategorySchedule categories={categories} /></div>
+        <p className="mt-2 text-sm text-go-brand">{categories.length} {categories.length === 1 ? "category" : "categories"} selected across {sports.length} {sports.length === 1 ? "sport" : "sports"}</p>
+        <div className="mt-3"><CategorySchedule categories={categories} onRemove={(sportId, categoryId) => {
+          const selection = draft.selections.find((item) => item.sportId === sportId && item.categoryId === categoryId);
+          if (selection) removeSelection(selection);
+        }} /></div>
+        <div className="mt-3"><Button href="/gameon-multisports-league">Add more sports / categories</Button></div>
         <p className="mt-3 text-xs leading-relaxed text-go-off/75">Match dates are fixed. Exact timings will be shared by the organisers. Please enter only categories you are eligible for.</p>
       </Panel>
 
@@ -110,7 +116,8 @@ export default function LeagueDetailsPage() {
           </Field>
         ) : null}
 
-        <Field label={isTeam ? "Captain name" : "Player name"}>
+        {multiSport ? <p className="text-xs text-go-off/75">One contact for every selected category. The team name applies to your cricket / football entries.</p> : null}
+        <Field label={multiSport ? "Name" : isTeam ? "Captain name" : "Player name"}>
           <input
             className={inputClass}
             value={draft.captainName}
@@ -153,10 +160,10 @@ export default function LeagueDetailsPage() {
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="text-[12px] font-medium text-go-off/70">
-              {isTeam ? "Squad size" : "Tickets in this entry"}
+              {isTeam && !multiSport ? "Squad size" : "Tickets in this entry"}
             </span>
             <span className="text-[10.5px] text-go-off/35">
-              {isTeam ? "set by the league" : "one per player"}
+              {isTeam && !multiSport ? "set by the league" : "across all categories"}
             </span>
           </div>
 
@@ -167,13 +174,13 @@ export default function LeagueDetailsPage() {
               ) : (
                 <Ticket className="h-4 w-4 text-go-brand" />
               )}
-              {squadSize} {isTeam ? "players" : squadSize > 1 ? "tickets" : "ticket"}
+              {squadSize} {isTeam && !multiSport ? "players" : squadSize > 1 ? "tickets" : "ticket"}
             </span>
-            <Chip tone="brand">{isTeam ? "Minimum squad" : "Per player"}</Chip>
+            <Chip tone="brand">{isTeam && !multiSport ? "Minimum squad" : "Per category"}</Chip>
           </div>
 
           <p className="mt-2 text-[11.5px] leading-relaxed text-go-off/45">
-            {isTeam
+            {isTeam && !multiSport
               ? `${sport?.name} is played ${squadSize}-a-side, so the minimum required squad is already set — there is no headcount to pick.`
               : `You are booking ${squadSize > 1 ? `${squadSize} tickets — one for each player` : "one ticket, one player"} across ${brackets}. Nothing to select here.`}
           </p>
@@ -201,7 +208,7 @@ export default function LeagueDetailsPage() {
               update({ squadSize, addons: {} });
               router.push("/gameon-multisports-league/book/review");
             }}
-            disabled={!complete}
+            disabled={!ready || !complete || categories.length === 0}
             size="lg"
             className="flex-1 lg:flex-none"
           >

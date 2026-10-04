@@ -29,7 +29,7 @@ export function leagueDetails(booking: LeagueBooking) {
 
 export async function listLeagueBookings(filters: LeagueFilters, page: number, pageSize = PAGE_SIZE) {
   let query = supabaseAdmin.from('league_bookings').select('*', { count: 'exact' });
-  if (filters.sport) query = query.eq('sport', filters.sport);
+  if (filters.sport) query = query.or(`sport.eq.${filters.sport},entry.cs.${JSON.stringify({ sports: [{ id: filters.sport }] })}`);
   if (filters.status) query = query.eq('status', filters.status);
   if (filters.q) {
     // Keep underscores so Razorpay identifiers (order_... / pay_...) match.
