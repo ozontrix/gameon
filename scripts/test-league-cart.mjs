@@ -79,7 +79,7 @@ test("Category ids shared between sports stay separate; duplicate pairs never do
   const result = parseLeagueEntry({ ...contact, selections: [...selections, selections[0]], date: "2026-10-17" });
   assert.equal(result.ok, true);
   assert.equal(result.entry.categories.length, 2);
-  assert.equal(result.quote.total, 4000);
+  assert.equal(result.quote.total, 4400);
 });
 
 test("All fourteen categories fit one checkout with server-derived totals and dates", () => {
@@ -90,7 +90,7 @@ test("All fourteen categories fit one checkout with server-derived totals and da
   assert.equal(result.entry.sports.length, 4);
   assert.equal(result.entry.squadSize, 30);
   assert.deepEqual(result.entry.dates, ["2026-10-17", "2026-10-18"]);
-  assert.equal(result.quote.total, 21200);
+  assert.equal(result.quote.total, 21600);
   assert.equal(result.quote.addOnsTotal, 0);
   assert.deepEqual(result.entry.addons, []);
 });

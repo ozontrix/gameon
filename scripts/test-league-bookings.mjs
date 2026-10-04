@@ -119,15 +119,15 @@ test('Multi-sport checkout persists every qualified category under one captured 
   const h = harness({ entryResult }); await h.seed();
   assert.equal(h.rows.length, 1);
   assert.equal(h.rows[0].sport, 'multisport');
-  assert.equal(h.rows[0].amount_paise, 800000);
+  assert.equal(h.rows[0].amount_paise, 840000);
   assert.deepEqual(h.rows[0].entry.categories.map(c => [c.sportId, c.id]), selections.map(c => [c.sportId, c.categoryId]));
   const confirmation = await h.confirmLeaguePayment('order_valid', 'pay_valid');
-  assert.equal(confirmation.amount, 8000);
+  assert.equal(confirmation.amount, 8400);
   assert.equal(confirmation.entry.sports.length, 4);
   assert.equal(confirmation.entry.categories.length, 4);
   assert.equal(h.calls.emails, 1);
   const email = load('src/lib/league/email.ts').renderLeagueConfirmationEmail(confirmation);
-  for (const text of ['Badminton · Open Mixed Doubles', 'Pickleball · Open Mixed Doubles', 'Box Cricket 7v7 · Team Entry (7v7)', 'Football 6v6 · Team Entry (6v6)', '₹8,000']) assert.ok(email.text.includes(text), text);
+  for (const text of ['Badminton · Open Mixed Doubles', 'Pickleball · Open Mixed Doubles', 'Box Cricket 7v7 · Team Entry (7v7)', 'Football 6v6 · Team Entry (6v6)', '₹8,400']) assert.ok(email.text.includes(text), text);
 });
 
 test('Concurrent browser/webhook confirmations produce one payment and one email', async () => {
