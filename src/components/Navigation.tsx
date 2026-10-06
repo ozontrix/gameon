@@ -38,7 +38,7 @@ const desktopSections: NavItem[] = [
   { id: "zones", label: "Zones", icon: Building },
   { id: "sponsorship", label: "Sponsorships", icon: Handshake, href: "/sponsorship" },
   { id: "blogs", label: "Blogs", icon: BookOpen, href: "/blogs" },
-  { id: "league", label: "Gameon Multi Sports League", icon: Trophy, href: "/gameon-multisports-league", highlighted: true },
+  { id: "league", label: "Game On Multi Sports League", icon: Trophy, href: "/gameon-multisports-league", highlighted: true },
 ];
 
 // Primary tabs always visible in the mobile bottom bar
@@ -56,7 +56,7 @@ const mobileTabs: MobileTab[] = [
   { id: "hero", label: "Home", icon: Home },
   { id: "sports", label: "Sports", icon: LayoutGrid },
   { id: "zones", label: "Zones", icon: Building },
-  { id: "league", label: "GML", icon: Trophy, href: "/gameon-multisports-league", highlighted: true, ariaLabel: "Gameon Multi Sports League" },
+  { id: "league", label: "GML", icon: Trophy, href: "/gameon-multisports-league", highlighted: true, ariaLabel: "Game On Multi Sports League" },
   { id: "more", label: "More", image: "/game_on_favicon.png" },
 ];
 

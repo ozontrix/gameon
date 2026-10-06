@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
-
 import { Navigation } from "@/components/Navigation";
-import { NotifyModal } from "@/components/NotifyModal";
 import { HeroSection } from "@/components/HeroSection";
 import { SportsSection } from "@/components/SportsSection";
 import { ZonesSection } from "@/components/ZonesSection";
@@ -16,14 +13,12 @@ import { StackedCard } from "@/components/StackedCard";
 
 // ─── Main Page ───
 export default function HomePage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <>
-      <Navigation onNotifyClick={() => setModalOpen(true)} />
+      <Navigation />
 
       <main className="relative">
-        <HeroSection onNotifyClick={() => setModalOpen(true)} />
+        <HeroSection />
 
         {/* Stacked cards — each section slides up as a card with rounded top corners */}
         <StackedCard index={0} totalCards={6}>
@@ -54,8 +49,6 @@ export default function HomePage() {
 
         <FooterSection />
       </main>
-
-      <NotifyModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }

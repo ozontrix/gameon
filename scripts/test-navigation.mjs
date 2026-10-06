@@ -68,7 +68,7 @@ test('Desktop has exactly the essential destinations and a permanently highlight
   const { desktop, links } = navigation();
   assert.ok(desktop);
   assert.deepEqual([...desktop.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ['/', '/', '/#sports', '/#zones', '/sponsorship', '/blogs', leaguePath]);
-  for (const label of ['Home', 'Sports', 'Zones', 'Sponsorships', 'Blogs', 'Gameon Multi Sports League']) assert.ok(desktop.includes(`>${label}<`));
+  for (const label of ['Home', 'Sports', 'Zones', 'Sponsorships', 'Blogs', 'Game On Multi Sports League']) assert.ok(desktop.includes(`>${label}<`));
   assert.doesNotMatch(desktop, /For You|Community|>Book<|>Location</);
   assert.ok(links.find(link => link.href === leaguePath && !link['aria-label']).className.includes('bg-go-brand text-go-black'));
 });
@@ -79,7 +79,7 @@ test('Mobile replaces Book with a highlighted GML route while retaining More', (
   for (const label of ['Home', 'Sports', 'Zones', 'GML', 'More']) assert.ok(mobile.includes(`>${label}<`));
   assert.doesNotMatch(mobile, />Book<|For You|Community/);
   const league = links.find(link => link.href === leaguePath && link['aria-label']);
-  assert.equal(league['aria-label'], 'Gameon Multi Sports League');
+  assert.equal(league['aria-label'], 'Game On Multi Sports League');
   assert.ok(league.className.includes('bg-go-brand text-go-black'));
   league.onClick();
   assert.deepEqual(updates.pop(), { index: 2, value: false });
@@ -125,4 +125,36 @@ test('All blog pages inherit shared navigation and reserve space for fixed deskt
   assert.doesNotMatch(source, /Blog navigation/);
   assert.match(source, /lg:pt-36/);
   assert.match(source, /pb-\[calc\(6rem\+env\(safe-area-inset-bottom\)\)\]/);
+});
+
+test('Home header keeps only the league CTA without an early-access or booking CTA', () => {
+  const source = readFileSync(resolve(root, 'src/components/HomePage.tsx'), 'utf8');
+  assert.match(source, /<Navigation \/>/);
+  assert.match(source, /<HeroSection \/>/);
+  assert.doesNotMatch(source, /onNotifyClick|NotifyModal/);
+  const { desktop, html } = navigation('/', true);
+  assert.doesNotMatch(html, /Get Early Access|Notify|Book Your Slots? Now/);
+  assert.equal([...desktop.matchAll(/bg-go-brand text-go-black/g)].length, 1);
+});
+
+test('Hero league CTA contains its smaller booking text inside the same link', () => {
+  const source = readFileSync(resolve(root, 'src/components/HeroSection.tsx'), 'utf8');
+  const ast = ts.createSourceFile('HeroSection.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const leagueLinks = [];
+  function visit(node) {
+    if (ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'Link') {
+      const href = node.openingElement.attributes.properties.find(attribute =>
+        ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === 'href');
+      if (href?.initializer && ts.isStringLiteral(href.initializer) && href.initializer.text === leaguePath) leagueLinks.push(node);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(ast);
+  assert.equal(leagueLinks.length, 1);
+  const cta = leagueLinks[0].getText(ast);
+  assert.match(cta, /<span>Game On Multi Sports League<\/span>/);
+  assert.match(cta, /flex flex-col items-center/);
+  assert.match(cta, /text-\[10px\][^>]*>Book Your Slot Now<\/span>/);
+  assert.match(cta, /focus-visible:outline/);
+  assert.doesNotMatch(source, /Get Early Access|onNotifyClick/);
 });

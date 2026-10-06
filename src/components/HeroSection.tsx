@@ -3,7 +3,8 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { Bell, ArrowRight, Timer } from "lucide-react";
+import Link from "next/link";
+import { Trophy, ArrowRight, Timer } from "lucide-react";
 import { GlassCard } from "./GlassCard";
 
 const stats = [
@@ -124,10 +125,6 @@ function RotatingEmoji({ icons, interval = 2200 }: { icons: TaglineIcon[]; inter
   );
 }
 
-interface HeroSectionProps {
-  onNotifyClick: () => void;
-}
-
 // ─── Floating particle ───
 function FloatingParticle({ delay = 0, size = 4, x = 0, y = 0, color = "brand" }: {
   delay?: number;
@@ -207,7 +204,7 @@ function CourtLines() {
   );
 }
 
-export function HeroSection({ onNotifyClick }: HeroSectionProps) {
+export function HeroSection() {
   const ref = useRef<HTMLElement>(null);
   const [sportIndex, setSportIndex] = useState(0);
   const mouseX = useMotionValue(0.5);
@@ -474,23 +471,26 @@ export function HeroSection({ onNotifyClick }: HeroSectionProps) {
 
           {/* CTA with glow effect */}
           <motion.div
-            className="mt-7"
+            className="mt-7 w-full max-w-md"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 200, damping: 22, delay: 1.3 }}
           >
-            <button
-              onClick={onNotifyClick}
-              className="group relative bg-go-brand text-go-black font-bold text-sm tracking-[0.12em] uppercase rounded-full py-4 px-10 flex items-center justify-center gap-3 cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-[0_0_40px_rgba(243,143,47,0.4)]"
+            <Link
+              href="/gameon-multisports-league"
+              className="group relative w-full bg-go-brand text-go-black font-bold text-xs sm:text-sm tracking-[0.12em] uppercase rounded-full py-4 px-5 sm:px-8 flex items-center justify-center gap-3 cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-[0_0_40px_rgba(243,143,47,0.4)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-go-brand"
             >
               {/* Ripple border */}
               <span className="absolute inset-0 rounded-full border-2 border-transparent group-hover:border-go-brand/30 transition-all duration-500" />
               {/* Sweep */}
               <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
-              <Bell className="w-4 h-4 relative z-10" />
-              <span className="relative z-10">Get Early Access</span>
-              <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
-            </button>
+              <Trophy className="w-4 h-4 shrink-0 relative z-10" aria-hidden="true" />
+              <span className="relative z-10 flex flex-col items-center gap-1 text-center">
+                <span>Game On Multi Sports League</span>
+                <span className="text-[10px] sm:text-xs font-medium tracking-wide normal-case">Book Your Slot Now</span>
+              </span>
+              <ArrowRight className="w-4 h-4 shrink-0 relative z-10 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+            </Link>
           </motion.div>
         </div>
 
