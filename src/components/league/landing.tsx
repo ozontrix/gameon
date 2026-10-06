@@ -3,8 +3,8 @@
 /**
  * Game On Multisports League — landing page body.
  *
- * A standalone inline brand hero and sport cards showing the entry price each sport starts
- * from — the per-category (slot type) breakdown lives on the category page
+ * A standalone inline brand hero and sport cards showing each tournament's overall prize
+ * amount and starting entry price — the per-category (slot type) breakdown lives on the category page
  * behind "Select Sport". No header, tab bar or footer.
  *
  * The cards stay deliberately lean: no venue/zone chip (the description carries
@@ -122,6 +122,16 @@ export function LeagueLanding() {
             </div>
 
             <p className="mt-3 text-[13px] leading-relaxed text-go-off/70">{sport.description}</p>
+
+            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-go-brand/30 bg-go-brand/10 px-3.5 py-3">
+              <Trophy className="h-5 w-5 shrink-0 text-go-brand" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-go-off">Overall Tournament Prize</p>
+                <p className="mt-1 font-display text-2xl leading-tight text-go-brand sm:text-3xl">
+                  {formatINR(sport.prizePool)}
+                </p>
+              </div>
+            </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
               {sport.id !== "cricket" && sport.id !== "football" ? (

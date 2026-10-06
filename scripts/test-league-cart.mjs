@@ -154,6 +154,29 @@ function uiHarness() {
   return { sport: id => render(Sport, { sportId: id }), landing: () => render(Landing), review: () => render(Review), buttons, pushes, selectionsClicked, booking };
 }
 
+test("Each sport stores its requested overall tournament prize separately from entry fees", () => {
+  assert.deepEqual(SPORTS.map(({ id, prizePool }) => [id, prizePool]), [
+    ["badminton", 97000],
+    ["pickleball", 75000],
+    ["cricket", 22000],
+    ["football", 22000],
+  ]);
+});
+
+test("Landing cards highlight the correct tournament prizes and retain entry fees and sport links", () => {
+  const cards = uiHarness().landing().split("<h2 ").slice(1);
+  assert.equal(cards.length, 4);
+  const expectedPrizes = ["₹97,000", "₹75,000", "₹22,000", "₹22,000"];
+  const expectedFees = ["₹1,000", "₹1,000", "₹2,000", "₹2,000"];
+  SPORTS.forEach((sport, index) => {
+    assert.ok(cards[index].includes(sport.name), sport.name);
+    assert.ok(cards[index].includes("Overall Tournament Prize"), sport.name);
+    assert.ok(cards[index].includes(expectedPrizes[index]), sport.name);
+    assert.ok(cards[index].includes(expectedFees[index]), sport.name);
+    assert.ok(cards[index].includes(`href="/gameon-multisports-league/sports/${sport.id}"`), sport.name);
+  });
+});
+
 test("Sport clicks persist immediately; returning to another sport keeps the combined cart", () => {
   const h = uiHarness();
   h.sport("badminton");

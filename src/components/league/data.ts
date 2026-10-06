@@ -42,6 +42,8 @@ export interface Sport {
    */
   tagline: string;
   description: string;
+  /** Overall tournament prize amount in INR, separate from category entry fees. */
+  prizePool: number;
   mode: EntryMode;
   slotLength: string;
   capacity: string;
@@ -56,6 +58,7 @@ export const SPORTS: Sport[] = [
     accent: "#A855F7",
     tagline: "All-time classic",
     description: "5 courts — 2 AC wooden courts and 3 synthetic indoor courts.",
+    prizePool: 97000,
     mode: "individual",
     slotLength: "60 min per match slot",
     capacity: "7 categories",
@@ -76,6 +79,7 @@ export const SPORTS: Sport[] = [
     accent: "#F5D000",
     tagline: "Fastest growing sport",
     description: "4 courts — 2 indoor AC and 2 outdoor courts.",
+    prizePool: 75000,
     mode: "individual",
     slotLength: "60 min per match slot",
     capacity: "5 categories",
@@ -94,6 +98,7 @@ export const SPORTS: Sport[] = [
     accent: "#34D399",
     tagline: "",
     description: "Box cricket arena — six overs a side, seven players a side.",
+    prizePool: 22000,
     mode: "team",
     slotLength: "60 min per match slot",
     capacity: "12 teams",
@@ -116,6 +121,7 @@ export const SPORTS: Sport[] = [
     accent: "#38BDF8",
     tagline: "",
     description: "Box football arena — 6v6.",
+    prizePool: 22000,
     mode: "team",
     slotLength: "45 min per match slot",
     capacity: "8 teams",
