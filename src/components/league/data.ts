@@ -86,11 +86,11 @@ export const SPORTS: Sport[] = [
     slotLength: "60 min per match slot",
     capacity: "5 categories",
     categories: [
-      { id: "u14-singles", name: "Under 14 Singles", short: "Under 14 · Singles", fee: 1000, date: "2026-10-17", format: "Under 14", squadSize: 1 },
-      { id: "u14-doubles", name: "Under 14 Doubles", short: "Under 14 · Doubles", fee: 1600, date: "2026-10-17", format: "Under 14", squadSize: 2 },
-      { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 2400, date: "2026-10-17", format: "Open · Mixed pair", squadSize: 2 },
-      { id: "open-singles", name: "Open Singles", short: "Open · Singles", fee: 1200, date: "2026-10-18", format: "Open category", squadSize: 1 },
-      { id: "open-doubles", name: "Open Doubles", short: "Open · Doubles", fee: 2400, date: "2026-10-18", format: "Open category", squadSize: 2 },
+      { id: "u14-singles", name: "Under 14 Singles", short: "Under 14 · Singles", fee: 1000, prizes: { winner: 3500, runnerUp: 2500 }, date: "2026-10-17", format: "Under 14", squadSize: 1 },
+      { id: "u14-doubles", name: "Under 14 Doubles", short: "Under 14 · Doubles", fee: 1600, prizes: { winner: 7000, runnerUp: 5000 }, date: "2026-10-17", format: "Under 14", squadSize: 2 },
+      { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 2400, prizes: { winner: 10000, runnerUp: 6000 }, date: "2026-10-17", format: "Open · Mixed pair", squadSize: 2 },
+      { id: "open-singles", name: "Open Singles", short: "Open · Singles", fee: 1200, prizes: { winner: 10000, runnerUp: 6000 }, date: "2026-10-18", format: "Open category", squadSize: 1 },
+      { id: "open-doubles", name: "Open Doubles", short: "Open · Doubles", fee: 2400, prizes: { winner: 15000, runnerUp: 10000 }, date: "2026-10-18", format: "Open category", squadSize: 2 },
     ],
   },
   {

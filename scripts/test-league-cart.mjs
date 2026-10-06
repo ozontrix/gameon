@@ -199,9 +199,47 @@ test("Each badminton card shows both prizes accessibly and keeps its original bo
   assert.equal((selected.match(/Runner-up/g) ?? []).length, 7);
 });
 
-test("Other sports do not show unconfirmed winner or runner-up prizes", () => {
+test("Pickleball category prizes match the confirmed amounts and total the tournament prize pool", () => {
+  const sport = findSport("pickleball");
+  assert.deepEqual(sport.categories.map(({ id, prizes }) => [id, prizes.winner, prizes.runnerUp]), [
+    ["u14-singles", 3500, 2500],
+    ["u14-doubles", 7000, 5000],
+    ["mixed-doubles", 10000, 6000],
+    ["open-singles", 10000, 6000],
+    ["open-doubles", 15000, 10000],
+  ]);
+  assert.equal(sport.categories.reduce((sum, { prizes }) => sum + prizes.winner + prizes.runnerUp, 0), sport.prizePool);
+  assert.deepEqual(sport.categories.map(({ fee }) => fee), [1000, 1600, 2400, 1200, 2400]);
+});
+
+test("Each pickleball card shows both prizes accessibly and keeps its original booking fee", () => {
   const h = uiHarness();
-  for (const id of ["pickleball", "cricket", "football"]) {
+  h.sport("pickleball");
+  const cards = h.buttons.filter(button => button["aria-pressed"] !== undefined);
+  const sport = findSport("pickleball");
+  assert.equal(cards.length, sport.categories.length);
+  sport.categories.forEach(category => {
+    const card = cards.find(button => button["aria-label"].startsWith(`${category.name},`));
+    const markup = renderToStaticMarkup(createElement("span", null, card.children));
+    for (const text of [category.name, "Winner", "Runner-up", formatINR(category.prizes.winner), formatINR(category.prizes.runnerUp), formatINR(category.fee)]) {
+      assert.ok(markup.includes(text), `${category.name}: ${text}`);
+    }
+    assert.ok(card["aria-label"].includes(`winner prize ${formatINR(category.prizes.winner)}, runner-up prize ${formatINR(category.prizes.runnerUp)}`));
+    card.onClick();
+  });
+  assert.equal(h.booking().pricing.total, 8600);
+  assert.equal(h.booking().categories.length, 5);
+  const selected = h.sport("pickleball");
+  assert.equal((selected.match(/aria-pressed="true"/g) ?? []).length, 5);
+  assert.equal((selected.match(/Runner-up/g) ?? []).length, 5);
+  h.buttons.find(button => button["aria-label"]?.startsWith("Under 14 Singles,")).onClick();
+  assert.equal(h.booking().pricing.total, 7600);
+  assert.equal(h.booking().categories.length, 4);
+});
+
+test("Team sports do not show unconfirmed winner or runner-up prizes", () => {
+  const h = uiHarness();
+  for (const id of ["cricket", "football"]) {
     const markup = h.sport(id);
     assert.ok(!markup.includes("Runner-up"), id);
     assert.ok(!markup.includes("winner prize"), id);
