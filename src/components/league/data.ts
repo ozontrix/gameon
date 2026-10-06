@@ -22,6 +22,8 @@ export interface Category {
   /** Two-word label for tight cards, e.g. "Men's · Doubles". */
   short: string;
   fee: number;
+  /** Category prize money in INR; omitted until confirmed for a sport. */
+  prizes?: { winner: number; runnerUp: number };
   /** Fixed tournament day, not a player-selectable booking date. */
   date: string;
   /** Who can enter and how many entries the bracket holds. */
@@ -63,13 +65,13 @@ export const SPORTS: Sport[] = [
     slotLength: "60 min per match slot",
     capacity: "7 categories",
     categories: [
-      { id: "u13-boys-singles", name: "U-13 Singles Boys", short: "U-13 Boys · Singles", fee: 1000, date: "2026-10-17", format: "Under 13 · Boys", squadSize: 1 },
-      { id: "u13-girls-singles", name: "U-13 Singles Girls", short: "U-13 Girls · Singles", fee: 1000, date: "2026-10-17", format: "Under 13 · Girls", squadSize: 1 },
-      { id: "u17-boys-singles", name: "U-17 Singles Boys", short: "U-17 Boys · Singles", fee: 1000, date: "2026-10-17", format: "Under 17 · Boys", squadSize: 1 },
-      { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 2000, date: "2026-10-17", format: "Open · Mixed pair", squadSize: 2 },
-      { id: "mens-singles", name: "Open Singles Men", short: "Men · Singles", fee: 1000, date: "2026-10-18", format: "Open · Men", squadSize: 1 },
-      { id: "womens-singles", name: "Open Singles Women", short: "Women · Singles", fee: 1000, date: "2026-10-18", format: "Open · Women", squadSize: 1 },
-      { id: "mens-doubles", name: "Doubles Men", short: "Men · Doubles", fee: 2000, date: "2026-10-18", format: "Open · Men", squadSize: 2 },
+      { id: "u13-boys-singles", name: "U-13 Singles Boys", short: "U-13 Boys · Singles", fee: 1000, prizes: { winner: 5000, runnerUp: 3000 }, date: "2026-10-17", format: "Under 13 · Boys", squadSize: 1 },
+      { id: "u13-girls-singles", name: "U-13 Singles Girls", short: "U-13 Girls · Singles", fee: 1000, prizes: { winner: 5000, runnerUp: 3000 }, date: "2026-10-17", format: "Under 13 · Girls", squadSize: 1 },
+      { id: "u17-boys-singles", name: "U-17 Singles Boys", short: "U-17 Boys · Singles", fee: 1000, prizes: { winner: 7000, runnerUp: 5000 }, date: "2026-10-17", format: "Under 17 · Boys", squadSize: 1 },
+      { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 2000, prizes: { winner: 10000, runnerUp: 6000 }, date: "2026-10-17", format: "Open · Mixed pair", squadSize: 2 },
+      { id: "mens-singles", name: "Open Singles Men", short: "Men · Singles", fee: 1000, prizes: { winner: 10000, runnerUp: 6000 }, date: "2026-10-18", format: "Open · Men", squadSize: 1 },
+      { id: "womens-singles", name: "Open Singles Women", short: "Women · Singles", fee: 1000, prizes: { winner: 7000, runnerUp: 5000 }, date: "2026-10-18", format: "Open · Women", squadSize: 1 },
+      { id: "mens-doubles", name: "Doubles Men", short: "Men · Doubles", fee: 2000, prizes: { winner: 15000, runnerUp: 10000 }, date: "2026-10-18", format: "Open · Men", squadSize: 2 },
     ],
   },
   {

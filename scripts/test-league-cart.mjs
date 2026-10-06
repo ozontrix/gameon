@@ -37,7 +37,7 @@ function loader(mocks = {}) {
 }
 const load = loader();
 const cart = load("src/components/league/cart.ts");
-const { SPORTS, entryFees, findSport } = load("src/components/league/data.ts");
+const { SPORTS, entryFees, findSport, formatINR } = load("src/components/league/data.ts");
 const { parseLeagueEntry, quoteEntry } = load("src/lib/league/entry.ts");
 const contact = { captainName: "Test Player", phone: "9811000000", email: "player@example.com", city: "Gurugram", teamName: "Test Team" };
 const example = [
@@ -161,6 +161,51 @@ test("Each sport stores its requested overall tournament prize separately from e
     ["cricket", 22000],
     ["football", 22000],
   ]);
+});
+
+test("Badminton category prizes match the poster and total the tournament prize pool", () => {
+  const sport = findSport("badminton");
+  assert.deepEqual(sport.categories.map(({ id, prizes }) => [id, prizes.winner, prizes.runnerUp]), [
+    ["u13-boys-singles", 5000, 3000],
+    ["u13-girls-singles", 5000, 3000],
+    ["u17-boys-singles", 7000, 5000],
+    ["mixed-doubles", 10000, 6000],
+    ["mens-singles", 10000, 6000],
+    ["womens-singles", 7000, 5000],
+    ["mens-doubles", 15000, 10000],
+  ]);
+  assert.equal(sport.categories.reduce((sum, { prizes }) => sum + prizes.winner + prizes.runnerUp, 0), sport.prizePool);
+});
+
+test("Each badminton card shows both prizes accessibly and keeps its original booking fee", () => {
+  const h = uiHarness();
+  h.sport("badminton");
+  const cards = h.buttons.filter(button => button["aria-pressed"] !== undefined);
+  const sport = findSport("badminton");
+  assert.equal(cards.length, sport.categories.length);
+  sport.categories.forEach(category => {
+    const card = cards.find(button => button["aria-label"].startsWith(`${category.name},`));
+    const markup = renderToStaticMarkup(createElement("span", null, card.children));
+    for (const text of [category.name, "Winner", "Runner-up", formatINR(category.prizes.winner), formatINR(category.prizes.runnerUp), formatINR(category.fee)]) {
+      assert.ok(markup.includes(text), `${category.name}: ${text}`);
+    }
+    assert.ok(card["aria-label"].includes(`winner prize ${formatINR(category.prizes.winner)}, runner-up prize ${formatINR(category.prizes.runnerUp)}`));
+    card.onClick();
+  });
+  assert.equal(h.booking().pricing.total, 9000);
+  assert.equal(h.booking().categories.length, 7);
+  const selected = h.sport("badminton");
+  assert.equal((selected.match(/aria-pressed="true"/g) ?? []).length, 7);
+  assert.equal((selected.match(/Runner-up/g) ?? []).length, 7);
+});
+
+test("Other sports do not show unconfirmed winner or runner-up prizes", () => {
+  const h = uiHarness();
+  for (const id of ["pickleball", "cricket", "football"]) {
+    const markup = h.sport(id);
+    assert.ok(!markup.includes("Runner-up"), id);
+    assert.ok(!markup.includes("winner prize"), id);
+  }
 });
 
 test("Landing cards highlight the correct tournament prizes and retain entry fees and sport links", () => {
