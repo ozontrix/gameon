@@ -237,13 +237,46 @@ test("Each pickleball card shows both prizes accessibly and keeps its original b
   assert.equal(h.booking().categories.length, 4);
 });
 
-test("Team sports do not show unconfirmed winner or runner-up prizes", () => {
-  const h = uiHarness();
+test("Cricket and football prizes match the confirmed amounts and total each tournament prize pool", () => {
   for (const id of ["cricket", "football"]) {
-    const markup = h.sport(id);
-    assert.ok(!markup.includes("Runner-up"), id);
-    assert.ok(!markup.includes("winner prize"), id);
+    const sport = findSport(id);
+    assert.deepEqual(sport.categories.map(({ id, prizes }) => [id, prizes.winner, prizes.runnerUp]), [
+      ["team", 15000, 7000],
+    ]);
+    assert.equal(sport.categories.reduce((sum, { prizes }) => sum + prizes.winner + prizes.runnerUp, 0), sport.prizePool);
+    assert.deepEqual(sport.categories.map(({ fee }) => fee), [2000]);
   }
+});
+
+test("Cricket and football cards show both prizes accessibly without changing selection or booking fees", () => {
+  const h = uiHarness();
+  for (const [index, id] of ["cricket", "football"].entries()) {
+    h.sport(id);
+    const cards = h.buttons.filter(button => button["aria-pressed"] !== undefined);
+    const sport = findSport(id);
+    assert.equal(cards.length, sport.categories.length);
+    sport.categories.forEach(category => {
+      const card = cards.find(button => button["aria-label"].startsWith(`${category.name},`));
+      const markup = renderToStaticMarkup(createElement("span", null, card.children));
+      for (const text of [category.name, "Winner", "Runner-up", "₹15,000", "₹7,000", "₹2,000", "per team"]) {
+        assert.ok(markup.includes(text), `${id}: ${text}`);
+      }
+      assert.ok(card["aria-label"].includes("winner prize ₹15,000, runner-up prize ₹7,000"));
+      assert.equal(card["aria-pressed"], false);
+      card.onClick();
+    });
+    assert.equal(h.booking().pricing.total, (index + 1) * 2000);
+    assert.equal(h.booking().categories.length, index + 1);
+    const selected = h.sport(id);
+    assert.equal((selected.match(/aria-pressed="true"/g) ?? []).length, 1);
+    assert.equal((selected.match(/Runner-up/g) ?? []).length, 1);
+  }
+  h.buttons.find(button => button["aria-label"]?.startsWith("Team Entry (6v6),")).onClick();
+  assert.equal(h.booking().pricing.total, 2000);
+  assert.deepEqual(h.booking().draft.selections, [{ sportId: "cricket", categoryId: "team" }]);
+  const result = parseLeagueEntry(h.booking().draft);
+  assert.equal(result.ok, true);
+  assert.equal(result.quote.total, 2000);
 });
 
 test("Landing cards highlight the correct tournament prizes and retain entry fees and sport links", () => {
