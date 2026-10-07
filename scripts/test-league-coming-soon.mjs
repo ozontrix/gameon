@@ -26,18 +26,18 @@ const { LeagueBookingsComingSoon } = load('src/components/league/bookings-coming
   'next/link': { __esModule: true, default: ({ children, ...props }) => createElement('a', props, children) },
 });
 
-function page(enabled = true) {
+function page(enabled) {
   const { default: Page } = load('src/app/gameon-multisports-league/page.tsx', {
     '@/lib/seo': { pageMetadata: value => value },
     '@/components/seo/breadcrumbs': { Breadcrumbs: () => createElement('nav', null, 'Original breadcrumbs') },
     '@/components/league/landing': { LeagueLanding: () => createElement('div', null, 'Original league content') },
     '@/components/league/bookings-coming-soon': { LeagueBookingsComingSoon },
-  }, source => enabled ? source : source.replace('SHOW_BOOKINGS_COMING_SOON = true', 'SHOW_BOOKINGS_COMING_SOON = false'));
+  }, source => enabled === undefined ? source : source.replace(/SHOW_BOOKINGS_COMING_SOON = (?:true|false)/, `SHOW_BOOKINGS_COMING_SOON = ${enabled}`));
   return renderToStaticMarkup(createElement(Page));
 }
 
 test('League landing immediately shows only the coming-soon view', () => {
-  const html = page();
+  const html = page(true);
   assert.match(html, /Bookings will be <span[^>]*>open soon<\/span>/);
   assert.match(html, /aria-labelledby="league-coming-soon-title"/);
   assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
@@ -45,7 +45,7 @@ test('League landing immediately shows only the coming-soon view', () => {
 });
 
 test('Temporary view covers the viewport in brand colors and provides an accessible home link', () => {
-  const html = page();
+  const html = page(true);
   assert.match(html, /fixed inset-0 z-50/);
   assert.match(html, /min-h-dvh overflow-y-auto bg-go-black/);
   assert.match(html, /text-go-brand/);
@@ -56,6 +56,13 @@ test('Temporary view covers the viewport in brand colors and provides an accessi
 
 test('Switching off one flag restores the existing breadcrumbs and league page', () => {
   const html = page(false);
+  assert.match(html, /Original breadcrumbs/);
+  assert.match(html, /Original league content/);
+  assert.doesNotMatch(html, /Bookings will be|league-coming-soon-title|Go home/);
+});
+
+test('Current flag restores the original league landing by default', () => {
+  const html = page();
   assert.match(html, /Original breadcrumbs/);
   assert.match(html, /Original league content/);
   assert.doesNotMatch(html, /Bookings will be|league-coming-soon-title|Go home/);
