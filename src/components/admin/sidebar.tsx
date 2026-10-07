@@ -74,6 +74,7 @@ function navGroups(refundsPending: number): NavGroup[] {
       label: 'Events & tournaments',
       items: [
         { href: '/admin/multisports-league', label: 'Multisports League', icon: ClipboardList, adminOnly: true },
+        { href: '/admin/open-play-registrations', label: 'Open Play Registrations', icon: Users, adminOnly: true },
         { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy, adminOnly: true },
         { href: '/admin/events', label: 'Events', icon: PartyPopper, adminOnly: true },
       ],

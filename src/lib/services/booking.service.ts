@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../db/supabase';
+import { isPublicPaidBookingDate } from '../utils/booking-dates';
 import type { AppBookingStatus } from '@/lib/utils/booking-status';
 import { DEFAULT_TIMEZONE, minutesBetween, wallClockIn, zonedTimeToUtc } from '../utils/date-helpers';
 import { CancellationPolicyService } from './cancellation-policy.service';
@@ -63,6 +64,9 @@ export class BookingService {
    */
   static async createBooking(userId: string, input: NewBooking) {
     const { facilityId, date, startTime, endTime } = input;
+    if (!isPublicPaidBookingDate(date)) {
+      throw new BookingError('Paid court bookings start from 19 October 2026. Join free open play on 18 October.', 400, 'BOOKING_NOT_OPEN');
+    }
 
     // 1. The date must fall inside the venue's booking window
     await BookingService.assertWithinBookingWindow(facilityId, date);

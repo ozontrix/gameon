@@ -34,6 +34,8 @@ export function MetaPixel({ enabled }: { enabled: boolean }) {
     if (!trackMetaPageView(pathname)) return;
     if (pathname === "/gameon-multisports-league" || pathname === "/gameon-multisports-league/") {
       trackMetaEvent("ViewContent", { content_name: "GameOn Multisports League", content_category: "Sports league" });
+    } else if (pathname === '/open-play-registrations' || pathname === '/open-play-registrations/') {
+      trackMetaEvent('ViewContent', { content_name: 'GameOn Free Open Play', content_category: 'Open play', content_ids: ['open-play:2026-10-18'] });
     } else {
       const match = /^\/gameon-multisports-league\/sports\/([^/]+)\/?$/.exec(pathname);
       const sport = match ? findSport(match[1]) : null;
@@ -54,7 +56,7 @@ export function MetaPixel({ enabled }: { enabled: boolean }) {
       {consent === "unknown" || settingsOpen ? (
         <section aria-label="Marketing cookie preferences" className="fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[110] mx-auto max-w-lg rounded-2xl border border-white/20 bg-go-black p-5 text-go-white shadow-2xl sm:left-auto sm:right-5 sm:mx-0">
           <h2 className="text-base font-semibold">Marketing cookies</h2>
-          <p className="mt-2 text-sm leading-relaxed text-go-off">With your permission, we use Meta Pixel to measure visits and paid registrations and improve our Facebook and Instagram ads. Booking works without it.</p>
+          <p className="mt-2 text-sm leading-relaxed text-go-off">With your permission, we use Meta Pixel to measure visits and registrations and improve our Facebook and Instagram ads. Registration and booking work without it.</p>
           <Link href="/privacy" className="mt-2 inline-block py-2 text-sm text-go-brand underline focus-visible:outline-2 focus-visible:outline-go-brand">Privacy policy</Link>
           {privacySignal ? <p className="mt-2 text-sm">Your browser privacy signal keeps marketing tracking disabled.</p> : null}
           <div className="mt-3 flex flex-wrap gap-3">

@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      open_play_registrations: {
+        Row: {
+          id: string
+          event_date: string
+          sport: string
+          full_name: string
+          phone: string
+          email: string | null
+          city: string
+          contact_consent: boolean
+          marketing_consent: boolean
+          attribution: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_date?: string
+          sport: string
+          full_name: string
+          phone: string
+          email?: string | null
+          city?: string
+          contact_consent: boolean
+          marketing_consent?: boolean
+          attribution?: Json
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['open_play_registrations']['Insert']>
+        Relationships: []
+      }
       league_coupons: {
         Row: {
           id: string

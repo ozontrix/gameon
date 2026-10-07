@@ -1,0 +1,17 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//GameOn Multisports//Free Open Play//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:open-play-20261018@game-on.in
+DTSTAMP:20261007T000000Z
+DTSTART;VALUE=DATE:20261018
+DTEND;VALUE=DATE:20261019
+SUMMARY:GameOn Free Open Play
+LOCATION:GameOn Multisports\, Sector 70\, Gurugram
+DESCRIPTION:Free cricket\, football\, badminton and pickleball. Evening DJ\,
+  pizza and coffee parties with a little dandiya. Exact timings to be shared
+  by the team. Registration is not a reserved court slot.
+URL:https://game-on.in/open-play-registrations
+END:VEVENT
+END:VCALENDAR

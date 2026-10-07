@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../db/supabase';
+import { isPublicPaidBookingDate } from '../utils/booking-dates';
 import {
   DEFAULT_TIMEZONE,
   dayOfWeek,
@@ -42,6 +43,8 @@ export class SlotService {
    * be booked. An empty list means the facility is not open that day.
    */
   static async getSlots(facilityId: string, targetDate: string, options: SlotOptions): Promise<Slot[]> {
+    // Open play is not a paid slot. Staff can still coordinate complimentary walk-ins.
+    if (!options.allowStarted && !isPublicPaidBookingDate(targetDate)) return [];
     // 1. Get facility and venue details
     const { data: facility, error: facError } = await supabaseAdmin
       .from('facilities')
