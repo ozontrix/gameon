@@ -6,7 +6,7 @@
  */
 
 export const LEAGUE_NAME = "Game On Multisports League";
-export const LEAGUE_TAGLINE = "Season 1 · 17 & 18 October 2026";
+export const LEAGUE_TAGLINE = "Season 1 · 24 & 25 October 2026";
 export const LEAGUE_PRIZE_POOL = "₹3 lakh+";
 export const LEAGUE_VENUE = "GameOn Multisports Complex, Sector 70, Gurugram";
 export const LEAGUE_HELP_PHONE = "+91 74948 25740";
@@ -19,15 +19,15 @@ export interface LeagueMatchDay {
 
 /** The two fixed tournament days; each category is assigned one in the catalog. */
 export const LEAGUE_MATCH_DAYS: LeagueMatchDay[] = [
-  { iso: "2026-10-17", label: "Day 1" },
-  { iso: "2026-10-18", label: "Day 2" },
+  { iso: "2026-10-24", label: "Day 1" },
+  { iso: "2026-10-25", label: "Day 2" },
 ];
 
 export function findMatchDay(iso: string | null | undefined): LeagueMatchDay | null {
   return LEAGUE_MATCH_DAYS.find((day) => day.iso === iso) ?? null;
 }
 
-/** "Saturday, 17 October 2026" — used by the email and the pass. */
+/** "Saturday, 24 October 2026" — used by the email and the pass. */
 export function matchDayLabel(iso: string | null | undefined): string {
   if (!iso) return "Match day to be confirmed";
   const [year, month, day] = iso.split("-").map(Number);

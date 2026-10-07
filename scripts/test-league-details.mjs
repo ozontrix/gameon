@@ -94,6 +94,20 @@ test("Older draft extras are excluded from the details total and cleared before 
   assert.deepEqual(pushed, ["/gameon-multisports-league/book/review"]);
 });
 
+test("Booking details show October 24–25 for selected categories", () => {
+  for (const [sportId, day] of [["badminton", 24], ["pickleball", 24], ["football", 24], ["cricket", 25]]) {
+    const { html } = details(sportId);
+    assert.match(html, new RegExp(`${day} Oct,? 2026`), sportId);
+    assert.doesNotMatch(html, /1[78] (?:Oct|October)/);
+  }
+  const { html } = details("badminton", { selections: [
+    { sportId: "badminton", categoryId: "mixed-doubles" },
+    { sportId: "badminton", categoryId: "mens-doubles" },
+  ] });
+  assert.match(html, /24 Oct,? 2026/);
+  assert.match(html, /25 Oct,? 2026/);
+});
+
 test("Required contact validation still disables review", () => {
   const { html, buttons } = details("cricket", { teamName: "", email: "" });
   assert.match(html, /Add team name, email to continue/);

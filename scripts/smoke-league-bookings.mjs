@@ -20,7 +20,10 @@ try {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   assert.ok(ready, 'Production server did not start.');
-  for (const path of ['/', '/gameon-multisports-league', '/gameon-multisports-league/sports/pickleball', '/gameon-multisports-league/book/details']) {
+  for (const path of ['/', '/gameon-multisports-league',
+    ...['badminton', 'pickleball', 'cricket', 'football'].map(sport => `/gameon-multisports-league/sports/${sport}`),
+    ...['details', 'review', 'success'].map(step => `/gameon-multisports-league/book/${step}`),
+    '/gameon-multisports-league/bookings']) {
     const response = await get(path);
     assert.equal(response.status, 200, path);
     const html = await response.text();
@@ -28,7 +31,21 @@ try {
     assert.ok(html.includes('Accept marketing') && html.includes('Reject marketing'), path);
     assert.doesNotMatch(html, /<script[^>]+src="https:\/\/connect\.facebook\.net/);
     assert.doesNotMatch(html, /<img[^>]+src="https:\/\/www\.facebook\.com\/tr/);
+    if (path.startsWith('/gameon-multisports-league')) {
+      const text = html.replace(/<!--[^]*?-->/g, '').replace(/&amp;/g, '&');
+      assert.doesNotMatch(text, /2026-10-1[78]|1[78] (?:Oct|October)|17 & 18/, path);
+      if (path.includes('/sports/')) {
+        assert.match(text, path.endsWith('/cricket') ? /25 Oct,? 2026/ : /24 Oct,? 2026/, path);
+        if (path.endsWith('/badminton') || path.endsWith('/pickleball')) assert.match(text, /25 Oct,? 2026/, path);
+      } else {
+        assert.match(text, /24 & 25 October 2026/, path);
+      }
+    }
   }
+  const payment = await get('/gameon-multisports-league/book/payment');
+  assert.equal(payment.status, 307);
+  assert.equal(payment.headers.get('location'), '/gameon-multisports-league/book/review');
+  console.log('PASS league landing, all sport pages and booking routes use October 24–25, 2026 with no superseded dates.');
   console.log('PASS public website and league routes render consent controls without a pre-consent Pixel script or image.');
   for (const path of ['/admin/multisports-league', '/admin/multisports-league/coupons', '/admin/multisports-league/12345678-1234-4234-8234-123456789abc', '/admin/multisports-league/export']) {
     const response = await get(path);

@@ -37,7 +37,7 @@ function loader(mocks = {}) {
 const load = loader();
 const { SPORTS } = load('src/components/league/data.ts');
 const { parseLeagueEntry } = load('src/lib/league/entry.ts');
-const input = { sport: 'badminton', categoryIds: [SPORTS[0].categories[0].id], date: '2026-10-17', captainName: 'Test Player', teamName: 'Test Team', email: 'player@example.com', phone: '9811000000', notes: 'Saved checkout notes', city: 'Gurugram', addons: {} };
+const input = { sport: 'badminton', categoryIds: [SPORTS[0].categories[0].id], date: '2026-10-24', captainName: 'Test Player', teamName: 'Test Team', email: 'player@example.com', phone: '9811000000', notes: 'Saved checkout notes', city: 'Gurugram', addons: {} };
 const parsed = parseLeagueEntry(input);
 assert.equal(parsed.ok, true);
 const id = '12345678-1234-4234-8234-123456789abc';
@@ -271,7 +271,7 @@ test('CSV export paginates past the default database cap and includes saved deta
   const csv = await response.text();
   assert.deepEqual(pages, [1, 2, 3]);
   assert.equal(csv.trim().split('\r\n').length, 1002);
-  for (const value of [input.email, input.captainName, input.notes, 'pay_valid', 'U-13 Singles Boys', '2026-10-17']) assert.ok(csv.includes(value), value);
+  for (const value of [input.email, input.captainName, input.notes, 'pay_valid', 'U-13 Singles Boys', '2026-10-24']) assert.ok(csv.includes(value), value);
 });
 
 test('Admin detail renders frozen checkout, price breakdown and email failure; guard runs before database', async () => {

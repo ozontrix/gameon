@@ -63,13 +63,13 @@ export function LeagueLanding() {
         </h1>
         <p className="mt-2.5 max-w-xl text-[13.5px] leading-relaxed text-go-off/60">
           Four sports. {SPORTS.reduce((sum, sport) => sum + sport.categories.length, 0)} categories.
-          One arena. Join us on 17 &amp; 18 October 2026 — add categories from any sport
+          One arena. Join us on 24 &amp; 25 October 2026 — add categories from any sport
           to your cart, check match days and pay together in one checkout.
         </p>
 
         <div className="mt-3.5 flex flex-wrap gap-2">
           <Chip icon={MapPin}>Sector 70, Gurugram</Chip>
-          <Chip icon={CalendarDays}>17 &amp; 18 October 2026</Chip>
+          <Chip icon={CalendarDays}>24 &amp; 25 October 2026</Chip>
           <Chip icon={Trophy} tone="brand">{LEAGUE_PRIZE_POOL} overall prize pool</Chip>
           <Chip icon={Zap} tone="brand">
             Instant confirmation

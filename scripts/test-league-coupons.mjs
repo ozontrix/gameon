@@ -45,7 +45,7 @@ const inventory = [
   { ...rules, id: 'inactive', code: 'INACTIVE', active: false, remaining: 10 },
   { ...rules, id: 'exhausted', code: 'EXHAUSTED', active: true, remaining: 0 },
 ];
-const entryInput = { selections: [{ sportId: 'pickleball', categoryId: 'open-doubles' }], date: '2026-10-18', captainName: 'Test Player', email: 'player@example.com', phone: '9811000000', coupon: 'ADMIN15' };
+const entryInput = { selections: [{ sportId: 'pickleball', categoryId: 'open-doubles' }], date: '2026-10-25', captainName: 'Test Player', email: 'player@example.com', phone: '9811000000', coupon: 'ADMIN15' };
 
 test('Admin validation accepts flat/percent rules and rejects invalid values and allocations', () => {
   assert.equal(CouponFormSchema.parse({ ...rules, code: ' admin15 ' }).code, 'ADMIN15');

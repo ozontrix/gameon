@@ -187,7 +187,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
           <p className="text-sm font-semibold text-go-white">Your selected match days</p>
           <p className="mt-1 text-[13px] text-go-brand">{scheduleLabel(chosen)}</p>
           {categoryDates(chosen).length > 1 ? (
-            <p className="mt-2 text-[12px] text-go-off/75">Your entry spans both days. Please be available on 17 and 18 October.</p>
+            <p className="mt-2 text-[12px] text-go-off/75">Your entry spans both days. Please be available on 24 and 25 October.</p>
           ) : null}
         </Panel>
       ) : null}

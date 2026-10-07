@@ -183,7 +183,7 @@ test("Confirmed Razorpay handler tracks Purchase; failed confirmation and dismis
     let purchases = 0;
     let paymentEvents = 0;
     const pushes = [];
-    const booking = { draft: { ...receipt.entry, selections: [{ sportId: "badminton", categoryId: "mixed-doubles" }], date: "2026-10-17" },
+    const booking = { draft: { ...receipt.entry, selections: [{ sportId: "badminton", categoryId: "mixed-doubles" }], date: "2026-10-24" },
       sports: [{ name: "Badminton" }], categories, ready: true, pricing: { total: 3740 }, update: () => {}, clearCart: () => {} };
     window.Razorpay = class { constructor(args) { options = args; } open() {} };
     globalThis.fetch = async path => path.endsWith("/order")

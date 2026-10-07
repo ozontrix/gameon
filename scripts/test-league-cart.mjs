@@ -55,7 +55,7 @@ test("Two badminton categories and one pickleball category survive back navigati
   assert.deepEqual(restored.selections, example);
   assert.equal(restored.captainName, contact.captainName);
   assert.equal(restored.city, contact.city);
-  assert.equal(restored.date, "2026-10-17");
+  assert.equal(restored.date, "2026-10-24");
   assert.equal(restored.squadSize, 4);
   const result = parseLeagueEntry(restored);
   assert.equal(result.ok, true);
@@ -76,7 +76,7 @@ test("Category ids shared between sports stay separate; duplicate pairs never do
     { sportId: "badminton", categoryId: "mixed-doubles" },
     { sportId: "pickleball", categoryId: "mixed-doubles" },
   ];
-  const result = parseLeagueEntry({ ...contact, selections: [...selections, selections[0]], date: "2026-10-17" });
+  const result = parseLeagueEntry({ ...contact, selections: [...selections, selections[0]], date: "2026-10-24" });
   assert.equal(result.ok, true);
   assert.equal(result.entry.categories.length, 2);
   assert.equal(result.quote.total, 4400);
@@ -84,12 +84,12 @@ test("Category ids shared between sports stay separate; duplicate pairs never do
 
 test("All fourteen categories fit one checkout with server-derived totals and dates", () => {
   const selections = SPORTS.flatMap(sport => sport.categories.map(category => ({ sportId: sport.id, categoryId: category.id })));
-  const result = parseLeagueEntry({ ...contact, selections, date: "2026-10-17", squadSize: 1, addons: { jersey: 30 } });
+  const result = parseLeagueEntry({ ...contact, selections, date: "2026-10-24", squadSize: 1, addons: { jersey: 30 } });
   assert.equal(result.ok, true);
   assert.equal(result.entry.categories.length, 14);
   assert.equal(result.entry.sports.length, 4);
   assert.equal(result.entry.squadSize, 30);
-  assert.deepEqual(result.entry.dates, ["2026-10-17", "2026-10-18"]);
+  assert.deepEqual(result.entry.dates, ["2026-10-24", "2026-10-25"]);
   assert.equal(result.quote.total, 21600);
   assert.equal(result.quote.addOnsTotal, 0);
   assert.deepEqual(result.entry.addons, []);
@@ -100,16 +100,16 @@ test("Invalid categories, missing selections, wrong dates, and missing team name
     { selections: [] },
     { selections: [...example, { sportId: "football", categoryId: "mixed-doubles" }] },
     { selections: [{ sportId: "unknown", categoryId: "team" }] },
-    { selections: example, date: "2026-10-18" },
+    { selections: example, date: "2026-10-25" },
     { selections: [...example, { sportId: "cricket", categoryId: "team" }], teamName: "" },
-  ]) assert.equal(parseLeagueEntry({ ...contact, date: "2026-10-17", ...patch }).ok, false);
+  ]) assert.equal(parseLeagueEntry({ ...contact, date: "2026-10-24", ...patch }).ok, false);
 });
 
 test("Legacy drafts migrate; corrupt selections and hidden add-ons are discarded", () => {
   const migrated = cart.restoreDraft({ ...contact, sport: "pickleball", categoryIds: ["open-singles", "open-doubles"], addons: { jersey: 2 } });
   assert.equal(migrated.selections.length, 2);
   assert.deepEqual(migrated.addons, {});
-  assert.equal(migrated.date, "2026-10-18");
+  assert.equal(migrated.date, "2026-10-25");
   assert.equal(cart.restoreDraft(null).selections.length, 0);
   assert.equal(cart.restoreDraft({ selections: [{ sportId: "football", categoryId: "bad" }, null] }).selections.length, 0);
 });
@@ -161,6 +161,39 @@ test("Each sport stores its requested overall tournament prize separately from e
     ["cricket", 22000],
     ["football", 22000],
   ]);
+});
+
+test("Landing, sport details and review show the rescheduled weekend", () => {
+  const h = uiHarness();
+  const landing = h.landing();
+  assert.match(landing, /24 &amp; 25 October 2026/);
+  assert.doesNotMatch(landing, /1[78] (?:Oct|October)/);
+  for (const sport of SPORTS) {
+    const html = h.sport(sport.id);
+    assert.match(html, sport.id === "cricket" ? /25 Oct,? 2026/ : /24 Oct,? 2026/);
+    assert.doesNotMatch(html, /1[78] (?:Oct|October)/);
+  }
+  h.booking().toggleSelection("badminton", "mixed-doubles");
+  h.booking().toggleSelection("badminton", "mens-doubles");
+  assert.match(h.sport("badminton"), /Please be available on 24 and 25 October/);
+  const review = h.review();
+  assert.match(review, /24 Oct,? 2026/);
+  assert.match(review, /25 Oct,? 2026/);
+  assert.doesNotMatch(review, /1[78] (?:Oct|October)/);
+});
+
+test("Saved drafts with old dates recalculate match dates without losing selections or contact details", () => {
+  for (const [sportId, categoryId, oldDate, newDate] of [
+    ["football", "team", "2026-10-17", "2026-10-24"],
+    ["cricket", "team", "2026-10-18", "2026-10-25"],
+  ]) {
+    const selections = [{ sportId, categoryId }];
+    const restored = cart.restoreDraft({ ...contact, selections, date: oldDate });
+    assert.deepEqual(restored.selections, selections);
+    assert.equal(restored.date, newDate);
+    assert.equal(restored.email, contact.email);
+    assert.equal(parseLeagueEntry(restored).ok, true);
+  }
 });
 
 test("Badminton category prizes match the poster and total the tournament prize pool", () => {
