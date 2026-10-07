@@ -38,12 +38,12 @@ function loader(mocks = {}) {
 const load = loader();
 const { OpenPlayRegistrationSchema, normalizeOpenPlayPhone, openPlayAttribution } = load('src/lib/open-play/registration.ts');
 const constants = load('src/lib/open-play/constants.ts');
-const valid = { fullName: 'Test Player', phone: '9811000000', sport: 'cricket', contactConsent: true };
+const valid = { fullName: 'Test Player', phone: '9811000000', sport: 'cricket', email: 'test@example.com', city: 'Gurugram', contactConsent: true };
 
 test('All four sports accept minimal details; contacts normalize and marketing is opt-in', () => {
   for (const sport of constants.OPEN_PLAY_SPORT_IDS) {
     const input = OpenPlayRegistrationSchema.parse({ ...valid, sport });
-    assert.equal(input.email, ''); assert.equal(input.city, ''); assert.equal(input.marketingConsent, false);
+    assert.equal(input.email, valid.email); assert.equal(input.city, valid.city); assert.equal(input.marketingConsent, false);
   }
   for (const phone of ['9811000000', '+91 98110 00000', '91-9811000000', '(09811000000)']) assert.equal(normalizeOpenPlayPhone(phone), valid.phone);
   assert.equal(OpenPlayRegistrationSchema.parse({ ...valid, fullName: '  Test Player  ', email: ' Test@Example.com ' }).email, 'test@example.com');
@@ -68,7 +68,7 @@ function routeHarness({ fail = false, created = true, closed = false } = {}) {
   const writes = [];
   const api = loader({
     '@/lib/open-play/constants': { ...constants, openPlayIsClosed: () => closed },
-    '@/lib/open-play/server': { saveOpenPlayRegistration: async input => { writes.push(input); if (fail) throw new Error('Private DB detail'); return { created, registrationId: created ? 'test-id' : null }; } },
+    '@/lib/open-play/server': { saveOpenPlayRegistration: async input => { writes.push(input); if (fail) throw new Error('Private DB detail'); return { created, registrationId: created ? 'test-id' : null, registration: created ? { id: 'test-id', email: input.email } : null }; }, deliverOpenPlayEmail: async () => true },
   })('src/app/api/v1/public/open-play/registrations/route.ts');
   return { api, writes };
 }
@@ -83,7 +83,7 @@ test('New registrations return success only after persistence; duplicates return
   const result = await response.json(); assert.equal(result.registrationId, 'test-id'); assert.equal(result.eventDate, '2026-10-18');
   assert.equal(result.phone, undefined); assert.equal(result.fullName, undefined);
   const duplicate = await routeHarness({ created: false }).api.POST(request(valid));
-  assert.equal(duplicate.status, 200); assert.deepEqual(await duplicate.json(), { success: true, created: false, registrationId: null, eventDate: '2026-10-18' });
+  assert.equal(duplicate.status, 200); assert.deepEqual(await duplicate.json(), { success: true, created: false, registrationId: null, emailSent: false, eventDate: '2026-10-18' });
 });
 test('API blocks cross-origin, malformed, oversized, invalid, bot and expired requests before persistence', async () => {
   const h = routeHarness();
@@ -115,14 +115,14 @@ test('Persistence uses conflict-safe insert and never overwrites duplicate conta
     assert.equal(name, 'open_play_registrations');
     return { upsert: (input, config) => { saved = input; options = config; return { select: () => ({ maybeSingle: async () => ({ data: returned, error: dbError }) }) }; } };
   } } } })('src/lib/open-play/server.ts');
-  assert.deepEqual(await saveOpenPlayRegistration(OpenPlayRegistrationSchema.parse(valid)), { created: true, registrationId: 'id' });
+  assert.deepEqual(await saveOpenPlayRegistration(OpenPlayRegistrationSchema.parse(valid)), { created: true, registrationId: 'id', registration: returned });
   assert.equal(saved.event_date, constants.OPEN_PLAY_DATE); assert.equal(saved.phone, valid.phone); assert.equal(saved.marketing_consent, false);
   assert.deepEqual(options, { onConflict: 'event_date,phone,sport', ignoreDuplicates: true });
-  returned = null; assert.deepEqual(await saveOpenPlayRegistration(OpenPlayRegistrationSchema.parse(valid)), { created: false, registrationId: null });
+  returned = null; assert.deepEqual(await saveOpenPlayRegistration(OpenPlayRegistrationSchema.parse(valid)), { created: false, registrationId: null, registration: null });
   dbError = { message: 'internal' }; await assert.rejects(() => saveOpenPlayRegistration(OpenPlayRegistrationSchema.parse(valid)), /could not be saved/);
 });
 
-const row = { id: 'test-id', event_date: constants.OPEN_PLAY_DATE, sport: 'cricket', full_name: 'Test Player', phone: '9811000000', email: 'test@example.com', city: 'Gurugram', contact_consent: true, marketing_consent: false, attribution: { utm_source: 'instagram', utm_campaign: 'oct18' }, created_at: '2026-10-07T10:00:00Z' };
+const row = { id: 'test-id', event_date: constants.OPEN_PLAY_DATE, sport: 'cricket', full_name: 'Test Player', phone: '9811000000', email: 'test@example.com', city: 'Gurugram', contact_consent: true, marketing_consent: false, attribution: { utm_source: 'instagram', utm_campaign: 'oct18' }, created_at: '2026-10-07T10:00:00Z', email_status: 'SENT', email_sent_at: '2026-10-07T10:00:01Z', email_error: null };
 test('Admin filters sanitize query syntax and ignore invalid sport values', () => {
   const { readOpenPlayFilters } = loader({ '@/lib/db/supabase': { supabaseAdmin: {} } })('src/lib/admin/queries/open-play.ts');
   const filters = readOpenPlayFilters({ q: [' hi,%() ', 'ignored'], sport: ['football', 'tennis'] });
@@ -130,6 +130,7 @@ test('Admin filters sanitize query syntax and ignore invalid sport values', () =
 });
 test('Admin page lists saved records and checks authorization before reads', async () => {
   const mocks = {
+    '@/lib/admin/actions/open-play': { retryOpenPlayEmail: async () => ({ ok: true }) },
     '@/lib/admin/session': { requireAdmin: async () => ({ role: 'ADMIN' }) },
     '@/lib/admin/queries/open-play': { readOpenPlayFilters: () => ({}), listOpenPlayRegistrations: async () => ({ registrations: [row], total: 1 }), openPlayRegistrationStats: async () => ({ cricket: 1, football: 0, badminton: 0, pickleball: 0 }) },
   };
@@ -157,6 +158,8 @@ test('Landing renders original graphics, four sport choices, accessible fields a
   const html = renderToStaticMarkup(createElement(OpenPlayLanding, { closed: false }));
   for (const text of ['YOUR SUNDAY.', 'ON US.', '18 October 2026', '19 October 2026', 'DJ party', 'Pizza party', 'Coffee party', 'dandiya', 'court-scene.svg', 'op-mobile-cta', 'id="register"', 'name="contactConsent"']) assert.ok(html.includes(text), text);
   assert.equal((html.match(/data-sport=/g) ?? []).length, 4); assert.match(html, /name="fullName"/); assert.match(html, /name="phone"/);
+  for (const field of ['email', 'city']) assert.match(html, new RegExp(`<input(?=[^>]*name="${field}")(?=[^>]*required)[^>]*>`));
+  assert.doesNotMatch(html, /class="op-extra"|Add email &amp; city/);
   assert.doesNotMatch(html, /<input[^>]+name="marketingConsent"[^>]+checked/);
   const closed = renderToStaticMarkup(createElement(OpenPlayLanding, { closed: true }));
   assert.match(closed, /Registrations for October 18 are now closed/); assert.doesNotMatch(closed, /<form/);
@@ -181,4 +184,98 @@ test('Paid court dates reject October 18 and permit October 19; guards run befor
   assert.deepEqual(await SlotService.getSlots('court', '2026-10-18', { durationMinutes: 60 }), []); assert.equal(reads, 0);
   const { BookingService } = mockedLoad('src/lib/services/booking.service.ts');
   await assert.rejects(() => BookingService.createBooking('user', { facilityId: 'court', date: '2026-10-18', startTime: '10:00', endTime: '11:00' }), /19 October/); assert.equal(reads, 0);
+});
+
+test('Email and city are required, reject blanks/missing values and trim valid details', () => {
+  for (const field of ['email', 'city']) {
+    for (const value of [undefined, null, '', '   ']) assert.equal(OpenPlayRegistrationSchema.safeParse({ ...valid, [field]: value }).success, false);
+  }
+  assert.equal(OpenPlayRegistrationSchema.safeParse({ ...valid, city: 'a' }).success, false);
+  const parsed = OpenPlayRegistrationSchema.parse({ ...valid, city: '  Sector 70  ', email: ' PLAYER@EXAMPLE.COM ' });
+  assert.equal(parsed.city, 'Sector 70'); assert.equal(parsed.email, 'player@example.com');
+});
+
+test('Email failure after persistence still returns saved success without internal contact data', async () => {
+  for (const behavior of ['reject', 'throw']) {
+    let saved = false;
+    const { POST } = loader({
+      '@/lib/open-play/constants': { ...constants, openPlayIsClosed: () => false },
+      '@/lib/open-play/server': {
+        saveOpenPlayRegistration: async () => { saved = true; return { created: true, registrationId: row.id, registration: row }; },
+        deliverOpenPlayEmail: async registration => { assert.equal(saved, true); assert.equal(registration.email, row.email); if (behavior === 'throw') throw new Error('Private email details'); return false; },
+      },
+    })('src/app/api/v1/public/open-play/registrations/route.ts');
+    const response = await POST(request(valid)); assert.equal(response.status, 201);
+    const result = await response.json(); assert.equal(result.success, true); assert.equal(result.emailSent, false);
+    assert.equal(result.registration, undefined); assert.equal(result.email, undefined);
+  }
+});
+
+test('Confirmation template includes sport/date/venue, escapes attendee data and avoids payment claims', () => {
+  const { renderOpenPlayConfirmationEmail } = load('src/lib/open-play/email.ts');
+  const mail = renderOpenPlayConfirmationEmail({ ...row, full_name: '<script>Player</script>', city: 'City & <town>' });
+  for (const value of ['Cricket', '18 October 2026', 'Sector 70', '₹0', 'GameOn Multi Sports', '19 October 2026']) assert.ok(mail.text.includes(value), value);
+  assert.match(mail.html, /&lt;script&gt;Player&lt;\/script&gt;/); assert.doesNotMatch(mail.html, /<script>/);
+  assert.match(mail.html, /City &amp; &lt;town&gt;/); assert.match(mail.text, /not a private court or a timed slot/);
+  assert.match(mail.subject, /Cricket Open Play/);
+});
+
+test('SMTP uses existing account and GameOn sender, handles missing config/rejection/failure and closes transport', async () => {
+  const previous = { user: process.env.SMTP_USER, pass: process.env.SMTP_APP_PASSWORD };
+  let transportCount = 0; let closeCount = 0; let mode = 'accept'; let options; let mail;
+  const { sendOpenPlayConfirmationEmail } = loader({ nodemailer: { createTransport: settings => { transportCount++; options = settings; return { sendMail: async input => { mail = input; if (mode === 'throw') throw new Error('Private SMTP detail'); return { accepted: mode === 'accept' ? [row.email] : [] }; }, close: () => { closeCount++; } }; } } })('src/lib/open-play/email.ts');
+  try {
+    delete process.env.SMTP_USER; delete process.env.SMTP_APP_PASSWORD;
+    assert.equal((await sendOpenPlayConfirmationEmail(row)).sent, false); assert.equal(transportCount, 0);
+    process.env.SMTP_USER = 'club@example.com'; process.env.SMTP_APP_PASSWORD = 'test pass';
+    assert.equal((await sendOpenPlayConfirmationEmail(row)).sent, true);
+    assert.deepEqual(mail.from, { name: 'GameOn Multi Sports', address: 'club@example.com' }); assert.equal(mail.to, row.email); assert.equal(mail.replyTo, 'info@gameonmultisports.com'); assert.equal(options.auth.pass, 'testpass');
+    mode = 'reject'; assert.equal((await sendOpenPlayConfirmationEmail(row)).sent, false);
+    mode = 'throw'; const failed = await sendOpenPlayConfirmationEmail(row); assert.equal(failed.sent, false); assert.doesNotMatch(failed.error, /Private SMTP/);
+    assert.equal(closeCount, 3);
+  } finally {
+    if (previous.user === undefined) delete process.env.SMTP_USER; else process.env.SMTP_USER = previous.user;
+    if (previous.pass === undefined) delete process.env.SMTP_APP_PASSWORD; else process.env.SMTP_APP_PASSWORD = previous.pass;
+  }
+});
+
+test('Email lease skips sent/active deliveries, persists failures and permits retries without duplicate concurrent sends', async () => {
+  const record = { ...row, email_status: 'PENDING' }; let sends = 0; let success = false;
+  const db = { from: () => {
+    let update; const filters = []; let claim = false;
+    const chain = {
+      update: data => { update = data; return chain; }, eq: (key, value) => { filters.push([key, value]); return chain; },
+      or: () => { claim = true; return chain; }, select: () => chain,
+      maybeSingle: async () => {
+        if (!filters.every(([key, value]) => record[key] === value)) return { data: null, error: null };
+        if (claim && !( ['PENDING', 'FAILED', 'SKIPPED'].includes(record.email_status) || (record.email_status === 'SENDING' && Date.parse(record.email_attempted_at) < Date.now() - 600000))) return { data: null, error: null };
+        Object.assign(record, update); return { data: { ...record }, error: null };
+      },
+      then: (resolve, reject) => chain.maybeSingle().then(resolve, reject),
+    }; return chain;
+  } };
+  const { deliverOpenPlayEmail } = loader({ '@/lib/db/supabase': { supabaseAdmin: db }, './email': { sendOpenPlayConfirmationEmail: async () => { sends++; return { sent: success, error: 'Test delivery failed' }; } } })('src/lib/open-play/server.ts');
+  assert.equal(await deliverOpenPlayEmail(record), false); assert.equal(record.email_status, 'FAILED'); assert.equal(record.email_error, 'Test delivery failed');
+  success = true; assert.equal(await deliverOpenPlayEmail(record), true); assert.equal(record.email_status, 'SENT'); assert.ok(record.email_sent_at); assert.equal(sends, 2);
+  assert.equal(await deliverOpenPlayEmail(record), true); assert.equal(sends, 2);
+  record.email_status = 'SENDING'; record.email_attempted_at = new Date().toISOString();
+  assert.equal(await deliverOpenPlayEmail(record), false); assert.equal(sends, 2);
+  record.email_attempted_at = new Date(Date.now() - 11 * 60000).toISOString();
+  assert.equal(await deliverOpenPlayEmail(record), true); assert.equal(sends, 3);
+  record.email_status = 'PENDING';
+  await Promise.all([deliverOpenPlayEmail(record), deliverOpenPlayEmail(record)]); assert.equal(sends, 4);
+});
+
+test('Email retry action denies non-admin access before reading and audits authorized delivery', async () => {
+  let permitted = false; let reads = 0; let deliveries = 0; let audits = 0; let revalidations = 0;
+  const { retryOpenPlayEmail } = loader({
+    '../session': { authorize: async role => { assert.equal(role, 'ADMIN'); return permitted ? { id: 'admin' } : null; } },
+    '../audit': { recordAudit: async () => { audits++; } },
+    'next/cache': { revalidatePath: path => { assert.equal(path, '/admin/open-play-registrations'); revalidations++; } },
+    '@/lib/db/supabase': { supabaseAdmin: { from: () => { reads++; const chain = { select: () => chain, eq: () => chain, maybeSingle: async () => ({ data: row, error: null }) }; return chain; } } },
+    '@/lib/open-play/server': { deliverOpenPlayEmail: async () => { deliveries++; return true; } },
+  })('src/lib/admin/actions/open-play.ts');
+  const input = new FormData(); input.set('id', '12345678-1234-4234-8234-123456789012');
+  assert.equal((await retryOpenPlayEmail(null, input)).ok, false); assert.equal(reads, 0);
+  permitted = true; assert.equal((await retryOpenPlayEmail(null, input)).ok, true); assert.equal(reads, 1); assert.equal(deliveries, 1); assert.equal(audits, 1); assert.equal(revalidations, 1);
 });

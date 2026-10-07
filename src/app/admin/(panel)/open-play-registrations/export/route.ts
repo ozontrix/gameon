@@ -12,13 +12,13 @@ export async function GET(request: Request) {
   if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (actor.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const filters = readOpenPlayFilters(Object.fromEntries(new URL(request.url).searchParams));
-  const rows: unknown[][] = [['Registration ID', 'Event date', 'Name', 'Phone', 'Email', 'City', 'Sport', 'Event contact consent', 'Marketing consent', 'UTM source', 'UTM medium', 'UTM campaign', 'UTM content', 'UTM term', 'Registered at']];
+  const rows: unknown[][] = [['Registration ID', 'Event date', 'Name', 'Phone', 'Email', 'City', 'Sport', 'Event contact consent', 'Marketing consent', 'UTM source', 'UTM medium', 'UTM campaign', 'UTM content', 'UTM term', 'Registered at', 'Email status', 'Email sent at', 'Email error']];
   for (let page = 1; ; page++) {
     const { registrations } = await listOpenPlayRegistrations(filters, page, 500);
     for (const entry of registrations) {
       const campaign = entry.attribution && typeof entry.attribution === 'object' && !Array.isArray(entry.attribution) ? entry.attribution : {};
       rows.push([entry.id, entry.event_date, entry.full_name, entry.phone, entry.email, entry.city, entry.sport, entry.contact_consent, entry.marketing_consent,
-        campaign.utm_source, campaign.utm_medium, campaign.utm_campaign, campaign.utm_content, campaign.utm_term, entry.created_at]);
+        campaign.utm_source, campaign.utm_medium, campaign.utm_campaign, campaign.utm_content, campaign.utm_term, entry.created_at, entry.email_status, entry.email_sent_at, entry.email_error]);
     }
     if (registrations.length < 500) break;
   }

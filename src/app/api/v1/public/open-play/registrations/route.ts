@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { withRateLimit } from '@/lib/middlewares/rate-limiter';
 import { openPlayIsClosed, OPEN_PLAY_DATE } from '@/lib/open-play/constants';
 import { OpenPlayRegistrationSchema } from '@/lib/open-play/registration';
-import { saveOpenPlayRegistration } from '@/lib/open-play/server';
+import { deliverOpenPlayEmail, saveOpenPlayRegistration } from '@/lib/open-play/server';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 const headers = { 'Cache-Control': 'no-store' };
 export async function POST(request: Request) {
   const origin = request.headers.get('origin');
@@ -29,7 +30,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'Please check the highlighted fields.', fields }, { status: 400, headers });
       }
       const result = await saveOpenPlayRegistration(parsed.data);
-      return NextResponse.json({ success: true, ...result, eventDate: OPEN_PLAY_DATE }, { status: result.created ? 201 : 200, headers });
+      let emailSent = false;
+      if (result.registration) {
+        try { emailSent = await deliverOpenPlayEmail(result.registration); }
+        catch { console.error('Open play: registration saved, confirmation email could not be processed.'); }
+      }
+      // Never return the internal row or let email failure lose a saved registration.
+      return NextResponse.json({ success: true, created: result.created, registrationId: result.registrationId, emailSent, eventDate: OPEN_PLAY_DATE }, { status: result.created ? 201 : 200, headers });
     } catch {
       return NextResponse.json({ success: false, error: 'We couldn’t save your registration. Please try again or call +91 74948 25740.' }, { status: 503, headers });
     }

@@ -15,8 +15,8 @@ export const OpenPlayRegistrationSchema = z.object({
   fullName: z.string().trim().min(2, 'Please enter your name.').max(80, 'Please use 80 characters or fewer.')
     .regex(/^[\p{L}\p{M} .'-]+$/u, 'Please enter a name using letters.'),
   phone: z.string().max(24).transform(normalizeOpenPlayPhone).pipe(z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number.')),
-  email: z.string().trim().max(254).pipe(z.union([z.email('Enter a valid email address.'), z.literal('')])).optional().default('').transform(value => value.toLowerCase()),
-  city: z.string().trim().max(80).optional().default(''),
+  email: z.string({ error: 'Enter your email address.' }).trim().min(1, 'Enter your email address.').max(254).pipe(z.email('Enter a valid email address.')).transform(value => value.toLowerCase()),
+  city: z.string({ error: 'Enter your city or neighbourhood.' }).trim().min(2, 'Enter your city or neighbourhood.').max(80, 'Please use 80 characters or fewer.'),
   contactConsent: z.literal(true, { error: 'Please agree so we can contact you about open play.' }),
   marketingConsent: z.boolean().optional().default(false),
   website: z.string().max(0, 'Unable to submit this registration.').optional().default(''),

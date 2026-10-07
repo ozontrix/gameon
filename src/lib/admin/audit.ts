@@ -5,6 +5,7 @@ import type { Json } from '@/types/database.types';
 import type { StaffSession } from './session';
 
 export type AuditEntity =
+  | 'open_play_registration'
   | 'league_coupon'
   | 'league_booking'
   | 'booking'

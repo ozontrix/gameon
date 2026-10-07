@@ -34,7 +34,7 @@ function command(method, params = {}) {
 }
 async function evaluate(expression) {
   const result = await command('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+  if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
   return result.result.value;
 }
 async function until(expression, label) {
@@ -51,10 +51,10 @@ async function navigate() {
   await evaluate('document.fonts.ready'); await sleep(500);
 }
 async function fillForm(sport = 'cricket') {
-  await evaluate(`document.querySelector('[data-sport="${sport}"]').click();
+  await evaluate(`(() => { document.querySelector('[data-sport="${sport}"]').click();
     const change = (name, value) => { const input = document.querySelector('[name="' + name + '"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); };
-    change('fullName', 'Browser Test Player'); change('phone', '9811000000');
-    const consent = document.querySelector('[name="contactConsent"]'); if (!consent.checked) consent.click();`);
+    change('fullName', 'Browser Test Player'); change('phone', '9811000000'); change('email', 'browser-test@example.com'); change('city', 'Gurugram');
+    const consent = document.querySelector('[name="contactConsent"]'); if (!consent.checked) consent.click(); })()`);
   await sleep(50);
 }
 try {
@@ -81,7 +81,7 @@ try {
       const { requestId, request } = message.params;
       if (request.url.includes('/api/v1/public/open-play/registrations')) {
         submissions.push(JSON.parse(request.postData));
-        const payload = mode === 'error' ? { success: false, error: 'Test storage is temporarily unavailable.' } : { success: true, created: mode === 'success', registrationId: mode === 'success' ? 'browser-test-id' : null, eventDate: '2026-10-18' };
+        const payload = mode === 'error' ? { success: false, error: 'Test storage is temporarily unavailable.' } : { success: true, created: mode === 'success', registrationId: mode === 'success' ? 'browser-test-id' : null, emailSent: mode === 'success', eventDate: '2026-10-18' };
         setTimeout(() => command('Fetch.fulfillRequest', { requestId, responseCode: mode === 'error' ? 503 : mode === 'duplicate' ? 200 : 201, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify(payload)).toString('base64') }).catch(error => errors.push(String(error))), 300);
       } else command('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' }).catch(error => errors.push(String(error)));
     }
@@ -95,6 +95,7 @@ try {
     const layout = await evaluate(`({ width: innerWidth, scroll: document.documentElement.scrollWidth, body: document.body.scrollWidth, title: !!document.querySelector('h1'), choices: document.querySelectorAll('[data-sport]').length, inputFont: getComputedStyle(document.querySelector('[name="phone"]')).fontSize, cta: getComputedStyle(document.querySelector('.op-mobile-cta')).display })`);
     assert.ok(layout.scroll <= width && layout.body <= width, `Overflow at ${width}: ${JSON.stringify(layout)}`);
     assert.equal(layout.choices, 4); assert.equal(layout.inputFont, '16px'); assert.equal(layout.cta === 'none', width >= 1024);
+    for (const field of ['email', 'city']) assert.equal(await evaluate(`document.querySelector('[name="${field}"]').required && document.querySelector('[name="${field}"]').getClientRects().length > 0`), true);
     await screenshot(`landing-${width}.png`);
     if (width === 375) { await evaluate(`document.querySelector('#register').scrollIntoView();`); await sleep(300); await screenshot('form-mobile.png'); }
     console.log(`PASS ${width}px responsive layout, input sizes and CTA visibility`);
@@ -103,6 +104,10 @@ try {
   await until(`document.querySelector('#op-sport-error')`, 'sport validation'); assert.equal(submissions.length, 0);
   await evaluate(`document.querySelectorAll('.op-sport-card')[1].click()`); await sleep(150);
   assert.equal(await evaluate(`document.querySelector('[data-sport="football"]').getAttribute('aria-pressed')`), 'true');
+  await fillForm('pickleball');
+  await evaluate(`document.querySelector('[name="email"]').value = ''; document.querySelector('[name="city"]').value = ''; document.querySelector('form').requestSubmit();`);
+  await until(`document.querySelector('#op-email-error') && document.querySelector('#op-city-error')`, 'required email and city validation');
+  assert.equal(submissions.length, 0);
   await fillForm('pickleball');
   await evaluate(`document.querySelector('form').requestSubmit(); document.querySelector('form').requestSubmit();`);
   try { await until(`document.body.innerText.toLowerCase().includes('you’re on the list.')`, 'saved confirmation'); }

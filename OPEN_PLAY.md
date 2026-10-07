@@ -9,7 +9,7 @@
 
 ## Registration
 
-Choose one of cricket, football, badminton or pickleball. Name and Indian mobile number are required. Email and city are optional. Event contact consent is required; future marketing consent is separate, optional and unchecked.
+Choose one of cricket, football, badminton or pickleball. Name, Indian mobile number, email and city are required and always visible. Email is normalized to lowercase, and city must contain at least two characters. Event contact consent is required; future marketing consent is separate, optional and unchecked.
 
 Server validation, same-origin checks, a honeypot, bounded requests and the existing in-memory rate limiter protect the public form. Rate limits are per running instance, not distributed across Vercel instances; configure platform-level abuse protection before high-volume campaigns if necessary.
 
@@ -17,11 +17,13 @@ Phone formats normalize to ten digits. A unique `(event_date, phone, sport)` dat
 
 Registrations are expressions of interest, not court reservations or guaranteed playing times. No payment or login is needed. Exact timings, equipment, pizza and coffee arrangements are not invented. Dandiya is the interpretation of “Dania night” and is a subtle mention.
 
-After a successful save the visitor gets a confirmation, directions, an all-day calendar download and a share invitation. No email/SMS is automatically sent. The team follows up with details manually using admin records. Registration closes at midnight after October 18 in Asia/Kolkata.
+After a successful save the visitor gets a confirmation, directions, an all-day calendar download and a share invitation. A GameOn Multi Sports HTML and plain-text confirmation email is sent to the saved email using the existing `SMTP_USER` and `SMTP_APP_PASSWORD` Gmail transport, with replies to `info@gameonmultisports.com`. SMTP acceptance is tracked, not guaranteed inbox delivery. No SMS is automatically sent. Registration closes at midnight after October 18 in Asia/Kolkata.
+
+Email failure never loses a saved registration. The success screen distinguishes email sent from unavailable. Delivery states and errors are visible in admin and CSV, and admins can retry failed, pending, skipped or stale sending attempts. An atomic ten-minute lease prevents concurrent duplicate sends; SMTP acceptance followed by a process crash can still cause a later retry to send twice. Public duplicate submissions never resend to a new address or overwrite existing contact details.
 
 ## Database and admin
 
-Migration: `supabase/migrations/20261007120000_open_play_registrations.sql` (also applied to the connected project during implementation). RLS is enabled; `anon` and `authenticated` have no table privileges. Only the server service-role client writes; admin authorization is checked before reads or CSV export.
+Migrations: `supabase/migrations/20261007120000_open_play_registrations.sql` and `supabase/migrations/20261007140000_open_play_confirmation_email.sql` (also applied to the connected project during implementation). Required-contact constraints enforce new/updated rows without inventing missing details in historical registrations. Older entries are marked `SKIPPED`, not automatically emailed. RLS is enabled; `anon` and `authenticated` have no table privileges. Only the server service-role client writes; admin authorization is checked before reads, email retries or CSV export.
 
 The admin screen provides per-sport counts, search, filtering, pagination, consent flags and campaign information. CSV export paginates beyond Supabase's default result limit and escapes spreadsheet formulas. Records are not exposed by a public GET endpoint.
 

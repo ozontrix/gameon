@@ -40,7 +40,7 @@ export function OpenPlayLanding({ closed }: { closed: boolean }) {
             <p className="op-hero-sub">Four sports. Zero playing fees.<br className="sm:hidden" /> A whole lot of GameOn.</p>
             <p className="op-body mt-4 max-w-lg">Put the plans on pause. Pick up a racket, find your squad, or try something new. On October 18, everyone’s invited to play for free.</p>
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm text-go-off/85">{['All skill levels', 'Come solo or with friends', 'No payment needed'].map(text => <span key={text} className="flex items-center gap-2"><Check className="size-4 text-go-brand" />{text}</span>)}</div>
-            <div className="mt-7 flex items-center gap-4"><a href="#register" className="op-cta">{closed ? 'Explore what’s next' : 'I’m in. Let’s play.'}<ArrowRight className="size-5" /></a><span className="max-w-24 text-xs leading-relaxed text-go-off/70">Just your name &amp; mobile to start.</span></div>
+            <div className="mt-7 flex items-center gap-4"><a href="#register" className="op-cta">{closed ? 'Explore what’s next' : 'I’m in. Let’s play.'}<ArrowRight className="size-5" /></a><span className="max-w-28 text-xs leading-relaxed text-go-off/70">A quick form. An email confirmation.</span></div>
           </motion.div>
           <div className="op-hero-art" aria-hidden="true">
             <span className="op-art-caption">OFFLINE IS THE NEW GAME PLAN.</span>
@@ -81,7 +81,7 @@ export function OpenPlayLanding({ closed }: { closed: boolean }) {
       <section className="op-container op-section" aria-labelledby="op-how-title">
         <div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr]"><div><p className="op-eyebrow">Less scrolling. More playing.</p><h2 id="op-how-title" className="op-heading mt-3">THREE STEPS.<br />ONE GOOD SUNDAY.</h2><a href="#register" className="mt-5 inline-flex min-h-11 items-center gap-3 text-sm font-semibold text-go-brand hover:underline">Join the open play list<ArrowRight className="size-4" /></a></div><div className="grid gap-4">{[
           { icon: Heart, title: 'Pick the sport you love.', copy: 'Or the one you’ve always wanted to try. Choose your preferred sport in the form.' },
-          { icon: Users, title: 'Tell us who’s joining.', copy: 'Your name and mobile number are all we need. No account, no checkout, no fuss.' },
+          { icon: Users, title: 'Tell us who’s joining.', copy: 'Add your name, mobile, email and city. We’ll email your joining confirmation. No account or checkout needed.' },
           { icon: MapPin, title: 'Show up. Get your game on.', copy: 'We’ll share timings on your mobile. Come to Sector 70 on October 18 ready to play.' },
         ].map(({ icon: Icon, title, copy }, index) => <div key={title} className="op-step"><span className="op-step-number">0{index + 1}</span><div><h3 className="flex items-center gap-2 text-lg font-semibold"><Icon className="size-4 shrink-0 text-go-brand" />{title}</h3><p className="op-body mt-2 text-sm">{copy}</p></div></div>)}</div></div>
       </section>

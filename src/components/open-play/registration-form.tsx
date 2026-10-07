@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, CalendarPlus, Check, CheckCircle2, ChevronDown, LoaderCircle, MapPin, ShieldCheck, Share2 } from 'lucide-react';
+import { ArrowRight, CalendarPlus, Check, CheckCircle2, LoaderCircle, MapPin, ShieldCheck, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_SPORTS, type OpenPlaySport } from '@/lib/open-play/constants';
 import { OpenPlayRegistrationSchema, openPlayAttribution } from '@/lib/open-play/registration';
@@ -12,7 +12,7 @@ export function OpenPlayRegistrationForm({ closed, sport, onSportChange: setSpor
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState('');
-  const [saved, setSaved] = useState<{ created: boolean; sport: OpenPlaySport } | null>(null);
+  const [saved, setSaved] = useState<{ created: boolean; sport: OpenPlaySport; emailSent: boolean } | null>(null);
   const [shareStatus, setShareStatus] = useState('');
   const pending = useRef(false);
   const successRef = useRef<HTMLDivElement>(null);
@@ -32,7 +32,6 @@ export function OpenPlayRegistrationForm({ closed, sport, onSportChange: setSpor
       setErrors(fields);
       setFailure('Please check the highlighted fields.');
       const first = parsed.error.issues[0]?.path[0];
-      if (first === 'email' || first === 'city') form.querySelector<HTMLDetailsElement>('.op-extra')?.setAttribute('open', '');
       if (first === 'sport') form.querySelector<HTMLButtonElement>('[data-sport]')?.focus();
       else form.querySelector<HTMLInputElement>(`[name="${String(first)}"]`)?.focus();
       return;
@@ -40,13 +39,13 @@ export function OpenPlayRegistrationForm({ closed, sport, onSportChange: setSpor
     pending.current = true;
     setBusy(true); setErrors({}); setFailure('');
     try {
-      const response = await fetch('/api/v1/public/open-play/registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed.data), signal: AbortSignal.timeout(20000) });
+      const response = await fetch('/api/v1/public/open-play/registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed.data), signal: AbortSignal.timeout(45000) });
       const result = await response.json();
       if (!response.ok || !result.success) {
         setErrors(result.fields ?? {});
         throw new Error(result.error || 'We couldn’t save your registration. Please try again.');
       }
-      setSaved({ created: result.created, sport: parsed.data.sport });
+      setSaved({ created: result.created, sport: parsed.data.sport, emailSent: result.emailSent === true });
       if (result.created && result.registrationId) trackOpenPlayLead(result.registrationId, parsed.data.sport);
       requestAnimationFrame(() => successRef.current?.focus());
     } catch (error) {
@@ -67,7 +66,8 @@ export function OpenPlayRegistrationForm({ closed, sport, onSportChange: setSpor
     <h2 className="mt-2 font-display text-4xl uppercase">You’re on the list.</h2>
     <p className="mt-4 text-base leading-relaxed text-go-off/80">{saved.created ? 'Your' : 'This mobile number already has a'} <strong className="text-go-white">{OPEN_PLAY_SPORTS.find(item => item.id === saved.sport)?.name}</strong> registration for free open play.</p>
     <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm"><p className="flex items-center gap-3"><CalendarPlus className="size-5 text-go-brand" />{OPEN_PLAY_DATE_LABEL}</p><p className="flex items-center gap-3"><MapPin className="size-5 text-go-brand" />Sector 70, Gurugram</p></div>
-    <p className="mt-4 text-sm leading-relaxed text-go-off/75">The team will share exact timings on your mobile. This registers your interest; it does not reserve a court or a timed slot. No payment is needed.</p>
+    {saved.created ? <p className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-sm leading-relaxed text-go-off/85">{saved.emailSent ? 'Your GameOn Multi Sports confirmation email has been sent. Check your inbox or spam folder.' : 'Your registration is saved. We couldn’t send your confirmation email right now; the team can retry it. You don’t need to register again.'}</p> : null}
+    <p className="mt-4 text-sm leading-relaxed text-go-off/75">The team will share exact timings using your registered contact details. This registers your interest; it does not reserve a court or a timed slot. No payment is needed.</p>
     <a href={OPEN_PLAY_MAP_URL} target="_blank" rel="noopener noreferrer" className="op-cta mt-6 w-full">Get directions <ArrowRight className="size-4" /></a>
     <div className="mt-3 grid grid-cols-2 gap-3"><a href="/open-play/october-18.ics" download className="op-secondary"><CalendarPlus className="size-4" />Save the date</a><button type="button" onClick={share} className="op-secondary"><Share2 className="size-4" />Invite a friend</button></div>
     <p aria-live="polite" className="mt-3 text-sm text-go-brand">{shareStatus}</p>
@@ -88,7 +88,8 @@ export function OpenPlayRegistrationForm({ closed, sport, onSportChange: setSpor
       <legend className="mb-3 text-sm font-semibold">02 / A little about you</legend>
       <div><label htmlFor="op-name" className="op-label">Your name <span className="text-go-brand">*</span></label><input id="op-name" name="fullName" autoComplete="name" maxLength={80} placeholder="Your full name" className="op-input" required aria-invalid={Boolean(errors.fullName)} aria-describedby={errors.fullName ? 'op-fullName-error' : undefined} />{fieldError('fullName')}</div>
       <div><label htmlFor="op-phone" className="op-label">Mobile number <span className="text-go-brand">*</span></label><div className="op-phone"><span className="border-r border-white/15 px-3 text-go-off/70">+91</span><input id="op-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel-national" maxLength={24} placeholder="10-digit mobile number" required aria-invalid={Boolean(errors.phone)} aria-describedby={`op-phone-hint${errors.phone ? ' op-phone-error' : ''}`} /></div><p id="op-phone-hint" className="mt-1.5 text-xs text-go-off/70">For your open play timings and event updates.</p>{fieldError('phone')}</div>
-      <details className="op-extra"><summary className="flex min-h-11 cursor-pointer items-center justify-between text-sm text-go-off/80">Add email &amp; city <span className="flex items-center gap-1 text-xs">Optional <ChevronDown className="size-4" /></span></summary><div className="space-y-4 pb-2 pt-3"><div><label htmlFor="op-email" className="op-label">Email</label><input id="op-email" name="email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" className="op-input" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'op-email-error' : undefined} />{fieldError('email')}</div><div><label htmlFor="op-city" className="op-label">City / neighbourhood</label><input id="op-city" name="city" autoComplete="address-level2" maxLength={80} placeholder="e.g. Sector 70, Gurugram" className="op-input" aria-invalid={Boolean(errors.city)} />{fieldError('city')}</div></div></details>
+      <div><label htmlFor="op-email" className="op-label">Email <span className="text-go-brand">*</span></label><input id="op-email" name="email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" className="op-input" required aria-invalid={Boolean(errors.email)} aria-describedby={`op-email-hint${errors.email ? ' op-email-error' : ''}`} /><p id="op-email-hint" className="mt-1.5 text-xs text-go-off/70">We’ll email your joining confirmation from GameOn Multi Sports.</p>{fieldError('email')}</div>
+      <div><label htmlFor="op-city" className="op-label">City / neighbourhood <span className="text-go-brand">*</span></label><input id="op-city" name="city" autoComplete="address-level2" minLength={2} maxLength={80} placeholder="e.g. Sector 70, Gurugram" className="op-input" required aria-invalid={Boolean(errors.city)} aria-describedby={errors.city ? 'op-city-error' : undefined} />{fieldError('city')}</div>
       <div className="op-honeypot" aria-hidden="true"><label htmlFor="op-website">Leave this field empty</label><input id="op-website" name="website" tabIndex={-1} autoComplete="off" /></div>
       <label className="flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-go-off/80"><input name="contactConsent" type="checkbox" required className="mt-0.5 size-4 shrink-0 accent-go-brand" aria-invalid={Boolean(errors.contactConsent)} aria-describedby={errors.contactConsent ? 'op-contactConsent-error' : undefined} /><span>I agree to be contacted about this event and have read the <Link href="/privacy" target="_blank" className="text-go-brand underline">Privacy Policy</Link>. <span className="text-go-brand">*</span></span></label>{fieldError('contactConsent')}
       <label className="flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-go-off/75"><input name="marketingConsent" type="checkbox" className="mt-0.5 size-4 shrink-0 accent-go-brand" /><span>Send me GameOn offers and future event updates too. <span className="text-go-off/60">(Optional)</span></span></label>

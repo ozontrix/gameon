@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ActionForm, SubmitButton } from '@/components/admin/action-form';
+import { retryOpenPlayEmail } from '@/lib/admin/actions/open-play';
 import { Pagination, pageFrom } from '@/components/admin/pagination';
 import { Badge, Card, EmptyState, Field, PageHeader, StatCard, Table, Td, Th, buttonClass, inputClass } from '@/components/admin/ui';
 import { PAGE_SIZE } from '@/lib/admin/constants';
@@ -31,7 +33,7 @@ export default async function OpenPlayRegistrationsAdminPage({ searchParams }: {
     </form>
     <p className="mb-3 text-sm text-zinc-600">{total} matching sport registration{total === 1 ? '' : 's'}. A person may register once per sport.</p>
     <Card>{registrations.length ? <>
-      <Table><thead><tr><Th>Attendee</Th><Th>Contact</Th><Th>Sport</Th><Th>Location</Th><Th>Campaign</Th><Th>Consent</Th><Th>Registered</Th></tr></thead>
+      <Table><thead><tr><Th>Attendee</Th><Th>Contact</Th><Th>Sport</Th><Th>Location</Th><Th>Campaign</Th><Th>Consent</Th><Th>Confirmation email</Th><Th>Registered</Th></tr></thead>
         <tbody>{registrations.map(entry => {
           const attribution = entry.attribution && typeof entry.attribution === 'object' && !Array.isArray(entry.attribution) ? entry.attribution : {};
           return <tr key={entry.id}>
@@ -41,6 +43,7 @@ export default async function OpenPlayRegistrationsAdminPage({ searchParams }: {
             <Td>{entry.city || '—'}</Td>
             <Td><p>{String(attribution.utm_source || 'Direct / not provided')}</p><p className="max-w-52 break-words text-xs text-zinc-500">{String(attribution.utm_campaign || '—')}</p></Td>
             <Td><p className="text-xs">Event contact: yes</p><Badge tone={entry.marketing_consent ? 'green' : 'neutral'}>{entry.marketing_consent ? 'Marketing opted in' : 'Event updates only'}</Badge></Td>
+            <Td><Badge tone={entry.email_status === 'SENT' ? 'green' : entry.email_status === 'FAILED' ? 'red' : 'neutral'}>{entry.email_status}</Badge>{entry.email_sent_at ? <p className="mt-1 text-xs text-zinc-500">{formatDateTime(entry.email_sent_at)}</p> : null}{entry.email_error ? <p className="mt-1 max-w-48 text-xs text-red-600">{entry.email_error}</p> : null}{entry.email && entry.email_status !== 'SENT' ? <ActionForm action={retryOpenPlayEmail} className="mt-2"><input type="hidden" name="id" value={entry.id} /><SubmitButton variant="secondary" size="sm" pendingLabel="Sending…">Retry email</SubmitButton></ActionForm> : null}</Td>
             <Td>{formatDateTime(entry.created_at)}</Td>
           </tr>;
         })}</tbody>

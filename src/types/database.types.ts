@@ -16,6 +16,10 @@ export type Database = {
     Tables: {
       open_play_registrations: {
         Row: {
+          email_status: string
+          email_attempted_at: string | null
+          email_sent_at: string | null
+          email_error: string | null
           id: string
           event_date: string
           sport: string
@@ -29,6 +33,10 @@ export type Database = {
           created_at: string
         }
         Insert: {
+          email_status?: string
+          email_attempted_at?: string | null
+          email_sent_at?: string | null
+          email_error?: string | null
           id?: string
           event_date?: string
           sport: string
