@@ -43,6 +43,7 @@ interface FirebaseIdTokenClaims {
   sub?: unknown;
   phone_number?: unknown;
   firebase?: { sign_in_provider?: unknown };
+  auth_time?: unknown;
 }
 
 /**
@@ -123,16 +124,20 @@ function readPhoneUser(claims: FirebaseIdTokenClaims): VerifiedPhoneUser | null 
   // Only phone sign-in carries a verified number, so any other provider is
   // something this endpoint was not asked to accept.
   const provider = claims.firebase?.sign_in_provider;
-  if (typeof provider === 'string' && provider !== 'phone') {
+  if (provider !== 'phone') {
     console.warn('Firebase token rejected: sign_in_provider is', provider);
     return null;
   }
 
   const phoneNumber = claims.phone_number;
-  if (typeof phoneNumber !== 'string' || !phoneNumber) {
+  if (typeof phoneNumber !== 'string' || !/^\+[1-9]\d{7,14}$/.test(phoneNumber)) {
     console.warn('Firebase token rejected: no phone_number claim');
     return null;
   }
 
+  // Refreshing a Firebase token must not substitute for a new SMS sign-in.
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof claims.auth_time !== 'number' || !Number.isInteger(claims.auth_time) ||
+    claims.auth_time > now + 30 || now - claims.auth_time > 300) return null;
   return { phoneNumber, uid: claims.sub };
 }

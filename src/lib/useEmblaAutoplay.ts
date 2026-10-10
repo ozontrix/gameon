@@ -5,9 +5,9 @@ import type { EmblaCarouselType } from "embla-carousel";
 
 // Auto-advance a horizontal embla carousel.
 // Pauses while the user is dragging and resumes once a slide settles.
-export function useEmblaAutoplay(emblaApi: EmblaCarouselType | undefined, delay = 3500) {
+export function useEmblaAutoplay(emblaApi: EmblaCarouselType | undefined, delay = 3500, enabled = true) {
   useEffect(() => {
-    if (!emblaApi) return;
+    if (!emblaApi || !enabled) return;
 
     let timer: ReturnType<typeof setInterval> | undefined;
 
@@ -20,6 +20,7 @@ export function useEmblaAutoplay(emblaApi: EmblaCarouselType | undefined, delay 
 
     const start = () => {
       stop();
+      if (document.hidden) return;
       timer = setInterval(() => {
         if (emblaApi.canScrollNext()) emblaApi.scrollNext();
         else emblaApi.scrollTo(0);
@@ -30,12 +31,14 @@ export function useEmblaAutoplay(emblaApi: EmblaCarouselType | undefined, delay 
     emblaApi.on("pointerDown", stop);
     emblaApi.on("pointerUp", start);
     emblaApi.on("select", start);
+    document.addEventListener("visibilitychange", start);
 
     return () => {
       stop();
       emblaApi.off("pointerDown", stop);
       emblaApi.off("pointerUp", start);
       emblaApi.off("select", start);
+      document.removeEventListener("visibilitychange", start);
     };
-  }, [emblaApi, delay]);
+  }, [emblaApi, delay, enabled]);
 }

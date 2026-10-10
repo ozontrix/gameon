@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../db/supabase';
 import { sportKeyFor } from '../utils/sport-key';
+import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
 
 /** How long an order holds its tickets before someone else may take them. */
 const HOLD_MINUTES = 10;
@@ -105,9 +106,9 @@ export class EventService {
     return data.map((row) => toPublicEvent(row as EventRow, takenByEvent.get(row.id) ?? 0));
   }
 
-  /** One event by id. Any status resolves, so an old link never 404s outright. */
+  /** Published history may resolve, but private drafts must not leak. */
   static async getPublic(id: string) {
-    const { data, error } = await supabaseAdmin.from('events').select(PUBLIC_SELECT).eq('id', id).maybeSingle();
+    const { data, error } = await supabaseAdmin.from('events').select(PUBLIC_SELECT).eq('id', id).neq('status', 'draft').maybeSingle();
     if (error) throw error;
     if (!data) return null;
 
@@ -122,7 +123,8 @@ export class EventService {
       .from('event_orders')
       .select('event_id, tickets')
       .in('event_id', eventIds)
-      .in('status', ['PENDING', 'CONFIRMED']);
+      .in('status', ['PENDING', 'CONFIRMED'])
+      .or(`status.eq.CONFIRMED,and(status.eq.PENDING,expires_at.gt.${new Date().toISOString()})`);
     if (error) throw error;
 
     const counts = new Map<string, number>();
@@ -194,12 +196,13 @@ export class EventService {
 
   /** Cancels any PENDING order past its hold, event-wide. */
   private static async releaseLapsedHolds(eventId: string) {
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('event_orders')
       .update({ status: 'CANCELLED' })
       .eq('event_id', eventId)
       .eq('status', 'PENDING')
       .lt('expires_at', new Date().toISOString());
+    if (error) throw error;
   }
 
   /**
@@ -209,15 +212,25 @@ export class EventService {
   static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ orderId: string; outcome: PaidEventOutcome }> {
     const { data: order, error: fetchError } = await supabaseAdmin
       .from('event_orders')
-      .select('id, status')
+      .select('id, status, amount_paid, payment_status, razorpay_payment_id')
       .eq('razorpay_order_id', orderId)
       .maybeSingle();
 
     if (fetchError) throw fetchError;
     if (!order) throw new EventError('No order found for this payment.', 404);
 
+    try {
+      await assertCapturedPayment(orderId, paymentId, Math.round(Number(order.amount_paid) * 100), order.razorpay_payment_id);
+    } catch (error) {
+      if (error instanceof PaymentValidationError) throw new EventError(error.message, error.status);
+      throw error;
+    }
+
     if (order.status === 'CONFIRMED') {
       return { orderId: order.id, outcome: 'confirmed' };
+    }
+    if (order.status === 'CANCELLED' && order.payment_status === 'PAID') {
+      return { orderId: order.id, outcome: 'tickets-lost' };
     }
 
     const paid = {
@@ -231,6 +244,8 @@ export class EventService {
       .from('event_orders')
       .update({ ...paid, status: 'CONFIRMED' })
       .eq('id', order.id)
+      .eq('payment_status', 'UNPAID')
+      .is('razorpay_payment_id', null)
       .in('status', ['PENDING', 'CANCELLED'])
       .select('id')
       .maybeSingle();
@@ -243,7 +258,9 @@ export class EventService {
       const { error: recordError } = await supabaseAdmin
         .from('event_orders')
         .update({ ...paid, status: 'CANCELLED' })
-        .eq('id', order.id);
+        .eq('id', order.id)
+        .eq('payment_status', 'UNPAID')
+        .is('razorpay_payment_id', null);
       if (recordError) throw recordError;
 
       console.error(
@@ -254,13 +271,15 @@ export class EventService {
 
     if (error) throw error;
 
-    const { data: latest } = await supabaseAdmin
+    const { data: latest, error: latestError } = await supabaseAdmin
       .from('event_orders')
-      .select('status')
+      .select('status, razorpay_payment_id, payment_status')
       .eq('id', order.id)
       .single();
 
-    if (latest?.status === 'CONFIRMED') {
+    if (latestError) throw latestError;
+    if (latest?.razorpay_payment_id !== paymentId) throw new EventError('A different payment is already recorded.', 409);
+    if (latest?.status === 'CONFIRMED' && latest.payment_status === 'PAID') {
       return { orderId: order.id, outcome: 'confirmed' };
     }
     throw new Error(`Could not confirm order ${order.id} for payment order ${orderId}`);

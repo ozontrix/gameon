@@ -2,6 +2,7 @@
 
 import { Navigation } from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
+import { HomeHighlights } from "@/components/HomeHighlights";
 import { SportsSection } from "@/components/SportsSection";
 import { ZonesSection } from "@/components/ZonesSection";
 import { AudienceSection } from "@/components/AudienceSection";
@@ -18,6 +19,7 @@ export default function HomePage() {
       <Navigation />
 
       <main className="relative">
+        <HomeHighlights />
         <HeroSection />
 
         {/* Stacked cards — each section slides up as a card with rounded top corners */}

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../db/supabase';
 import { sportKeyFor } from '../utils/sport-key';
+import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
 
 /** How long a registration holds its team slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -130,9 +131,9 @@ export class TournamentService {
     return data.map((row) => toPublicTournament(row as TournamentRow, takenByTournament.get(row.id) ?? 0));
   }
 
-  /** One tournament by id. Any status resolves, so an old link never 404s outright. */
+  /** Published history may resolve, but private drafts must not leak. */
   static async getPublic(id: string) {
-    const { data, error } = await supabaseAdmin.from('tournaments').select(PUBLIC_SELECT).eq('id', id).maybeSingle();
+    const { data, error } = await supabaseAdmin.from('tournaments').select(PUBLIC_SELECT).eq('id', id).neq('status', 'draft').maybeSingle();
     if (error) throw error;
     if (!data) return null;
 
@@ -147,7 +148,8 @@ export class TournamentService {
       .from('tournament_registrations')
       .select('tournament_id')
       .in('tournament_id', tournamentIds)
-      .in('status', ['PENDING', 'CONFIRMED']);
+      .in('status', ['PENDING', 'CONFIRMED'])
+      .or(`status.eq.CONFIRMED,and(status.eq.PENDING,expires_at.gt.${new Date().toISOString()})`);
     if (error) throw error;
 
     const counts = new Map<string, number>();
@@ -217,12 +219,13 @@ export class TournamentService {
 
   /** Cancels any PENDING registration past its hold, tournament-wide. */
   private static async releaseLapsedHolds(tournamentId: string) {
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('tournament_registrations')
       .update({ status: 'CANCELLED' })
       .eq('tournament_id', tournamentId)
       .eq('status', 'PENDING')
       .lt('expires_at', new Date().toISOString());
+    if (error) throw error;
   }
 
   /**
@@ -232,15 +235,25 @@ export class TournamentService {
   static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ registrationId: string; outcome: PaidTournamentOutcome }> {
     const { data: registration, error: fetchError } = await supabaseAdmin
       .from('tournament_registrations')
-      .select('id, status')
+      .select('id, status, amount_paid, payment_status, razorpay_payment_id')
       .eq('razorpay_order_id', orderId)
       .maybeSingle();
 
     if (fetchError) throw fetchError;
     if (!registration) throw new TournamentError('No registration found for this payment order.', 404);
 
+    try {
+      await assertCapturedPayment(orderId, paymentId, Math.round(Number(registration.amount_paid) * 100), registration.razorpay_payment_id);
+    } catch (error) {
+      if (error instanceof PaymentValidationError) throw new TournamentError(error.message, error.status);
+      throw error;
+    }
+
     if (registration.status === 'CONFIRMED') {
       return { registrationId: registration.id, outcome: 'confirmed' };
+    }
+    if (registration.status === 'CANCELLED' && registration.payment_status === 'PAID') {
+      return { registrationId: registration.id, outcome: 'slot-lost' };
     }
 
     const paid = {
@@ -255,6 +268,8 @@ export class TournamentService {
       .from('tournament_registrations')
       .update({ ...paid, status: 'CONFIRMED' })
       .eq('id', registration.id)
+      .eq('payment_status', 'UNPAID')
+      .is('razorpay_payment_id', null)
       .in('status', ['PENDING', 'CANCELLED'])
       .select('id')
       .maybeSingle();
@@ -269,7 +284,9 @@ export class TournamentService {
       const { error: recordError } = await supabaseAdmin
         .from('tournament_registrations')
         .update({ ...paid, status: 'CANCELLED' })
-        .eq('id', registration.id);
+        .eq('id', registration.id)
+        .eq('payment_status', 'UNPAID')
+        .is('razorpay_payment_id', null);
       if (recordError) throw recordError;
 
       console.error(
@@ -280,13 +297,15 @@ export class TournamentService {
 
     if (error) throw error;
 
-    const { data: latest } = await supabaseAdmin
+    const { data: latest, error: latestError } = await supabaseAdmin
       .from('tournament_registrations')
-      .select('status')
+      .select('status, razorpay_payment_id, payment_status')
       .eq('id', registration.id)
       .single();
 
-    if (latest?.status === 'CONFIRMED') {
+    if (latestError) throw latestError;
+    if (latest?.razorpay_payment_id !== paymentId) throw new TournamentError('A different payment is already recorded.', 409);
+    if (latest?.status === 'CONFIRMED' && latest.payment_status === 'PAID') {
       return { registrationId: registration.id, outcome: 'confirmed' };
     }
     throw new Error(`Could not confirm registration ${registration.id} for order ${orderId}`);

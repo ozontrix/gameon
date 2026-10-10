@@ -50,11 +50,11 @@ export async function POST(request: Request) {
       // 3. Confirm — the webhook may already have done it, which is fine
       const result = await BookingService.confirmPaidOrder(razorpay_order_id, razorpay_payment_id);
 
-      if (result.outcome === 'slot-lost') {
+      if (result.outcome !== 'confirmed') {
         return NextResponse.json({
           success: false,
-          code: 'SLOT_TAKEN',
-          error: `We received your payment, but this slot was booked by someone else before it went through. Please contact GameOn support for a refund (payment ID ${razorpay_payment_id}).`,
+          code: result.outcome === 'wallet-insufficient' ? 'WALLET_BALANCE_CHANGED' : 'SLOT_TAKEN',
+          error: `We received your payment, but ${result.outcome === 'wallet-insufficient' ? 'your Points balance changed before confirmation' : 'this slot was booked by someone else before it went through'}. A refund is required. Do not pay again; contact GameOn support (payment ID ${razorpay_payment_id}).`,
         }, { status: 409 });
       }
 

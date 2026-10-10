@@ -20,22 +20,25 @@ async function clearExpired(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('bookings')
+    const cutoff = new Date().toISOString();
+    const tables = ['bookings', 'event_orders', 'tournament_registrations'] as const;
+    const results = await Promise.all(tables.map(table => supabaseAdmin
+      .from(table)
       .update({ status: 'CANCELLED' })
       .eq('status', 'PENDING')
       .eq('payment_status', 'UNPAID')
-      .lt('expires_at', new Date().toISOString())
-      .select('id');
-
-    if (error) {
-      throw error;
-    }
+      .lt('expires_at', cutoff)
+      .select('id')));
+    const failed = results.find(result => result.error);
+    if (failed?.error) throw failed.error;
+    const clearedByType = Object.fromEntries(results.map((result, index) => [tables[index], result.data?.length ?? 0]));
+    const clearedCount = results.reduce((sum, result) => sum + (result.data?.length ?? 0), 0);
 
     return NextResponse.json({
       success: true,
-      message: `Cleared ${data.length} expired bookings.`,
-      clearedCount: data.length,
+      message: `Cleared ${clearedCount} expired checkout holds.`,
+      clearedCount,
+      clearedByType,
     });
 
   } catch (error) {

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { SignJWT } from 'jose';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { verifyFirebaseIdToken } from '@/lib/firebase-token';
 import { withRateLimit } from '@/lib/middlewares/rate-limiter';
+import { createPhoneSession, PhoneSessionError } from '@/lib/phone-session';
 
 const exchangeSchema = z.object({
-  firebaseToken: z.string().min(1),
+  firebaseToken: z.string().min(1).max(8192),
   // Only ever applied to a brand-new account — see findOrCreatePhoneUser.
   referralCode: z.string().trim().max(20).optional(),
 });
@@ -80,40 +80,14 @@ export async function POST(request: Request) {
         console.error(`No profiles row for auth user ${userId} — run the profile backfill.`);
       }
 
-      // STEP D: Token Minting
-      const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-      if (!jwtSecret) {
-        console.error('CRITICAL: SUPABASE_JWT_SECRET is not configured');
-        return NextResponse.json({ success: false, error: 'Server misconfiguration: missing jwt secret' }, { status: 500 });
-      }
-
-      const secret = new TextEncoder().encode(jwtSecret);
-      const alg = 'HS256';
-
-      // Create a Supabase-compatible JWT
-      const accessToken = await new SignJWT({
-        aud: 'authenticated',
-        role: 'authenticated',
-        phone: e164Phone,
-        app_metadata: {
-          provider: 'phone',
-          providers: ['phone']
-        }
-      })
-        .setProtectedHeader({ alg, typ: 'JWT' })
-        .setSubject(userId)
-        .setIssuedAt()
-        .setExpirationTime('30d') // Hard expire in 30 days since we don't have refresh tokens
-        .sign(secret);
-
-      return NextResponse.json({
-        success: true,
-        access_token: accessToken,
-        user_id: userId,
-        phone: e164Phone
-      });
+      return NextResponse.json({ success: true,
+        ...await createPhoneSession(userId, e164Phone, firebaseUser.uid),
+      }, { headers: { 'Cache-Control': 'no-store' } });
 
     } catch (error) {
+      if (error instanceof PhoneSessionError) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 401 });
+      }
       console.error('Exchange error:', error);
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }

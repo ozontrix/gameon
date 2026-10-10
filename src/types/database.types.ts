@@ -1588,8 +1588,41 @@ export type Database = {
         Returns: number
       }
       wallet_adjust: {
-        Args: { p_booking_id?: string | null; p_points: number; p_reason: string; p_user_id: string }
+        Args: {
+          p_booking_id?: string | null
+          p_points: number
+          p_reason: string
+          p_user_id: string
+        }
         Returns: number
+      }
+      phone_session_create: {
+        Args: { p_user_id: string; p_phone: string; p_firebase_uid: string; p_token_hash: string }
+        Returns: Json
+      }
+      phone_session_refresh: {
+        Args: { p_token_hash: string; p_next_hash: string }
+        Returns: Json
+      }
+      phone_session_validate: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
+      }
+      phone_session_revoke: {
+        Args: { p_token_hash: string }
+        Returns: undefined
+      }
+      booking_confirm_payment: {
+        Args: { p_booking_id: string; p_order_id: string | null; p_payment_id: string | null; p_user_id?: string }
+        Returns: Json
+      }
+      booking_cancel_with_wallet_refund: {
+        Args: { p_booking_id: string; p_user_id: string; p_refund_percent: number; p_reason?: string | null }
+        Returns: Json
+      }
+      credit_booking_referral: {
+        Args: { p_user_id: string; p_booking_id: string }
+        Returns: undefined
       }
     }
     Enums: {

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../db/supabase';
+import { decodeJwt } from 'jose';
+import { isPhoneSessionToken, PhoneSessionError, verifyPhoneSession } from '../phone-session';
 
 export type UserRole = 'USER' | 'ADMIN' | 'STAFF';
 
@@ -26,29 +28,39 @@ export async function withAuth(
 
   const token = authHeader.split(' ')[1];
 
+  let user: AuthenticatedUser;
   try {
-    // ONLY Accept Supabase JWTs. We strictly verify them against our environment keys.
-    const { data: { user: sbUser }, error } = await supabaseAdmin.auth.getUser(token);
+    if (isPhoneSessionToken(token)) {
+      const identity = await verifyPhoneSession(token);
+      user = { id: identity.user_id, role: ROLES.includes(identity.role as UserRole) ? identity.role as UserRole : 'USER', provider: 'phone' };
+    } else {
+      let claims;
+      try { claims = decodeJwt(token); } catch { throw new PhoneSessionError('Invalid token'); }
+      const metadata = claims.app_metadata as { provider?: string } | undefined;
+      if (metadata?.provider === 'phone' && !claims.session_id) throw new PhoneSessionError('Legacy phone session: sign in again');
+      const { data: { user: sbUser }, error } = await supabaseAdmin.auth.getUser(token);
 
-    if (error || !sbUser) {
-      throw new Error(error?.message || 'Invalid token');
+      if (error?.status && error.status >= 500) throw error;
+      if (error || !sbUser) throw new PhoneSessionError('Invalid token');
+
+      // Roles live in app_metadata, which only the service role can write.
+      const role = sbUser.app_metadata?.role;
+      user = {
+        id: sbUser.id,
+        role: ROLES.includes(role) ? role : 'USER',
+        provider: sbUser.app_metadata?.provider === 'phone' ? 'phone' : 'email',
+      };
+
     }
-
-    // Roles live in app_metadata, which only the service role can write.
-    const role = sbUser.app_metadata?.role;
-    const user: AuthenticatedUser = {
-      id: sbUser.id,
-      role: ROLES.includes(role) ? role : 'USER',
-      provider: sbUser.app_metadata?.provider === 'phone' ? 'phone' : 'email',
-    };
-
-    if (!allowedRoles.includes(user.role)) {
-      return NextResponse.json({ success: false, error: 'Forbidden: Insufficient permissions' }, { status: 403 });
-    }
-
-    return handler(request, user);
   } catch (error) {
-    console.error('Auth Error:', error);
-    return NextResponse.json({ success: false, error: 'Unauthorized: Invalid token' }, { status: 401 });
+    if (error instanceof PhoneSessionError) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid token' }, { status: 401 });
+    }
+    console.error('Authentication service unavailable');
+    return NextResponse.json({ success: false, error: 'Authentication temporarily unavailable' }, { status: 503 });
   }
+  if (!allowedRoles.includes(user.role)) {
+    return NextResponse.json({ success: false, error: 'Forbidden: Insufficient permissions' }, { status: 403 });
+  }
+  return handler(request, user);
 }

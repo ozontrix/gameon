@@ -320,7 +320,7 @@ export function HeroSection() {
 
   return (
     <section
-      id="hero"
+      id="discover-gameon"
       ref={ref}
       className="relative h-screen w-full overflow-hidden bg-go-black"
     >
@@ -402,7 +402,6 @@ export function HeroSection() {
               alt="Game On — Where the City Unplugs & GameOn Begins"
               width={540}
               height={162}
-              priority
               className="object-contain w-full h-auto"
               style={{ width: "auto", height: "auto" }}
             />
