@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSmtpTransport, getSmtpConfig } from "@/lib/email/smtp";
+import { createSmtpTransport, getSmtpConfig, logSmtpFailure } from "@/lib/email/smtp";
 
 export const runtime = "nodejs";
 
@@ -81,14 +81,14 @@ export async function POST(req: NextRequest) {
         html: buildEmailHtml({ type, name, email, phone, submittedAt }),
         text: buildEmailText({ type, name, email, phone, submittedAt }),
       });
-      if (!result.accepted?.length) throw new Error("SMTP did not accept the notification recipients");
+      if (!result.accepted?.length) throw Object.assign(new Error("SMTP did not accept the notification recipients"), { code: "EENVELOPE", command: "RCPT TO" });
     } finally {
       transporter.close();
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
-    console.error("Notify: email was not accepted by SMTP.");
+  } catch (error) {
+    logSmtpFailure("Notify", error);
     return NextResponse.json({ ok: false, error: "Failed to send email." }, { status: 500 });
   }
 }

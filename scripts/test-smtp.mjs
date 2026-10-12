@@ -29,14 +29,14 @@ async function withEnv(overrides, action) {
 function harness() {
   const cache = new Map();
   const transports = [], deliveries = [];
-  let mode = 'accept';
+  let mode = 'accept', smtpError = new Error('private SMTP response');
   const nodemailer = { createTransport: options => {
     const transport = { options, closed: false };
     transports.push(transport);
     return {
       sendMail: async mail => {
         deliveries.push(mail);
-        if (mode === 'throw') throw new Error('private SMTP response');
+        if (mode === 'throw') throw smtpError;
         return { accepted: mode === 'reject' ? [] : mode === 'bcc-only' ? ['desk@example.com'] : [mail.to] };
       },
       close: () => { transport.closed = true; },
@@ -61,7 +61,7 @@ function harness() {
     new Function('require', 'module', 'exports', outputText)(localRequire, compiled, compiled.exports);
     return compiled.exports;
   }
-  return { load, transports, deliveries, setMode: value => { mode = value; } };
+  return { load, transports, deliveries, setMode: value => { mode = value; }, setError: value => { smtpError = value; mode = 'throw'; } };
 }
 
 test('Brevo defaults use port 587 with required STARTTLS and separate sender identity', () => withEnv({}, () => {
@@ -97,6 +97,75 @@ test('Configuration fails closed for missing credentials/sender, invalid ports a
 
 test('Password trims surrounding whitespace without corrupting internal spaces', () => withEnv({ SMTP_PASSWORD: '  key with spaces  ' }, () => {
   assert.equal(harness().load('src/lib/email/smtp.ts').getSmtpConfig().pass, 'key with spaces');
+}));
+
+test('Quoted production dashboard values normalize without changing internal password characters', () => withEnv({
+  SMTP_HOST: ' "smtp-relay.brevo.com" ', SMTP_PORT: "'587'", SMTP_USER: '"login@smtp-brevo.com"',
+  SMTP_PASSWORD: " 'key with spaces' ", SMTP_FROM_EMAIL: '"info@gameonmultisports.com"', SMTP_FROM_NAME: '"GameOn"',
+}, () => {
+  const config = harness().load('src/lib/email/smtp.ts').getSmtpConfig();
+  assert.equal(config.host, 'smtp-relay.brevo.com'); assert.equal(config.port, 587);
+  assert.equal(config.user, testEnv.SMTP_USER); assert.equal(config.pass, 'key with spaces');
+  assert.deepEqual(config.from, { name: 'GameOn', address: testEnv.SMTP_FROM_EMAIL });
+}));
+
+test('Brevo API keys, unsupported ports and multiline credentials fail closed', () => withEnv({}, () => {
+  const { getSmtpConfig } = harness().load('src/lib/email/smtp.ts');
+  for (const [key, value] of [['SMTP_PASSWORD', 'xkeysib-not-an-smtp-key'], ['SMTP_PASSWORD', 'key\nvalue'], ['SMTP_USER', 'login\r\nvalue'], ['SMTP_FROM_NAME', 'GameOn\nInjected'], ['SMTP_PORT', '25']]) {
+    const previous = process.env[key]; process.env[key] = value;
+    assert.equal(getSmtpConfig(), null, key);
+    if (previous === undefined) delete process.env[key]; else process.env[key] = previous;
+  }
+  process.env.SMTP_PORT = '2525';
+  assert.equal(getSmtpConfig().port, 2525);
+}));
+
+test('SMTP diagnostics classify protocol failures without returning raw provider text or credentials', () => {
+  const { getSmtpFailure } = harness().load('src/lib/email/smtp.ts');
+  const cases = [
+    [{ code: 'EAUTH', responseCode: 535, command: 'AUTH PLAIN' }, 'AUTHENTICATION'],
+    [{ code: 'EAUTH', responseCode: 525 }, 'IP_NOT_AUTHORIZED'],
+    [{ responseCode: 550, command: 'MAIL FROM', response: 'sender not verified' }, 'SENDER_REJECTED'],
+    [{ responseCode: 550, response: 'daily sending limit exceeded' }, 'SENDING_LIMIT'],
+    [{ responseCode: 550, response: 'account suspended' }, 'ACCOUNT_RESTRICTED'],
+    [{ code: 'ETIMEDOUT', command: 'CONN' }, 'CONNECTION'],
+    [{ code: 'ETLS' }, 'TLS'],
+    [{ code: 'EENVELOPE', command: 'RCPT TO' }, 'RECIPIENT_REJECTED'],
+    [{ responseCode: 451, command: 'DATA' }, 'TEMPORARY_REJECTION'],
+    [null, 'UNKNOWN'],
+  ];
+  for (const [input, reason] of cases) assert.equal(getSmtpFailure(input).reason, reason);
+  const secret = 'private-password recipient@example.com';
+  const result = getSmtpFailure({ message: secret, stack: secret, code: secret, command: `AUTH ${secret}`, response: secret, responseCode: 999 });
+  assert.doesNotMatch(JSON.stringify(result), /private-password|recipient@example.com/);
+  assert.equal(result.code, 'UNKNOWN'); assert.equal(result.command, undefined); assert.equal(result.responseCode, undefined);
+});
+
+test('Open play stores an actionable authentication failure and logs only sanitized diagnostics', () => withEnv({}, async () => {
+  const h = harness();
+  h.setError(Object.assign(new Error('private-password'), { code: 'EAUTH', command: 'AUTH PLAIN', responseCode: 535, response: 'private-password recipient@example.com' }));
+  const logs = []; const previous = console.error;
+  console.error = (...args) => logs.push(args);
+  try {
+    const { sendOpenPlayConfirmationEmail } = h.load('src/lib/open-play/email.ts');
+    const result = await sendOpenPlayConfirmationEmail({ id: '12345678-test', full_name: 'Test Player', email: 'player@example.com', sport: 'cricket', city: 'Gurugram' });
+    assert.equal(result.sent, false); assert.match(result.error, /authentication failed.*EAUTH, SMTP 535/);
+    assert.equal(logs[0][1].reason, 'AUTHENTICATION'); assert.equal(h.transports.at(-1).closed, true);
+    assert.doesNotMatch(JSON.stringify({ result, logs }), /private-password|recipient@example.com/);
+  } finally { console.error = previous; }
+}));
+
+test('Notify logs the Brevo IP restriction while keeping public API errors generic', () => withEnv({}, async () => {
+  const h = harness();
+  h.setError(Object.assign(new Error('private SMTP response'), { code: 'EAUTH', responseCode: 525 }));
+  const logs = []; const previous = console.error;
+  console.error = (...args) => logs.push(args);
+  try {
+    const { POST } = h.load('src/app/api/notify/route.ts');
+    const response = await POST(new Request('https://game-on.in/api/notify', { method: 'POST', body: JSON.stringify({ type: 'newsletter', email: 'player@example.com' }) }));
+    assert.equal(response.status, 500); assert.deepEqual(await response.json(), { ok: false, error: 'Failed to send email.' });
+    assert.equal(logs[0][1].reason, 'IP_NOT_AUTHORIZED'); assert.equal(h.transports.at(-1).closed, true);
+  } finally { console.error = previous; }
 }));
 
 function confirmation(h) {

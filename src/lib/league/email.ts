@@ -1,4 +1,4 @@
-import { createSmtpTransport, getSmtpConfig } from "@/lib/email/smtp";
+import { createSmtpTransport, getSmtpConfig, logSmtpFailure } from "@/lib/email/smtp";
 import { formatINR } from "@/components/league/data";
 import {
   LEAGUE_HELP_EMAIL,
@@ -256,9 +256,8 @@ export async function sendLeagueConfirmationEmail(
     const customerAccepted = accepted.some(address =>
       (typeof address === 'string' ? address : address.address)?.toLowerCase() === confirmation.entry.email.toLowerCase());
     return customerAccepted ? { sent: true } : { sent: false, error: "SMTP did not accept the confirmation recipient" };
-  } catch {
-    console.error("League confirmation email was not accepted by SMTP.");
-    return { sent: false, error: "Confirmation email delivery failed" };
+  } catch (error) {
+    return { sent: false, error: logSmtpFailure("League confirmation", error) };
   } finally {
     transporter.close();
   }

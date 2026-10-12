@@ -1,4 +1,4 @@
-/** Check local SMTP connection/authentication without sending any email. */
+/** Check SMTP auth. Explicit --send-to-self additionally sends one diagnostic to the configured sender. */
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -22,13 +22,20 @@ if (!config) {
   const transport = compiled.exports.createSmtpTransport(config);
   try {
     await transport.verify();
-    console.log(`SMTP connection and authentication verified: ${config.host}:${config.port}. No email sent. Sender verification and inbox delivery still require a real delivery test.`);
+    console.log(`SMTP connection and authentication verified: ${config.host}:${config.port}. Verification itself sends no email.`);
     console.log(`Configured sender: ${config.from.address}. Staff notifications: ${process.env.NOTIFY_RECIPIENTS?.trim() ? 'configured' : 'NOT configured'}.`);
+    if (process.argv.includes('--send-to-self')) {
+      const result = await transport.sendMail({
+        from: config.from,
+        to: config.from.address,
+        subject: 'GameOn SMTP delivery diagnostic (no registration)',
+        text: 'This is a one-time GameOn SMTP diagnostic. No customer registration or newsletter subscription was created. Check Brevo transactional logs and your inbox to confirm delivery.',
+      });
+      if (!result.accepted?.length) throw Object.assign(new Error('No recipient accepted'), { code: 'EENVELOPE', command: 'RCPT TO' });
+      console.log('Diagnostic email accepted by SMTP. Inbox delivery must be confirmed in Brevo transactional logs and the sender mailbox.');
+    }
   } catch (error) {
-    // Only expose safe protocol status fields, never credentials or the SMTP response.
-    const code = typeof error?.code === 'string' && /^[A-Z_]+$/.test(error.code) ? error.code : 'UNKNOWN';
-    const status = Number.isInteger(error?.responseCode) ? ` (SMTP ${error.responseCode})` : '';
-    console.error(`SMTP verification failed: ${code}${status}. Check Brevo credentials, account status and network access.`);
+    compiled.exports.logSmtpFailure('SMTP verification', error);
     process.exitCode = 1;
   } finally {
     transport.close();

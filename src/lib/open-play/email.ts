@@ -1,5 +1,5 @@
 import 'server-only';
-import { createSmtpTransport, getSmtpConfig } from '@/lib/email/smtp';
+import { createSmtpTransport, getSmtpConfig, logSmtpFailure } from '@/lib/email/smtp';
 import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_PHONE, OPEN_PLAY_SPORTS, OPEN_PLAY_VENUE, PAID_PLAY_DATE_LABEL } from './constants';
 import type { OpenPlayRegistration } from './server';
 
@@ -49,8 +49,7 @@ export async function sendOpenPlayConfirmationEmail(registration: OpenPlayRegist
   try {
     const result = await transport.sendMail({ from: smtp.from, to: registration.email, replyTo: HELP_EMAIL, ...renderOpenPlayConfirmationEmail(registration) });
     return result.accepted?.length ? { sent: true } : { sent: false, error: 'SMTP did not accept the confirmation recipient' };
-  } catch {
-    console.error('Open play: confirmation email was not accepted by SMTP.');
-    return { sent: false, error: 'Confirmation email delivery failed' };
+  } catch (error) {
+    return { sent: false, error: logSmtpFailure('Open play confirmation', error) };
   } finally { transport.close(); }
 }

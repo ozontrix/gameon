@@ -65,17 +65,48 @@ Never put SMTP credentials into the mobile app. No app rebuild is required just
 to change the Supabase SMTP provider. This dashboard change is not performed by
 the repository migration.
 
-## Validation
+## Production-only failures
+
+The old `email was not accepted by SMTP` log discarded the underlying exception.
+It did not prove that Brevo rejected the message: connection and authentication
+errors produced the same log. Open play and league failures now save a fixed,
+actionable diagnostic for admins, and all three flows log allowlisted protocol
+fields (`reason`, `code`, `responseCode`, `command`). Credentials, raw provider
+responses and recipient details are not logged or returned to public clients.
+
+Check the new Production deployment's function log after one failed attempt:
+
+| Diagnostic | Action |
+| --- | --- |
+| `IP_NOT_AUTHORIZED`, SMTP `525` | If Brevo SMTP IP blocking is enabled, authorize the hosting server's actual outbound IP under Settings → Security → Authorized IPs. Do not assume your laptop IP or website DNS IP is the outbound IP. Keep IP protection enabled; use a hosting/network configuration with known outbound IPs if necessary. |
+| `AUTHENTICATION`, SMTP `535` | Recheck the Production SMTP login and SMTP key. An API key or Brevo account password cannot be used as `SMTP_PASSWORD`. |
+| `SENDER_REJECTED` | Confirm the exact `SMTP_FROM_EMAIL` sender and its domain authentication in Brevo. Adding a domain without completing verification is not enough. |
+| `ACCOUNT_RESTRICTED` / `SENDING_LIMIT` | Check transactional sending activation, suspension notices, credits and sending limits. |
+| `CONNECTION` | Check outbound network access. Brevo supports 587 (STARTTLS), 465 (TLS) and 2525 (STARTTLS); update the port only when the logs indicate a connection problem and redeploy. |
+| `RECIPIENT_REJECTED` | Check the recipient and Brevo blocked-contact logs. Newsletter/early-access notifications go to `NOTIFY_RECIPIENTS`, not to the subscriber. |
+
+Matching surrounding quotes pasted into SMTP environment values are normalized.
+Multiline settings, Brevo API keys and unsupported Brevo ports fail closed. No
+insecure TLS bypass, automatic credential fallback or duplicate-send retry is used.
+
+Environment changes require a new Vercel deployment. Existing failures will not
+automatically resend; use the Open Play/league admin retry controls after fixing
+the configuration. Failed newsletter requests must be submitted again.
+
+## Validation commands
 
 ```sh
 node --test scripts/test-smtp.mjs scripts/test-delete-account.mjs scripts/test-open-play.mjs scripts/test-league-flow.mjs scripts/test-league-bookings.mjs
 node --conditions=react-server scripts/verify-smtp.mjs
+node --conditions=react-server scripts/verify-smtp.mjs --send-to-self
 npm run build
 ```
 
 The tests mock SMTP and send no emails. The verification script uses local
 credentials to check the SMTP connection and authentication, without sending
-mail. It cannot prove sender verification or inbox delivery. After deployment,
+mail by default. The explicit `--send-to-self` flag sends one diagnostic to
+`SMTP_FROM_EMAIL` only; it creates no customer registration or subscription.
+SMTP acceptance still does not prove inbox delivery. After deployment,
 submit one real website form/open-play registration and request a fresh app
 signup-confirmation email. Check delivery and Brevo transactional logs. Retry
 failed saved registration/league emails through the existing admin controls.
@@ -83,6 +114,7 @@ failed saved registration/league emails through the existing admin controls.
 Official references:
 - https://help.brevo.com/hc/en-us/articles/7924908994450-Send-transactional-emails-using-Brevo-SMTP
 - https://help.brevo.com/hc/en-us/articles/115000188150-Troubleshooting-Issues-with-Brevo-SMTP
+- https://help.brevo.com/hc/en-us/articles/5740111683858-Authorize-and-block-IP-addresses-for-API-and-SMTP-security
 - https://supabase.com/docs/guides/auth/auth-smtp
 - https://supabase.com/docs/guides/auth/auth-email-templates
 - https://vercel.com/docs/environment-variables
