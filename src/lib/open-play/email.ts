@@ -1,5 +1,5 @@
 import 'server-only';
-import nodemailer from 'nodemailer';
+import { createSmtpTransport, getSmtpConfig } from '@/lib/email/smtp';
 import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_PHONE, OPEN_PLAY_SPORTS, OPEN_PLAY_VENUE, PAID_PLAY_DATE_LABEL } from './constants';
 import type { OpenPlayRegistration } from './server';
 
@@ -42,13 +42,12 @@ export function renderOpenPlayConfirmationEmail(registration: OpenPlayRegistrati
 
 /** SMTP failure must never invalidate a saved attendee registration. */
 export async function sendOpenPlayConfirmationEmail(registration: OpenPlayRegistration): Promise<{ sent: boolean; error?: string }> {
-  const user = process.env.SMTP_USER ?? '';
-  const pass = (process.env.SMTP_APP_PASSWORD ?? '').replace(/\s+/g, '');
-  if (!user || !pass) return { sent: false, error: 'SMTP not configured' };
+  const smtp = getSmtpConfig();
+  if (!smtp) return { sent: false, error: 'SMTP not configured' };
   if (!registration.email) return { sent: false, error: 'No email on this registration' };
-  const transport = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user, pass }, connectionTimeout: 8000, greetingTimeout: 8000, socketTimeout: 15000, dnsTimeout: 8000 });
+  const transport = createSmtpTransport(smtp);
   try {
-    const result = await transport.sendMail({ from: { name: 'GameOn Multi Sports', address: user }, to: registration.email, replyTo: HELP_EMAIL, ...renderOpenPlayConfirmationEmail(registration) });
+    const result = await transport.sendMail({ from: smtp.from, to: registration.email, replyTo: HELP_EMAIL, ...renderOpenPlayConfirmationEmail(registration) });
     return result.accepted?.length ? { sent: true } : { sent: false, error: 'SMTP did not accept the confirmation recipient' };
   } catch {
     console.error('Open play: confirmation email was not accepted by SMTP.');

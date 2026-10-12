@@ -220,22 +220,24 @@ test('Confirmation template includes sport/date/venue, escapes attendee data and
   assert.match(mail.subject, /Cricket Open Play/);
 });
 
-test('SMTP uses existing account and GameOn sender, handles missing config/rejection/failure and closes transport', async () => {
-  const previous = { user: process.env.SMTP_USER, pass: process.env.SMTP_APP_PASSWORD };
+test('SMTP uses Brevo and a separate verified sender, handles missing config/rejection/failure and closes transport', async () => {
+  const previous = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD, from: process.env.SMTP_FROM_EMAIL };
   let transportCount = 0; let closeCount = 0; let mode = 'accept'; let options; let mail;
   const { sendOpenPlayConfirmationEmail } = loader({ nodemailer: { createTransport: settings => { transportCount++; options = settings; return { sendMail: async input => { mail = input; if (mode === 'throw') throw new Error('Private SMTP detail'); return { accepted: mode === 'accept' ? [row.email] : [] }; }, close: () => { closeCount++; } }; } } })('src/lib/open-play/email.ts');
   try {
-    delete process.env.SMTP_USER; delete process.env.SMTP_APP_PASSWORD;
+    delete process.env.SMTP_USER; delete process.env.SMTP_PASSWORD;
     assert.equal((await sendOpenPlayConfirmationEmail(row)).sent, false); assert.equal(transportCount, 0);
-    process.env.SMTP_USER = 'club@example.com'; process.env.SMTP_APP_PASSWORD = 'test pass';
+    process.env.SMTP_USER = 'login@smtp-brevo.com'; process.env.SMTP_PASSWORD = 'test pass'; process.env.SMTP_FROM_EMAIL = 'info@gameonmultisports.com';
     assert.equal((await sendOpenPlayConfirmationEmail(row)).sent, true);
-    assert.deepEqual(mail.from, { name: 'GameOn Multi Sports', address: 'club@example.com' }); assert.equal(mail.to, row.email); assert.equal(mail.replyTo, 'info@gameonmultisports.com'); assert.equal(options.auth.pass, 'testpass');
+    assert.deepEqual(mail.from, { name: 'GameOn Multi Sports', address: 'info@gameonmultisports.com' }); assert.equal(mail.to, row.email); assert.equal(mail.replyTo, 'info@gameonmultisports.com'); assert.equal(options.auth.pass, 'test pass');
+    assert.equal(options.host, 'smtp-relay.brevo.com'); assert.equal(options.port, 587); assert.equal(options.secure, false); assert.equal(options.requireTLS, true);
     mode = 'reject'; assert.equal((await sendOpenPlayConfirmationEmail(row)).sent, false);
     mode = 'throw'; const failed = await sendOpenPlayConfirmationEmail(row); assert.equal(failed.sent, false); assert.doesNotMatch(failed.error, /Private SMTP/);
     assert.equal(closeCount, 3);
   } finally {
     if (previous.user === undefined) delete process.env.SMTP_USER; else process.env.SMTP_USER = previous.user;
-    if (previous.pass === undefined) delete process.env.SMTP_APP_PASSWORD; else process.env.SMTP_APP_PASSWORD = previous.pass;
+    if (previous.pass === undefined) delete process.env.SMTP_PASSWORD; else process.env.SMTP_PASSWORD = previous.pass;
+    if (previous.from === undefined) delete process.env.SMTP_FROM_EMAIL; else process.env.SMTP_FROM_EMAIL = previous.from;
   }
 });
 

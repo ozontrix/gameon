@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { createSmtpTransport, getSmtpConfig } from "@/lib/email/smtp";
 import { ACCOUNT_DELETION_EMAIL, deletionReplyEmail, type AccountDeletionInput } from "./account-deletion";
 
 function escapeHtml(value: string): string {
@@ -34,15 +34,11 @@ export function renderDeletionEmail(input: AccountDeletionInput, reference: stri
 
 /** Send the staff request first. A failed user copy must not lose an accepted request. */
 export async function sendAccountDeletionRequest(input: AccountDeletionInput, reference: string) {
-  const user = process.env.SMTP_USER ?? "";
-  const pass = (process.env.SMTP_APP_PASSWORD ?? "").replace(/\s+/g, "");
-  if (!user || !pass) return { accepted: false, copySent: false, unavailable: true };
+  const smtp = getSmtpConfig();
+  if (!smtp) return { accepted: false, copySent: false, unavailable: true };
 
-  const transport = nodemailer.createTransport({
-    host: "smtp.gmail.com", port: 465, secure: true,
-    auth: { user, pass }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 20000,
-  });
-  const from = { name: "Game On · Account Support", address: user };
+  const transport = createSmtpTransport(smtp);
+  const from = smtp.from;
   const replyEmail = deletionReplyEmail(input);
   const submittedAt = `${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST`;
   try {

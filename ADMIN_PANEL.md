@@ -143,7 +143,8 @@ but before saving delivery status may result in another email on recovery.
 
 Deploy the changed APIs and panel together. Keep `RAZORPAY_KEY_ID`,
 `RAZORPAY_KEY_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_USER` and
-`SMTP_APP_PASSWORD` configured in Vercel. `NOTIFY_RECIPIENTS` retains the desk's
+`SMTP_PASSWORD`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM_EMAIL` and `SMTP_FROM_NAME`
+configured in Vercel (see `EMAIL_DELIVERY.md`). `NOTIFY_RECIPIENTS` retains the desk's
 email copies. For recovery if the customer closes the browser after payment,
 configure Razorpay to send `payment.captured` and `order.paid` to
 `https://gameonmultisports.com/api/v1/webhooks/razorpay` and set the matching

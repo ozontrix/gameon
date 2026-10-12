@@ -36,6 +36,7 @@ function load(relative) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX },
   });
   const localRequire = (id) => {
+    if (id === "server-only") return {};
     if (id === "nodemailer") return nodemailer;
     if (id.startsWith("@/")) {
       const path = `src/${id.slice(2)}`;
@@ -95,9 +96,11 @@ test("Email HTML escapes the request message and preserves a text copy", () => {
 test("Sends staff request and user copy separately with correct reply addresses", async () => {
   resetMail();
   const oldUser = process.env.SMTP_USER;
-  const oldPass = process.env.SMTP_APP_PASSWORD;
+  const oldPass = process.env.SMTP_PASSWORD;
+  const oldFrom = process.env.SMTP_FROM_EMAIL;
   process.env.SMTP_USER = "smtp@example.com";
-  process.env.SMTP_APP_PASSWORD = "mock-password";
+  process.env.SMTP_PASSWORD = "mock-password";
+  process.env.SMTP_FROM_EMAIL = "info@gameonmultisports.com";
   try {
     const result = await sendAccountDeletionRequest(AccountDeletionSchema.parse(valid), "DEL-TEST");
     assert.equal(result.accepted, true);
@@ -111,15 +114,18 @@ test("Sends staff request and user copy separately with correct reply addresses"
     assert.equal(closed, true);
   } finally {
     if (oldUser === undefined) delete process.env.SMTP_USER; else process.env.SMTP_USER = oldUser;
-    if (oldPass === undefined) delete process.env.SMTP_APP_PASSWORD; else process.env.SMTP_APP_PASSWORD = oldPass;
+    if (oldPass === undefined) delete process.env.SMTP_PASSWORD; else process.env.SMTP_PASSWORD = oldPass;
+    if (oldFrom === undefined) delete process.env.SMTP_FROM_EMAIL; else process.env.SMTP_FROM_EMAIL = oldFrom;
   }
 });
 
 test("Route handles successful delivery, partial failure, SMTP rejection and missing configuration", async () => {
   const oldUser = process.env.SMTP_USER;
-  const oldPass = process.env.SMTP_APP_PASSWORD;
+  const oldPass = process.env.SMTP_PASSWORD;
+  const oldFrom = process.env.SMTP_FROM_EMAIL;
   process.env.SMTP_USER = "smtp@example.com";
-  process.env.SMTP_APP_PASSWORD = "mock-password";
+  process.env.SMTP_PASSWORD = "mock-password";
+  process.env.SMTP_FROM_EMAIL = "info@gameonmultisports.com";
   try {
     resetMail();
     const response = await POST(request(valid));
@@ -137,12 +143,13 @@ test("Route handles successful delivery, partial failure, SMTP rejection and mis
     assert.equal((await POST(request(valid))).status, 502);
     assert.equal(deliveries.length, 1);
 
-    resetMail(); delete process.env.SMTP_APP_PASSWORD;
+    resetMail(); delete process.env.SMTP_PASSWORD;
     assert.equal((await POST(request(valid))).status, 503);
     assert.equal(deliveries.length, 0);
   } finally {
     if (oldUser === undefined) delete process.env.SMTP_USER; else process.env.SMTP_USER = oldUser;
-    if (oldPass === undefined) delete process.env.SMTP_APP_PASSWORD; else process.env.SMTP_APP_PASSWORD = oldPass;
+    if (oldPass === undefined) delete process.env.SMTP_PASSWORD; else process.env.SMTP_PASSWORD = oldPass;
+    if (oldFrom === undefined) delete process.env.SMTP_FROM_EMAIL; else process.env.SMTP_FROM_EMAIL = oldFrom;
   }
 });
 

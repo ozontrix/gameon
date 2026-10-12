@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { createSmtpTransport, getSmtpConfig } from "@/lib/email/smtp";
 
 export const runtime = "nodejs";
 
-const SMTP_USER = process.env.SMTP_USER ?? "";
-// Gmail app passwords are 16 chars; strip any spaces the user may have typed.
-const SMTP_APP_PASSWORD = (process.env.SMTP_APP_PASSWORD ?? "").replace(/\s+/g, "");
 const RECIPIENTS = (process.env.NOTIFY_RECIPIENTS ?? "")
   .split(",")
   .map((s) => s.trim())
@@ -61,8 +58,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "A valid email address is required." }, { status: 400 });
     }
 
-    if (!SMTP_USER || !SMTP_APP_PASSWORD || RECIPIENTS.length === 0) {
-      console.error("Notify: SMTP not configured (SMTP_USER, SMTP_APP_PASSWORD, NOTIFY_RECIPIENTS).");
+    const smtp = getSmtpConfig();
+    if (!smtp || RECIPIENTS.length === 0) {
+      console.error("Notify: SMTP not configured (SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL, NOTIFY_RECIPIENTS).");
       return NextResponse.json({ ok: false, error: "Email is not configured." }, { status: 500 });
     }
 
@@ -73,25 +71,24 @@ export async function POST(req: NextRequest) {
         ? `🎉 New newsletter signup — ${email}`
         : `🔥 New early access request — ${name || email}`;
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: { user: SMTP_USER, pass: SMTP_APP_PASSWORD },
-    });
-
-    await transporter.sendMail({
-      from: `"Game On" <${SMTP_USER}>`,
-      to: RECIPIENTS.join(", "),
-      replyTo: email,
-      subject,
-      html: buildEmailHtml({ type, name, email, phone, submittedAt }),
-      text: buildEmailText({ type, name, email, phone, submittedAt }),
-    });
+    const transporter = createSmtpTransport(smtp);
+    try {
+      const result = await transporter.sendMail({
+        from: smtp.from,
+        to: RECIPIENTS.join(", "),
+        replyTo: email,
+        subject,
+        html: buildEmailHtml({ type, name, email, phone, submittedAt }),
+        text: buildEmailText({ type, name, email, phone, submittedAt }),
+      });
+      if (!result.accepted?.length) throw new Error("SMTP did not accept the notification recipients");
+    } finally {
+      transporter.close();
+    }
 
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("Notify email error:", err);
+  } catch {
+    console.error("Notify: email was not accepted by SMTP.");
     return NextResponse.json({ ok: false, error: "Failed to send email." }, { status: 500 });
   }
 }

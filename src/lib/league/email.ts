@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { createSmtpTransport, getSmtpConfig } from "@/lib/email/smtp";
 import { formatINR } from "@/components/league/data";
 import {
   LEAGUE_HELP_EMAIL,
@@ -13,14 +13,11 @@ import { confirmationBrackets, confirmationSchedule } from "./confirmation";
 /**
  * The paid-entry confirmation email.
  *
- * Sent from the SMTP account in `.env.local` (the same Gmail transport the
- * notify route uses). Table-based, inline-styled HTML so it survives Outlook and
+ * Sent through the shared Brevo transport using the verified sender in
+ * `.env.local`. Table-based, inline-styled HTML so it survives Outlook and
  * Gmail, with the club's own copy BCC'd so the desk sees every entry.
  */
 
-const SMTP_USER = process.env.SMTP_USER ?? "";
-// Gmail app passwords are 16 chars; strip any spaces that may have been typed.
-const SMTP_APP_PASSWORD = (process.env.SMTP_APP_PASSWORD ?? "").replace(/\s+/g, "");
 const CLUB_RECIPIENTS = (process.env.NOTIFY_RECIPIENTS ?? "")
   .split(",")
   .map((address) => address.trim())
@@ -235,26 +232,18 @@ export function renderLeagueConfirmationEmail(confirmation: LeagueConfirmation) 
 export async function sendLeagueConfirmationEmail(
   confirmation: LeagueConfirmation
 ): Promise<{ sent: boolean; error?: string }> {
-  if (!SMTP_USER || !SMTP_APP_PASSWORD) {
-    console.error("League email: SMTP is not configured (SMTP_USER, SMTP_APP_PASSWORD).");
+  const smtp = getSmtpConfig();
+  if (!smtp) {
+    console.error("League email: SMTP is not configured (SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL).");
     return { sent: false, error: "SMTP not configured" };
   }
 
+  const transporter = createSmtpTransport(smtp);
   try {
     const { subject, html, text } = renderLeagueConfirmationEmail(confirmation);
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      connectionTimeout: 8000,
-      greetingTimeout: 8000,
-      socketTimeout: 15000,
-      auth: { user: SMTP_USER, pass: SMTP_APP_PASSWORD },
-    });
-
-    await transporter.sendMail({
-      from: `"${LEAGUE_NAME}" <${SMTP_USER}>`,
+    const result = await transporter.sendMail({
+      from: smtp.from,
       to: confirmation.entry.email,
       bcc: CLUB_RECIPIENTS.length ? CLUB_RECIPIENTS.join(", ") : undefined,
       replyTo: LEAGUE_HELP_EMAIL,
@@ -263,9 +252,14 @@ export async function sendLeagueConfirmationEmail(
       text,
     });
 
-    return { sent: true };
-  } catch (error) {
-    console.error("League confirmation email failed:", error);
-    return { sent: false, error: error instanceof Error ? error.message : "Send failed" };
+    const accepted = result.accepted ?? [];
+    const customerAccepted = accepted.some(address =>
+      (typeof address === 'string' ? address : address.address)?.toLowerCase() === confirmation.entry.email.toLowerCase());
+    return customerAccepted ? { sent: true } : { sent: false, error: "SMTP did not accept the confirmation recipient" };
+  } catch {
+    console.error("League confirmation email was not accepted by SMTP.");
+    return { sent: false, error: "Confirmation email delivery failed" };
+  } finally {
+    transporter.close();
   }
 }

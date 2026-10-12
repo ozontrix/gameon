@@ -28,6 +28,7 @@ function load(relative) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX },
   });
   const localRequire = (id) => {
+    if (id === "server-only") return {};
     if (id.startsWith("@/")) return load(`src/${id.slice(2)}.ts`);
     if (id.startsWith(".")) return load(`${resolve(dirname(filename), id)}.ts`);
     return require(id);
