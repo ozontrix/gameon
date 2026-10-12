@@ -37,7 +37,12 @@ function harness() {
       sendMail: async mail => {
         deliveries.push(mail);
         if (mode === 'throw') throw smtpError;
-        return { accepted: mode === 'reject' ? [] : mode === 'bcc-only' ? ['desk@example.com'] : [mail.to] };
+        const staff = (mail.bcc ?? '').split(',').map(value => value.trim()).filter(Boolean);
+        const customer = mail.to.split(',').map(value => value.trim());
+        if (mode === 'staff-failure' && mail.to.includes('info@gameonmultisports.com')) throw new Error('private SMTP staff failure');
+        if (mode === 'user-failure' && mail.to === 'player@example.com') throw new Error('private SMTP customer failure');
+        if (mode === 'info-rejected') return { accepted: [...customer, ...staff].filter(address => address !== 'info@gameonmultisports.com') };
+        return { accepted: mode === 'reject' ? [] : mode === 'bcc-only' ? staff : mode === 'customer-only' ? customer : [...customer, ...staff] };
       },
       close: () => { transport.closed = true; },
     };
@@ -182,9 +187,9 @@ test('League confirmation uses Brevo, preserves customer/BCC/reply-to and closes
   assert.deepEqual(await sendLeagueConfirmationEmail(input), { sent: true });
   assert.equal(h.transports[0].options.host, 'smtp-relay.brevo.com');
   assert.equal(h.deliveries[0].from.address, testEnv.SMTP_FROM_EMAIL);
-  assert.equal(h.deliveries[0].to, 'player@example.com'); assert.equal(h.deliveries[0].bcc, 'desk@example.com');
+  assert.equal(h.deliveries[0].to, 'player@example.com'); assert.equal(h.deliveries[0].bcc, 'info@gameonmultisports.com, desk@example.com');
   assert.equal(h.deliveries[0].replyTo, 'info@gameonmultisports.com'); assert.equal(h.transports[0].closed, true);
-  for (const mode of ['reject', 'bcc-only', 'throw']) {
+  for (const mode of ['reject', 'bcc-only', 'customer-only', 'throw']) {
     h.setMode(mode); const result = await sendLeagueConfirmationEmail(input);
     assert.equal(result.sent, false); assert.doesNotMatch(result.error, /private SMTP/);
     assert.equal(h.transports.at(-1).closed, true);
@@ -197,10 +202,16 @@ test('Website newsletter and early-access notifications use the shared Brevo sen
   const h = harness(); const { POST } = h.load('src/app/api/notify/route.ts');
   const request = type => new Request('https://game-on.in/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, email: 'player@example.com', name: 'Test Player' }) });
   for (const type of ['newsletter', 'early-access']) {
+    const count = h.deliveries.length;
     assert.equal((await POST(request(type))).status, 200);
     assert.equal(h.transports.at(-1).options.host, 'smtp-relay.brevo.com'); assert.equal(h.transports.at(-1).closed, true);
     assert.equal(h.deliveries.at(-1).from.address, testEnv.SMTP_FROM_EMAIL);
-    assert.equal(h.deliveries.at(-1).to, 'desk@example.com'); assert.equal(h.deliveries.at(-1).replyTo, 'player@example.com');
+    assert.equal(h.deliveries.length, count + 2);
+    const staff = h.deliveries.at(-2), customer = h.deliveries.at(-1);
+    assert.equal(staff.to, 'info@gameonmultisports.com, desk@example.com'); assert.equal(staff.replyTo, 'player@example.com');
+    assert.equal(customer.to, 'player@example.com'); assert.equal(customer.replyTo, 'info@gameonmultisports.com');
+    assert.match(customer.subject, type === 'newsletter' ? /subscribed/ : /early access request/);
+    assert.doesNotMatch(customer.html, /desk@example.com|A new submission just came in/);
   }
   for (const mode of ['reject', 'throw']) {
     h.setMode(mode); assert.equal((await POST(request('newsletter'))).status, 500);
@@ -208,4 +219,91 @@ test('Website newsletter and early-access notifications use the shared Brevo sen
   }
   const count = h.transports.length; delete process.env.SMTP_FROM_EMAIL;
   assert.equal((await POST(request('newsletter'))).status, 500); assert.equal(h.transports.length, count);
+}));
+
+test('Staff recipients always include info, deduplicate case/whitespace, and exclude customer from BCC', () => withEnv({
+  NOTIFY_RECIPIENTS: ' INFO@GAMEONMULTISPORTS.COM, desk@example.com, DESK@example.com, player@example.com, invalid, injected\r\n@example.com ',
+}, () => {
+  const { getNotificationRecipients, smtpAcceptedAll } = harness().load('src/lib/email/smtp.ts');
+  assert.deepEqual(getNotificationRecipients('PLAYER@example.com'), ['info@gameonmultisports.com', 'desk@example.com']);
+  assert.equal(smtpAcceptedAll(['PLAYER@example.com', { address: 'INFO@gameonmultisports.com' }], ['player@example.com', 'info@gameonmultisports.com']), true);
+  assert.equal(smtpAcceptedAll(['info@gameonmultisports.com'], ['player@example.com', 'info@gameonmultisports.com']), false);
+}));
+
+test('Open play requires customer and staff acceptance, and reports partial failures honestly', () => withEnv({}, async () => {
+  const h = harness();
+  const { sendOpenPlayConfirmationEmail } = h.load('src/lib/open-play/email.ts');
+  const input = { id: '12345678-test', full_name: 'Test Player', email: 'player@example.com', sport: 'cricket', city: 'Gurugram' };
+  assert.deepEqual(await sendOpenPlayConfirmationEmail(input), { sent: true });
+  assert.equal(h.deliveries[0].to, input.email);
+  assert.equal(h.deliveries[0].bcc, 'info@gameonmultisports.com, desk@example.com');
+  h.setMode('bcc-only'); assert.match((await sendOpenPlayConfirmationEmail(input)).error, /confirmation recipient/);
+  h.setMode('customer-only'); assert.match((await sendOpenPlayConfirmationEmail(input)).error, /staff copies/);
+  h.setMode('info-rejected'); assert.equal((await sendOpenPlayConfirmationEmail(input)).sent, false);
+  assert.ok(h.transports.every(transport => transport.closed));
+}));
+
+test('All three forms include the club mailbox even with NOTIFY_RECIPIENTS empty', () => withEnv({ NOTIFY_RECIPIENTS: '' }, async () => {
+  const h = harness();
+  const openPlay = h.load('src/lib/open-play/email.ts');
+  assert.equal((await openPlay.sendOpenPlayConfirmationEmail({ id: '12345678', full_name: 'Test', email: 'player@example.com', sport: 'cricket', city: 'Gurugram' })).sent, true);
+  assert.equal(h.deliveries.at(-1).bcc, 'info@gameonmultisports.com');
+  assert.equal((await h.load('src/lib/league/email.ts').sendLeagueConfirmationEmail(confirmation(h))).sent, true);
+  assert.equal(h.deliveries.at(-1).bcc, 'info@gameonmultisports.com');
+  const response = await h.load('src/app/api/notify/route.ts').POST(new Request('https://game-on.in/api/notify', { method: 'POST', body: JSON.stringify({ type: 'newsletter', email: 'player@example.com' }) }));
+  assert.equal(response.status, 200);
+  assert.equal(h.deliveries.at(-2).to, 'info@gameonmultisports.com'); assert.equal(h.deliveries.at(-1).to, 'player@example.com');
+}));
+
+test('Newsletter attempts both emails despite individual failures and never reports partial delivery as success', () => withEnv({}, async () => {
+  const h = harness(); const { POST } = h.load('src/app/api/notify/route.ts');
+  for (const mode of ['staff-failure', 'user-failure', 'info-rejected']) {
+    h.setMode(mode);
+    const count = h.deliveries.length;
+    const response = await POST(new Request('https://game-on.in/api/notify', { method: 'POST', body: JSON.stringify({ type: 'newsletter', email: 'player@example.com' }) }));
+    assert.equal(response.status, 500); assert.equal(h.deliveries.length, count + 2);
+    assert.equal(h.transports.at(-1).closed, true);
+  }
+}));
+
+test('Newsletter escapes customer content and prevents staff mailbox exposure', () => withEnv({}, async () => {
+  const h = harness(); const { POST } = h.load('src/app/api/notify/route.ts');
+  const response = await POST(new Request('https://game-on.in/api/notify', { method: 'POST', body: JSON.stringify({ type: 'newsletter', email: 'player@example.com', name: '<script>Player</script>' }) }));
+  assert.equal(response.status, 200);
+  const customer = h.deliveries.at(-1);
+  assert.match(customer.html, /&lt;script&gt;Player&lt;\/script&gt;/);
+  assert.doesNotMatch(customer.html, /<script>|desk@example.com/);
+  assert.equal(customer.bcc, undefined); assert.equal(customer.cc, undefined);
+  assert.match(customer.text, /stop receiving them/);
+}));
+
+test('Notify rejects cross-origin, invalid addresses, header injection and excessive submissions before sending', () => withEnv({}, async () => {
+  const h = harness(); const { POST } = h.load('src/app/api/notify/route.ts');
+  const request = (body, origin) => new Request('https://game-on.in/api/notify', { method: 'POST', headers: origin ? { origin } : {}, body: JSON.stringify(body) });
+  assert.equal((await POST(request({ email: 'player@example.com' }, 'https://other.example'))).status, 403);
+  for (const body of [{ email: 'one@example.com,two@example.com' }, { email: 'player@example.com', name: 'Injected\r\nheader' }, { email: 'invalid' }]) assert.equal((await POST(request(body))).status, 400);
+  assert.equal(h.deliveries.length, 0);
+  for (let i = 0; i < 2; i++) assert.equal((await POST(request({ type: 'newsletter', email: 'player@example.com' }))).status, 200);
+  assert.equal((await POST(request({ email: 'player@example.com' }))).status, 429);
+  assert.equal(h.deliveries.length, 4);
+}));
+
+test('Notify accepts the public host when Next normalizes its internal URL, but rejects cross-site fetches', () => withEnv({}, async () => {
+  const h = harness(); const { POST } = h.load('src/app/api/notify/route.ts');
+  const request = crossSite => new Request('https://localhost:3000/api/notify', {
+    method: 'POST', headers: { host: 'game-on.in', origin: 'https://game-on.in', 'sec-fetch-site': crossSite ? 'cross-site' : 'same-origin' },
+    body: JSON.stringify({ type: 'newsletter', email: 'player@example.com' }),
+  });
+  assert.equal((await POST(request(false))).status, 200);
+  assert.equal((await POST(request(true))).status, 403);
+  assert.equal(h.deliveries.length, 2);
+}));
+
+test('A registration using the club address needs only one copy and no self-BCC', () => withEnv({ NOTIFY_RECIPIENTS: '' }, async () => {
+  const h = harness();
+  const input = confirmation(h); input.entry.email = 'info@gameonmultisports.com';
+  assert.equal((await h.load('src/lib/league/email.ts').sendLeagueConfirmationEmail(input)).sent, true);
+  assert.equal(h.deliveries.at(-1).bcc, undefined);
+  assert.equal((await h.load('src/lib/open-play/email.ts').sendOpenPlayConfirmationEmail({ id: '12345678', full_name: 'Test', email: 'info@gameonmultisports.com', sport: 'cricket', city: 'Gurugram' })).sent, true);
+  assert.equal(h.deliveries.at(-1).bcc, undefined);
 }));

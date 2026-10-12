@@ -1,11 +1,38 @@
 # Brevo email delivery
 
 All website/API transactional senders use `src/lib/email/smtp.ts`: newsletter and
-early-access staff notifications, paid league confirmations (including staff BCC),
+early-access customer/staff confirmations, paid league confirmations (including staff BCC),
 open-play confirmations/retries and account-deletion staff/user messages.
 Mobile clients using these APIs inherit the same transport. No Gmail fallback exists.
 Existing recipient lists, reply-to addresses, templates and durable booking/registration
 behavior are preserved. SMTP acceptance is not proof of inbox delivery.
+
+## Customer and club confirmations
+
+- Open Play: the attendee receives the event confirmation; `info@gameonmultisports.com`
+  and additional staff recipients receive a private BCC copy.
+- Multisports League: after captured payment is verified and saved, the entrant
+  receives the confirmation/pass; the club mailbox and additional staff receive
+  private BCC copies. Loading the success page does not send another email.
+- Newsletter (and early access): staff receive submission details, and the
+  submitter receives a separate customer-facing confirmation with the club reply-to.
+  Staff recipients are not exposed in the customer's email.
+
+The club mailbox is always included, even when `NOTIFY_RECIPIENTS` is empty or
+contains only other addresses. Additional staff addresses are normalized and
+deduplicated. A customer who is also a staff recipient is excluded from BCC to
+avoid a duplicate copy of the same message.
+
+Success requires SMTP acceptance of the customer and all staff recipients.
+Partial rejection is not treated as successful delivery. For Open Play/League,
+the saved registration/payment remains valid and the admin can retry a FAILED
+delivery; a retry after partial acceptance may resend an already accepted copy.
+Newsletter attempts both messages independently, returns failure if either fails,
+and has no durable email retry queue. The notify endpoint uses the existing
+per-instance rate limiter (five attempts per 15 minutes) and rejects explicit
+cross-origin submissions; this is not a distributed anti-abuse guarantee.
+
+No new environment variable or database migration is required for these changes.
 
 ## Local and Vercel configuration
 
@@ -21,7 +48,7 @@ Development if those deployments should send email):
 | `SMTP_PASSWORD` | Your Brevo **SMTP key**, not an API key |
 | `SMTP_FROM_EMAIL` | `info@gameonmultisports.com` (verify in Brevo first) |
 | `SMTP_FROM_NAME` | `GameOn Multi Sports` |
-| `NOTIFY_RECIPIENTS` | Keep the existing comma-separated staff recipients |
+| `NOTIFY_RECIPIENTS` | Optional additional comma-separated staff recipients; the club mailbox is always included |
 
 Delete obsolete `SMTP_APP_PASSWORD`. Do not add `NEXT_PUBLIC_` or `EXPO_PUBLIC_`
 prefixes to any SMTP settings. Deploy this code with the updated variables;
@@ -83,7 +110,7 @@ Check the new Production deployment's function log after one failed attempt:
 | `SENDER_REJECTED` | Confirm the exact `SMTP_FROM_EMAIL` sender and its domain authentication in Brevo. Adding a domain without completing verification is not enough. |
 | `ACCOUNT_RESTRICTED` / `SENDING_LIMIT` | Check transactional sending activation, suspension notices, credits and sending limits. |
 | `CONNECTION` | Check outbound network access. Brevo supports 587 (STARTTLS), 465 (TLS) and 2525 (STARTTLS); update the port only when the logs indicate a connection problem and redeploy. |
-| `RECIPIENT_REJECTED` | Check the recipient and Brevo blocked-contact logs. Newsletter/early-access notifications go to `NOTIFY_RECIPIENTS`, not to the subscriber. |
+| `RECIPIENT_REJECTED` | Check the recipient and Brevo blocked-contact logs. Newsletter/early-access send separate staff and subscriber messages; Open Play/League use customer To plus staff BCC. |
 
 Matching surrounding quotes pasted into SMTP environment values are normalized.
 Multiline settings, Brevo API keys and unsupported Brevo ports fail closed. No

@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSmtpTransport, getSmtpConfig, logSmtpFailure } from "@/lib/email/smtp";
+import { createSmtpTransport, GAMEON_NOTIFICATION_EMAIL, getNotificationRecipients, getSmtpConfig, logSmtpFailure, smtpAcceptedAll } from "@/lib/email/smtp";
+import { withRateLimit } from "@/lib/middlewares/rate-limiter";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-const RECIPIENTS = (process.env.NOTIFY_RECIPIENTS ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@,<>]+@[^\s@,<>]+\.[^\s@,<>]+$/;
 
 function escapeHtml(value: string): string {
   return value
@@ -46,7 +43,34 @@ Submitted: ${submittedAt} (IST)
 — Game On · Where the City Unplugs & GameOn Begins —`;
 }
 
+function buildCustomerConfirmation({ type, name }: NotifyPayload) {
+  const newsletter = type === "newsletter";
+  const title = newsletter ? "You're subscribed to GameOn updates" : "We've received your early access request";
+  const greeting = name ? `Hi ${name},` : "Hi there,";
+  const message = newsletter
+    ? "Thanks for subscribing to GameOn Multi Sports updates. We'll keep you in the loop about upcoming sports, events and venue news."
+    : "Thanks for your interest in GameOn Multi Sports. Our team has received your early access request and will share updates with you.";
+  const footer = newsletter
+    ? `If you didn't request these updates or want to stop receiving them, reply to ${GAMEON_NOTIFICATION_EMAIL}.`
+    : `Questions? Reply to ${GAMEON_NOTIFICATION_EMAIL}. This confirms your request, not a paid booking or reserved slot.`;
+  return {
+    subject: `${title} | GameOn Multi Sports`,
+    text: ["GameOn Multi Sports", "", greeting, "", message, "", footer, "", "Team GameOn Multi Sports"].join("\n"),
+    html: `<!DOCTYPE html><html lang="en"><body style="margin:0;padding:24px;background:#0B0B0C;font-family:Arial,Helvetica,sans-serif;"><table role="presentation" style="width:100%;max-width:540px;margin:auto;background:#FFFFFF;border-collapse:collapse;"><tr><td style="padding:28px;background:#1A1D23;color:#F38F2F;font-size:24px;font-weight:bold;">GAMEON MULTI SPORTS</td></tr><tr><td style="padding:28px;color:#1A1D23;"><h1 style="font-size:24px;">${escapeHtml(title)}</h1><p>${escapeHtml(greeting)}</p><p style="line-height:1.7;">${escapeHtml(message)}</p><p style="font-size:13px;line-height:1.7;">${escapeHtml(footer)}</p><p>Team GameOn Multi Sports</p></td></tr></table></body></html>`,
+  };
+}
+
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  const url = new URL(req.url);
+  const incomingOrigin = `${url.protocol}//${req.headers.get("host") || url.host}`;
+  if ((origin && origin !== url.origin && origin !== incomingOrigin) || req.headers.get("sec-fetch-site") === "cross-site") {
+    return NextResponse.json({ ok: false, error: "Please submit this request from our website." }, { status: 403 });
+  }
+  return withRateLimit(req, { limit: 5, windowMs: 15 * 60_000, keyPrefix: "notify" }, sendNotification);
+}
+
+async function sendNotification(req: Request) {
   try {
     const body = await req.json().catch(() => null);
     const type: NotifyPayload["type"] = body?.type === "newsletter" ? "newsletter" : "early-access";
@@ -54,13 +78,13 @@ export async function POST(req: NextRequest) {
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
 
-    if (!EMAIL_RE.test(email)) {
+    if (email.length > 254 || !EMAIL_RE.test(email) || name.length > 120 || phone.length > 40 || /[\r\n]/.test(name + phone)) {
       return NextResponse.json({ ok: false, error: "A valid email address is required." }, { status: 400 });
     }
 
     const smtp = getSmtpConfig();
-    if (!smtp || RECIPIENTS.length === 0) {
-      console.error("Notify: SMTP not configured (SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL, NOTIFY_RECIPIENTS).");
+    if (!smtp) {
+      console.error("Notify: SMTP not configured (SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL).");
       return NextResponse.json({ ok: false, error: "Email is not configured." }, { status: 500 });
     }
 
@@ -73,15 +97,36 @@ export async function POST(req: NextRequest) {
 
     const transporter = createSmtpTransport(smtp);
     try {
-      const result = await transporter.sendMail({
-        from: smtp.from,
-        to: RECIPIENTS.join(", "),
-        replyTo: email,
-        subject,
-        html: buildEmailHtml({ type, name, email, phone, submittedAt }),
-        text: buildEmailText({ type, name, email, phone, submittedAt }),
+      const staff = getNotificationRecipients();
+      const payload = { type, name, email, phone, submittedAt };
+      // Separate messages keep staff details private. Both attempts finish even if one fails.
+      const results = await Promise.allSettled([
+        transporter.sendMail({
+          from: smtp.from,
+          to: staff.join(", "),
+          replyTo: email,
+          subject,
+          html: buildEmailHtml(payload),
+          text: buildEmailText(payload),
+        }),
+        transporter.sendMail({
+          from: smtp.from,
+          to: email,
+          replyTo: GAMEON_NOTIFICATION_EMAIL,
+          ...buildCustomerConfirmation(payload),
+        }),
+      ]);
+      let failed = false;
+      results.forEach((result, index) => {
+        const expected = index === 0 ? staff : [email];
+        if (result.status === "rejected" || !smtpAcceptedAll(result.value.accepted, expected)) {
+          failed = true;
+          const error = result.status === "rejected" ? result.reason
+            : { code: "EENVELOPE", command: "RCPT TO" };
+          logSmtpFailure(index === 0 ? "Notify staff notification" : "Notify customer confirmation", error);
+        }
       });
-      if (!result.accepted?.length) throw Object.assign(new Error("SMTP did not accept the notification recipients"), { code: "EENVELOPE", command: "RCPT TO" });
+      if (failed) return NextResponse.json({ ok: false, error: "Failed to send email." }, { status: 500 });
     } finally {
       transporter.close();
     }

@@ -1,4 +1,4 @@
-import { createSmtpTransport, getSmtpConfig, logSmtpFailure } from "@/lib/email/smtp";
+import { createSmtpTransport, getNotificationRecipients, getSmtpConfig, logSmtpFailure, smtpAcceptedAll } from "@/lib/email/smtp";
 import { formatINR } from "@/components/league/data";
 import {
   LEAGUE_HELP_EMAIL,
@@ -17,11 +17,6 @@ import { confirmationBrackets, confirmationSchedule } from "./confirmation";
  * `.env.local`. Table-based, inline-styled HTML so it survives Outlook and
  * Gmail, with the club's own copy BCC'd so the desk sees every entry.
  */
-
-const CLUB_RECIPIENTS = (process.env.NOTIFY_RECIPIENTS ?? "")
-  .split(",")
-  .map((address) => address.trim())
-  .filter(Boolean);
 
 const FONT = "Arial,Helvetica,sans-serif";
 
@@ -241,21 +236,22 @@ export async function sendLeagueConfirmationEmail(
   const transporter = createSmtpTransport(smtp);
   try {
     const { subject, html, text } = renderLeagueConfirmationEmail(confirmation);
+    const staff = getNotificationRecipients(confirmation.entry.email);
 
     const result = await transporter.sendMail({
       from: smtp.from,
       to: confirmation.entry.email,
-      bcc: CLUB_RECIPIENTS.length ? CLUB_RECIPIENTS.join(", ") : undefined,
+      bcc: staff.length ? staff.join(", ") : undefined,
       replyTo: LEAGUE_HELP_EMAIL,
       subject,
       html,
       text,
     });
 
-    const accepted = result.accepted ?? [];
-    const customerAccepted = accepted.some(address =>
-      (typeof address === 'string' ? address : address.address)?.toLowerCase() === confirmation.entry.email.toLowerCase());
-    return customerAccepted ? { sent: true } : { sent: false, error: "SMTP did not accept the confirmation recipient" };
+    if (!smtpAcceptedAll(result.accepted, [confirmation.entry.email])) return { sent: false, error: "SMTP did not accept the confirmation recipient" };
+    return staff.length && !smtpAcceptedAll(result.accepted, staff)
+      ? { sent: false, error: "Customer confirmation accepted, but SMTP did not accept all staff copies. Retrying may resend the customer confirmation." }
+      : { sent: true };
   } catch (error) {
     return { sent: false, error: logSmtpFailure("League confirmation", error) };
   } finally {

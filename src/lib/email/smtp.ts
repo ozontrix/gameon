@@ -7,6 +7,23 @@ function envValue(key: string, fallback = '') {
   return /^("[\s\S]*"|'[\s\S]*')$/.test(value) ? value.slice(1, -1).trim() : value;
 }
 
+export const GAMEON_NOTIFICATION_EMAIL = 'info@gameonmultisports.com';
+
+/** The club mailbox is mandatory; optional staff addresses cannot replace it. */
+export function getNotificationRecipients(exclude?: string): string[] {
+  const recipients = [GAMEON_NOTIFICATION_EMAIL, ...envValue('NOTIFY_RECIPIENTS').split(',')]
+    .map(address => address.trim().toLowerCase())
+    .filter(address => /^[^\s@,<>]+@[^\s@,<>]+\.[^\s@,<>]+$/.test(address));
+  return [...new Set(recipients)].filter(address => address !== exclude?.trim().toLowerCase());
+}
+
+/** SMTP may resolve successfully even when some recipients were rejected. */
+export function smtpAcceptedAll(accepted: readonly (string | { address?: string })[] | undefined, recipients: readonly string[]): boolean {
+  const addresses = new Set((accepted ?? []).map(value =>
+    (typeof value === 'string' ? value : value.address ?? '').trim().toLowerCase()));
+  return recipients.length > 0 && recipients.every(address => addresses.has(address.trim().toLowerCase()));
+}
+
 /** Server-only SMTP settings shared by every GameOn transactional sender. */
 export function getSmtpConfig() {
   const host = envValue('SMTP_HOST', 'smtp-relay.brevo.com');

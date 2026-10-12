@@ -1,5 +1,5 @@
 import 'server-only';
-import { createSmtpTransport, getSmtpConfig, logSmtpFailure } from '@/lib/email/smtp';
+import { createSmtpTransport, getNotificationRecipients, getSmtpConfig, logSmtpFailure, smtpAcceptedAll } from '@/lib/email/smtp';
 import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_PHONE, OPEN_PLAY_SPORTS, OPEN_PLAY_VENUE, PAID_PLAY_DATE_LABEL } from './constants';
 import type { OpenPlayRegistration } from './server';
 
@@ -47,8 +47,12 @@ export async function sendOpenPlayConfirmationEmail(registration: OpenPlayRegist
   if (!registration.email) return { sent: false, error: 'No email on this registration' };
   const transport = createSmtpTransport(smtp);
   try {
-    const result = await transport.sendMail({ from: smtp.from, to: registration.email, replyTo: HELP_EMAIL, ...renderOpenPlayConfirmationEmail(registration) });
-    return result.accepted?.length ? { sent: true } : { sent: false, error: 'SMTP did not accept the confirmation recipient' };
+    const staff = getNotificationRecipients(registration.email);
+    const result = await transport.sendMail({ from: smtp.from, to: registration.email, bcc: staff.length ? staff.join(', ') : undefined, replyTo: HELP_EMAIL, ...renderOpenPlayConfirmationEmail(registration) });
+    if (!smtpAcceptedAll(result.accepted, [registration.email])) return { sent: false, error: 'SMTP did not accept the confirmation recipient' };
+    return staff.length && !smtpAcceptedAll(result.accepted, staff)
+      ? { sent: false, error: 'Customer confirmation accepted, but SMTP did not accept all staff copies. Retrying may resend the customer confirmation.' }
+      : { sent: true };
   } catch (error) {
     return { sent: false, error: logSmtpFailure('Open play confirmation', error) };
   } finally { transport.close(); }

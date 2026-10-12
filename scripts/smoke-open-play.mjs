@@ -24,6 +24,8 @@ try {
   const invalid = await fetch(`${origin}/api/v1/public/open-play/registrations`, { method: 'POST', headers: { 'Content-Type': 'application/json', origin }, body: '{}' }); assert.equal(invalid.status, 400); assert.equal((await invalid.json()).success, false);
   const crossSite = await fetch(`${origin}/api/v1/public/open-play/registrations`, { method: 'POST', headers: { origin: 'https://evil.example' }, body: '{}' }); assert.equal(crossSite.status, 403);
   assert.equal((await get('/api/v1/public/open-play/registrations')).status, 405);
+  const notifyInvalid = await fetch(`${origin}/api/notify`, { method: 'POST', headers: { 'Content-Type': 'application/json', origin }, body: '{}' }); assert.equal(notifyInvalid.status, 400);
+  const notifyCrossSite = await fetch(`${origin}/api/notify`, { method: 'POST', headers: { origin: 'https://evil.example' }, body: '{}' }); assert.equal(notifyCrossSite.status, 403);
   const sitemap = await (await get('/sitemap.xml')).text(); assert.match(sitemap, /open-play-registrations/); assert.doesNotMatch(sitemap, /\/admin\/open-play/);
   console.log('PASS landing, social graphic, calendar, protected admin routes, rejected submissions and sitemap. No live registration writes.');
 } catch (error) { console.error(output.slice(-3000)); throw error; }
