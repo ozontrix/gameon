@@ -29,8 +29,17 @@ export default async function LeagueBookingsPage({ searchParams }: { searchParam
     </form>
     <Card>{!bookings.length ? <EmptyState title="No League entries found" description="New website checkouts appear here. Confirmed means Razorpay capture has been verified. Older email-only entries are not imported automatically." /> : <>
       <Table><thead><tr><Th>Entry / created</Th><Th>Contact</Th><Th>Sport / categories</Th><Th>Amount</Th><Th>Payment</Th><Th>Email</Th><Th>Details</Th></tr></thead><tbody>{bookings.map(booking => {
-        const { entry } = leagueDetails(booking);
-        return <tr key={booking.id}><Td><Link href={`/admin/multisports-league/${booking.id}`} className="font-medium text-zinc-950 hover:underline">{booking.reference ?? `#${booking.id.slice(0, 8).toUpperCase()}`}</Link><p className="mt-1 text-xs text-zinc-500">{formatDateTime(booking.created_at)}</p></Td><Td><p className="font-medium">{booking.captain_name}</p>{booking.team_name ? <p>{booking.team_name}</p> : null}<p>{booking.email}</p><p>{booking.phone}</p></Td><Td><p className="font-medium">{entry.sportName}</p><p>{confirmationBrackets(entry)}</p><p className="mt-1 text-xs text-zinc-500">{confirmationSchedule(entry)}</p></Td><Td>{formatMoney(booking.amount_paise / 100)}<p className="text-xs text-zinc-500">{entry.squadSize} player tickets</p></Td><Td><Badge tone={booking.status === 'CONFIRMED' ? 'green' : 'amber'}>{booking.status === 'CONFIRMED' ? 'Paid / confirmed' : 'Pending / unpaid'}</Badge></Td><Td><Badge tone={booking.email_status === 'SENT' ? 'green' : booking.email_status === 'FAILED' ? 'red' : 'neutral'}>{booking.email_status}</Badge></Td><Td><Link href={`/admin/multisports-league/${booking.id}`} className={buttonClass('secondary', 'sm')}>View entry</Link></Td></tr>;
+        const { entry, quote } = leagueDetails(booking);
+        const balance = booking.status === 'CONFIRMED' ? Math.max(0, Math.round(quote.total * 100) - booking.amount_paise) / 100 : quote.total;
+        return <tr key={booking.id}>
+          <Td><Link href={`/admin/multisports-league/${booking.id}`} className="font-medium text-zinc-950 hover:underline">{booking.reference ?? `#${booking.id.slice(0, 8).toUpperCase()}`}</Link><p className="mt-1 text-xs text-zinc-500">{formatDateTime(booking.created_at)}</p></Td>
+          <Td><p className="font-medium">{booking.captain_name}</p>{booking.team_name ? <p>{booking.team_name}</p> : null}<p>{booking.email}</p><p>{booking.phone}</p></Td>
+          <Td><p className="font-medium">{entry.sportName}</p><p>{confirmationBrackets(entry)}</p><p className="mt-1 text-xs text-zinc-500">{confirmationSchedule(entry)}</p></Td>
+          <Td><p>Total: {formatMoney(quote.total)}</p><p>{booking.status === 'CONFIRMED' ? 'Paid' : 'Order'}: {formatMoney(booking.amount_paise / 100)}</p><p>Balance: {formatMoney(balance)}</p><p className="text-xs text-zinc-500">{entry.squadSize} player tickets</p></Td>
+          <Td><Badge tone={booking.status === 'CONFIRMED' && balance === 0 ? 'green' : 'amber'}>{booking.status === 'CONFIRMED' ? balance > 0 ? 'Advance paid / reserved' : 'Paid / confirmed' : 'Pending / unpaid'}</Badge></Td>
+          <Td><Badge tone={booking.email_status === 'SENT' ? 'green' : booking.email_status === 'FAILED' ? 'red' : 'neutral'}>{booking.email_status}</Badge></Td>
+          <Td><Link href={`/admin/multisports-league/${booking.id}`} className={buttonClass('secondary', 'sm')}>View entry</Link></Td>
+        </tr>;
       })}</tbody></Table>
       <Pagination basePath="/admin/multisports-league" params={filters} page={page} pageSize={PAGE_SIZE} total={total} />
     </>}</Card>

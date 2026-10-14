@@ -19,6 +19,7 @@ export default async function LeagueEntryPage({ params }: { params: Promise<{ id
   const booking = await getLeagueBooking(id);
   if (!booking) notFound();
   const { entry, quote } = leagueDetails(booking);
+  const balance = booking.status === 'CONFIRMED' ? Math.max(0, Math.round(quote.total * 100) - booking.amount_paise) / 100 : quote.total;
   return <>
     <PageHeader title={booking.reference ?? 'Pending League entry'} description={`${LEAGUE_NAME} · ${LEAGUE_VENUE}`} back={{ href: '/admin/multisports-league', label: 'All League entries' }} />
     <div className="grid gap-5 lg:grid-cols-2">
@@ -29,10 +30,14 @@ export default async function LeagueEntryPage({ params }: { params: Promise<{ id
         { label: 'Notes', value: <span className="whitespace-pre-wrap">{entry.notes || '—'}</span> },
       ]} /></CardBody></Card>
       <Card><CardHeader title="Payment & order" /><CardBody><DetailList items={[
-        { label: 'Status', value: <Badge tone={booking.status === 'CONFIRMED' ? 'green' : 'amber'}>{booking.status === 'CONFIRMED' ? 'Paid / confirmed' : 'Pending / unpaid'}</Badge> },
+        { label: 'Status', value: <Badge tone={booking.status === 'CONFIRMED' && balance === 0 ? 'green' : 'amber'}>{booking.status === 'CONFIRMED' ? balance > 0 ? 'Advance paid / reserved' : 'Paid / confirmed' : 'Pending / unpaid'}</Badge> },
         { label: 'Booking ID', value: booking.id }, { label: 'Reference', value: booking.reference || '—' },
         { label: 'Razorpay order', value: booking.razorpay_order_id || 'Not created' }, { label: 'Razorpay payment', value: booking.razorpay_payment_id || '—' },
-        { label: 'Total / INR', value: formatMoney(booking.amount_paise / 100) },
+        { label: 'Payment option', value: entry.paymentPlan === 'DEPOSIT_20' ? '20% advance' : 'Pay in full' },
+        { label: 'Booking total / INR', value: formatMoney(quote.total) },
+        { label: 'Due on this order / INR', value: formatMoney(booking.amount_paise / 100) },
+        { label: 'Captured / INR', value: formatMoney(booking.status === 'CONFIRMED' ? booking.amount_paise / 100 : 0) },
+        { label: 'Remaining balance / INR', value: formatMoney(balance) },
         { label: 'Created', value: formatDateTime(booking.created_at) }, { label: 'Confirmed', value: formatDateTime(booking.paid_at) },
       ]} /></CardBody></Card>
       <Card><CardHeader title={`${entry.sportName} categories`} /><Table><thead><tr><Th>Sport / Category</Th><Th>Match date</Th><Th>Entry fee</Th><Th>Players</Th></tr></thead><tbody>{entry.categories.map(category => <tr key={`${category.sportId ?? entry.sport}:${category.id}`}><Td>{category.sportName ? `${category.sportName} · ` : ''}{category.name}</Td><Td>{formatDate(category.date ?? entry.date)}</Td><Td>{formatMoney(category.fee)}</Td><Td>{category.squadSize ?? '—'}</Td></tr>)}</tbody></Table></Card>

@@ -5,6 +5,7 @@ import { parseLeagueEntry } from "@/lib/league/entry";
 import { LEAGUE_NAME } from "@/lib/league/constants";
 import { formatDayLabel, scheduleLabel } from "@/components/league/data";
 import { attachLeagueOrder, createLeagueBooking, LeagueBookingError } from "@/lib/league/bookings";
+import { leaguePaymentSchedule } from '@/lib/league/payment-plan';
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
 
       const { entry } = result;
       let quote = result.quote;
-      let amount = Math.round(quote.total * 100); // Razorpay works in paise
+      let amount = leaguePaymentSchedule(quote.total, entry.paymentPlan).dueNowPaise;
 
       if (amount < 100) {
         return NextResponse.json(
@@ -51,8 +52,13 @@ export async function POST(request: Request) {
         quote = booking.quote as unknown as typeof quote;
         amount = booking.amount_paise;
       }
+      const payment = leaguePaymentSchedule(quote.total, entry.paymentPlan);
+      // Fail closed if coupon RPC is not migrated or a saved order has another payment plan.
+      if (amount !== payment.dueNowPaise || amount < 100) {
+        throw new LeagueBookingError('The saved payment amount does not match your payment option. Please contact the desk.', 409);
+      }
       if (booking.razorpay_order_id) {
-        return NextResponse.json({ success: true, orderId: booking.razorpay_order_id, amount, currency: "INR", keyId, quote }, { status: 201 });
+        return NextResponse.json({ success: true, orderId: booking.razorpay_order_id, amount, currency: "INR", keyId, quote, payment }, { status: 201 });
       }
       const order = await getRazorpay().orders.create({
         amount,
@@ -65,6 +71,9 @@ export async function POST(request: Request) {
           categories: entry.categories.map((category) => `${category.sportName}: ${category.name} (${formatDayLabel(category.date)})`).join(", ").slice(0, 256),
           match_day: scheduleLabel(entry.categories),
           contact: entry.phone,
+          payment_plan: payment.plan,
+          booking_total_paise: String(payment.totalPaise),
+          balance_paise: String(payment.balancePaise),
         },
       });
       await attachLeagueOrder(booking.id, order.id);
@@ -77,6 +86,7 @@ export async function POST(request: Request) {
           currency: "INR",
           keyId,
           quote,
+          payment,
         },
         { status: 201 }
       );

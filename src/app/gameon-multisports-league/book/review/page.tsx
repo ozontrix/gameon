@@ -32,9 +32,10 @@ import {
   StepFooter,
 } from "@/components/league/ui";
 import { cn } from "@/lib/utils";
+import { formatLeaguePayment, leaguePaymentSchedule, type LeaguePaymentPlan } from '@/lib/league/payment-plan';
 
 export default function LeagueReviewPage() {
-  const { draft, ready, sport, sports, categories, pricing, coupons, couponsLoading, couponError, applyCoupon, removeCoupon } =
+  const { draft, ready, sport, sports, categories, pricing, coupons, couponsLoading, couponError, applyCoupon, removeCoupon, update } =
     useLeagueBooking();
   const [code, setCode] = useState("");
   const [applying, setApplying] = useState(false);
@@ -61,6 +62,8 @@ export default function LeagueReviewPage() {
   };
 
   const addOnLines = ADD_ONS.filter((addOn) => (draft.addons[addOn.id] ?? 0) > 0);
+  const paymentPlan = draft.paymentPlan ?? 'FULL';
+  const payment = leaguePaymentSchedule(pricing.total, paymentPlan);
 
   return (
     <div>
@@ -261,18 +264,43 @@ export default function LeagueReviewPage() {
         </p>
       </Panel>
 
+      <Panel className="mb-4">
+        <fieldset>
+          <legend className="font-display text-lg uppercase text-go-white">Choose how to pay</legend>
+          <p id="league-payment-help" className="mt-2 text-sm text-go-off/80">Pay the full booking amount now, or reserve your entry with a 20% advance.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {([
+              { plan: 'FULL', title: 'Pay in full', copy: 'Complete your payment now. No remaining balance.' },
+              { plan: 'DEPOSIT_20', title: 'Book your slot at just 20%', copy: 'Pay 20% now. The remaining 80% stays payable; our team will coordinate collection.' },
+            ] satisfies { plan: LeaguePaymentPlan; title: string; copy: string }[]).map(option => {
+              const schedule = leaguePaymentSchedule(pricing.total, option.plan);
+              return <label key={option.plan} className={cn('flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-go-brand', paymentPlan === option.plan ? 'border-go-brand bg-go-brand/10' : 'border-white/15 bg-white/[0.03] hover:border-go-brand/50')}>
+                <input type="radio" name="league-payment-plan" value={option.plan} checked={paymentPlan === option.plan} onChange={() => update({ paymentPlan: option.plan })} aria-describedby="league-payment-help" className="mt-1 h-5 w-5 shrink-0 accent-go-brand" />
+                <span className="min-w-0"><span className="block text-base font-semibold text-go-white">{option.title}</span><span className="mt-2 block font-display text-2xl text-go-brand">{formatLeaguePayment(schedule.dueNowPaise / 100)}</span><span className="mt-2 block text-sm leading-relaxed text-go-off/80">{option.copy}</span></span>
+              </label>;
+            })}
+          </div>
+          <div className="mt-4" aria-live="polite">
+            <InfoRow label="Booking total" value={formatLeaguePayment(pricing.total)} />
+            <InfoRow label="Pay now" value={formatLeaguePayment(payment.dueNowPaise / 100)} strong />
+            <InfoRow label="Remaining balance" value={formatLeaguePayment(payment.balancePaise / 100)} />
+          </div>
+          {paymentPlan === 'DEPOSIT_20' ? <p className="mt-3 text-sm leading-relaxed text-go-off/80">Your entry is reserved after the advance is successfully captured. This is not a full-payment receipt. The remaining balance will not be charged automatically.</p> : null}
+        </fieldset>
+      </Panel>
+
       <StepFooter>
         <div className="flex items-center gap-3 lg:justify-between">
           <div className="min-w-0 flex-1 lg:flex-none">
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-go-off/40">
-              Total payable
+              Pay now
             </p>
             <p className="font-display text-lg leading-tight text-go-white">
-              {formatINR(pricing.total)}
+              {formatLeaguePayment(payment.dueNowPaise / 100)}
             </p>
           </div>
           <LeaguePayButton
-            label={`Proceed to pay ${formatINR(pricing.total)}`}
+            label={paymentPlan === 'DEPOSIT_20' ? `Book with 20% · ${formatLeaguePayment(payment.dueNowPaise / 100)}` : `Pay in full · ${formatLeaguePayment(payment.dueNowPaise / 100)}`}
             className="flex-1 lg:flex-none"
           />
         </div>

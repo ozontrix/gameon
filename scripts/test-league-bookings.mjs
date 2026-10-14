@@ -37,6 +37,8 @@ function loader(mocks = {}) {
 const load = loader();
 const { SPORTS } = load('src/components/league/data.ts');
 const { parseLeagueEntry } = load('src/lib/league/entry.ts');
+const { leaguePaymentSchedule, formatLeaguePayment } = load('src/lib/league/payment-plan.ts');
+const { confirmationBalance } = load('src/lib/league/confirmation.ts');
 const input = { sport: 'badminton', categoryIds: [SPORTS[0].categories[0].id], date: '2026-10-24', captainName: 'Test Player', teamName: 'Test Team', email: 'player@example.com', phone: '9811000000', notes: 'Saved checkout notes', city: 'Gurugram', addons: {} };
 const parsed = parseLeagueEntry(input);
 assert.equal(parsed.ok, true);
@@ -45,7 +47,7 @@ const id = '12345678-1234-4234-8234-123456789abc';
 function harness({ payment = {}, mail = { sent: true }, failWrite = false, entryResult = parsed } = {}) {
   const rows = [];
   const calls = { emails: 0, fetches: 0, capturedBeforeEmail: false };
-  const gatewayPayment = { id: 'pay_valid', order_id: 'order_valid', amount: entryResult.quote.total * 100, currency: 'INR', status: 'captured', ...payment };
+  const gatewayPayment = { id: 'pay_valid', order_id: 'order_valid', amount: leaguePaymentSchedule(entryResult.quote.total, entryResult.entry.paymentPlan).dueNowPaise, currency: 'INR', status: 'captured', ...payment };
   const db = { from(table) {
     assert.equal(table, 'league_bookings');
     let operation = 'select', payload, filters = [], lease = false;
@@ -292,4 +294,107 @@ test('Admin detail renders frozen checkout, price breakdown and email failure; g
   let read = false;
   const denied = loader({ ...componentMocks, '@/lib/admin/session': { requireAdmin: async () => { throw new Error('DENIED'); } }, '@/lib/admin/queries/league': { getLeagueBooking: async () => { read = true; } } })('src/app/admin/(panel)/multisports-league/[id]/page.tsx').default;
   await assert.rejects(denied({ params: Promise.resolve({ id }) }), /DENIED/); assert.equal(read, false);
+});
+
+test('20% advance persists and verifies separately from the complete price for every sport', async () => {
+  for (const sport of SPORTS) {
+    const entryResult = parseLeagueEntry({ ...input, sport: sport.id, categoryIds: [sport.categories[0].id], date: sport.categories[0].date, paymentPlan: 'DEPOSIT_20' });
+    assert.equal(entryResult.ok, true);
+    const h = harness({ entryResult }); await h.seed();
+    assert.equal(h.rows[0].entry.paymentPlan, 'DEPOSIT_20');
+    assert.equal(h.rows[0].quote.total, entryResult.quote.total);
+    assert.equal(h.rows[0].amount_paise, entryResult.quote.total * 20);
+    const receipt = await h.confirmLeaguePayment('order_valid', 'pay_valid');
+    assert.equal(receipt.amount, entryResult.quote.total / 5);
+    assert.equal(confirmationBalance(receipt), entryResult.quote.total * 0.8);
+    assert.equal(h.calls.emails, 1);
+    assert.deepEqual(await h.confirmLeaguePayment('order_valid', 'pay_valid'), receipt);
+    const email = load('src/lib/league/email.ts').renderLeagueConfirmationEmail(receipt);
+    for (const content of [email.text, email.html]) {
+      assert.ok(content.includes('Advance paid (20%)'));
+      assert.ok(content.includes('Remaining balance'));
+      assert.ok(content.includes(formatLeaguePayment(confirmationBalance(receipt))));
+      assert.ok(content.includes('will not be charged automatically'));
+    }
+    const wrong = harness({ entryResult, payment: { amount: entryResult.quote.total * 100 } }); await wrong.seed();
+    await assert.rejects(wrong.confirmLeaguePayment('order_valid', 'pay_valid'), error => error.status === 409);
+    assert.equal(wrong.calls.emails, 0);
+  }
+});
+
+test('Mixed-sport advance confirms one order with all categories and exposes outstanding amount on success', async () => {
+  const selections = SPORTS.map(s => ({ sportId: s.id, categoryId: s.categories[0].id }));
+  const entryResult = parseLeagueEntry({ ...input, selections, paymentPlan: 'DEPOSIT_20' });
+  const h = harness({ entryResult }); await h.seed();
+  const receipt = await h.confirmLeaguePayment('order_valid', 'pay_valid');
+  assert.equal(receipt.entry.sports.length, 4);
+  assert.equal(receipt.amount, entryResult.quote.total / 5);
+  assert.equal(h.calls.emails, 1);
+  const screen = loader({
+    react: { ...require('react'), useSyncExternalStore: () => JSON.stringify(receipt) },
+  })('src/components/league/confirmation-screen.tsx').LeagueConfirmationScreen;
+  const html = renderToStaticMarkup(createElement(screen));
+  for (const text of ['20% advance paid', 'Advance paid (20%)', 'Remaining balance', 'will not be charged automatically', formatLeaguePayment(receipt.amount), formatLeaguePayment(confirmationBalance(receipt))]) assert.ok(html.includes(text), text);
+  assert.ok(!html.includes('Paid in full'));
+});
+
+test('Payment plans default to full, reject untrusted percentages, and preserve paise after discounts', () => {
+  assert.equal(parseLeagueEntry(input).entry.paymentPlan, undefined);
+  for (const paymentPlan of ['DEPOSIT_1', 'deposit', 20, null]) assert.equal(parseLeagueEntry({ ...input, paymentPlan }).ok, false);
+  const schedule = leaguePaymentSchedule(2041, 'DEPOSIT_20');
+  assert.deepEqual(schedule, { plan: 'DEPOSIT_20', totalPaise: 204100, dueNowPaise: 40820, balancePaise: 163280 });
+  assert.equal(leaguePaymentSchedule(2041).dueNowPaise, 204100);
+  assert.equal(formatLeaguePayment(408.2), '₹408.20');
+  assert.throws(() => leaguePaymentSchedule(NaN));
+  const cart = load('src/components/league/cart.ts');
+  assert.equal(cart.restoreDraft({ ...input, paymentPlan: 'DEPOSIT_20' }).paymentPlan, 'DEPOSIT_20');
+  assert.equal(cart.restoreDraft({ ...input, paymentPlan: 'INVALID' }).paymentPlan, 'FULL');
+});
+
+test('Review exposes accessible full/20% choices and exact amounts for all sports and mixed carts', () => {
+  const reactRuntime = require('react/jsx-runtime');
+  for (const selections of [...SPORTS.map(s => [{ sportId: s.id, categoryId: s.categories[0].id }]), SPORTS.map(s => ({ sportId: s.id, categoryId: s.categories[0].id }))]) {
+    for (const paymentPlan of ['FULL', 'DEPOSIT_20']) {
+      const date = selections.map(s => SPORTS.find(sport => sport.id === s.sportId).categories.find(c => c.id === s.categoryId).date).sort()[0];
+      const result = parseLeagueEntry({ ...input, date, selections, paymentPlan });
+      assert.equal(result.ok, true);
+      const radios = [], patches = [];
+      const capture = kind => (tag, props, key) => { if (tag === 'input' && props.type === 'radio') radios.push(props); return reactRuntime[kind](tag, props, key); };
+      const page = loader({
+        '@/components/league/booking-context': { useLeagueBooking: () => ({ draft: { ...input, selections, paymentPlan, addons: {} }, ready: true, sport: result.entry.sport, sports: result.entry.sports, categories: result.entry.categories, pricing: result.quote, coupons: [], couponsLoading: false, couponError: null, update: patch => patches.push(patch) }) },
+        '@/components/league/pay-button': { LeaguePayButton: ({ label }) => createElement('button', {}, label) },
+        'react/jsx-runtime': { ...reactRuntime, jsx: capture('jsx'), jsxs: capture('jsxs') },
+      })('src/app/gameon-multisports-league/book/review/page.tsx').default;
+      const html = renderToStaticMarkup(createElement(page));
+      assert.equal(radios.length, 2);
+      assert.equal(radios.filter(r => r.checked).length, 1);
+      assert.ok(html.includes('Pay in full'));
+      assert.ok(html.includes('Book your slot at just 20%'));
+      assert.ok(html.includes('Remaining balance'));
+      assert.ok(html.includes(formatLeaguePayment(leaguePaymentSchedule(result.quote.total, paymentPlan).dueNowPaise / 100)));
+      radios.find(r => r.value === 'DEPOSIT_20').onChange();
+      assert.deepEqual(patches, [{ paymentPlan: 'DEPOSIT_20' }]);
+    }
+  }
+});
+
+test('Deposit admin list, details and CSV distinguish the captured advance from the remaining balance', async () => {
+  const entryResult = parseLeagueEntry({ ...input, paymentPlan: 'DEPOSIT_20' });
+  const h = harness({ entryResult }); await h.seed(); await h.confirmLeaguePayment('order_valid', 'pay_valid');
+  const queries = loader({ '@/lib/db/supabase': { supabaseAdmin: {} } })('src/lib/admin/queries/league.ts');
+  const mocks = {
+    '@/lib/admin/session': { requireAdmin: async () => ({ role: 'ADMIN' }), getStaffSession: async () => ({ role: 'ADMIN' }) },
+    '@/lib/admin/queries/league': { ...queries, listLeagueBookings: async () => ({ bookings: h.rows, total: 1 }), getLeagueBooking: async () => h.rows[0] },
+    '@/lib/admin/actions/league': {},
+    '@/components/admin/action-form': {},
+  };
+  const list = loader(mocks)('src/app/admin/(panel)/multisports-league/page.tsx').default;
+  const detail = loader(mocks)('src/app/admin/(panel)/multisports-league/[id]/page.tsx').default;
+  for (const html of [renderToStaticMarkup(await list({ searchParams: Promise.resolve({}) })), renderToStaticMarkup(await detail({ params: Promise.resolve({ id }) }))]) {
+    assert.ok(html.includes('Advance paid / reserved'));
+    assert.ok(!html.includes('>Paid / confirmed<'));
+  }
+  const csv = await (await loader(mocks)('src/app/admin/(panel)/multisports-league/export/route.ts').GET(new Request('https://example.com/export'))).text();
+  assert.ok(csv.includes('Remaining balance INR'));
+  assert.ok(csv.includes('"DEPOSIT_20"'));
 });

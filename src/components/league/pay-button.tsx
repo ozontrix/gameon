@@ -18,6 +18,7 @@ import { LEAGUE_CONFIRMATION_KEY, type LeagueConfirmation } from "@/lib/league/c
 import { LEAGUE_NAME } from "@/lib/league/constants";
 import { formatDayLabel, scheduleLabel } from "./data";
 import { trackLeaguePaymentInfo, trackLeaguePurchase } from "@/lib/analytics/meta-pixel";
+import { formatLeaguePayment, leaguePaymentSchedule } from '@/lib/league/payment-plan';
 
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 const ORDER_API = "/api/v1/public/league/entries/order";
@@ -88,9 +89,11 @@ export function LeaguePayButton({
     notes: draft.notes,
     addons: {},
     coupon: draft.coupon,
+    paymentPlan: draft.paymentPlan ?? 'FULL',
   });
 
   const handlePay = async () => {
+    if (busy) return;
     if (!ready || categories.length === 0 || !draft.date) {
       toast.error("Pick a sport and a category first.");
       return;
@@ -120,8 +123,8 @@ export function LeaguePayButton({
         return;
       }
 
-      if (order.amount !== Math.round(pricing.total * 100)) {
-        toast.message(`Your saved checkout total is ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(order.amount / 100)}. Razorpay shows the final amount before payment.`);
+      if (order.amount !== leaguePaymentSchedule(pricing.total, draft.paymentPlan).dueNowPaise) {
+        toast.message(`Your saved amount due now is ${formatLeaguePayment(order.amount / 100)}. Razorpay shows the final amount before payment.`);
       }
 
       setStatus("paying");
@@ -132,7 +135,7 @@ export function LeaguePayButton({
         currency: order.currency,
         order_id: order.orderId,
         name: LEAGUE_NAME,
-        description: `${categories.length} categories · ${sports.map((item) => item.name).join(" + ")} · ${scheduleLabel(categories)}`,
+        description: `${draft.paymentPlan === 'DEPOSIT_20' ? '20% advance' : 'Full payment'} · ${categories.length} categories · ${sports.map((item) => item.name).join(" + ")} · ${scheduleLabel(categories)}`,
         image: "/game_on_favicon.png",
         prefill: {
           name: draft.captainName || draft.teamName,

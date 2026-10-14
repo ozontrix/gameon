@@ -13,12 +13,14 @@ export async function GET(request: Request) {
   if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (actor.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const filters = readLeagueFilters(Object.fromEntries(new URL(request.url).searchParams));
-  const rows: unknown[][] = [['Booking ID', 'Reference', 'Status', 'Sport', 'Categories', 'Match dates', 'Player tickets', 'Player / captain', 'Team', 'Email', 'Phone', 'City', 'Notes', 'Add-ons', 'Entry fees INR', 'Add-ons INR', 'Subtotal INR', 'Discount INR', 'Coupon', 'Total INR', 'Razorpay order', 'Razorpay payment', 'Created', 'Confirmed', 'Email status', 'Email sent at']];
+  const rows: unknown[][] = [['Booking ID', 'Reference', 'Status', 'Sport', 'Categories', 'Match dates', 'Player tickets', 'Player / captain', 'Team', 'Email', 'Phone', 'City', 'Notes', 'Add-ons', 'Entry fees INR', 'Add-ons INR', 'Subtotal INR', 'Discount INR', 'Coupon', 'Total INR', 'Razorpay order', 'Razorpay payment', 'Created', 'Confirmed', 'Email status', 'Email sent at', 'Payment option', 'Order amount INR', 'Captured INR', 'Remaining balance INR']];
   for (let page = 1; ; page++) {
     const { bookings } = await listLeagueBookings(filters, page, 500);
     for (const booking of bookings) {
       const { entry, quote } = leagueDetails(booking);
-      rows.push([booking.id, booking.reference, booking.status, entry.sportName, entry.categories.map(c => `${c.sportName ? `${c.sportName} · ` : ''}${c.name}`).join(' + '), entry.categories.map(c => `${c.sportName ? `${c.sportName} · ` : ''}${c.name}: ${c.date ?? entry.date}`).join('; '), entry.squadSize, booking.captain_name, booking.team_name, booking.email, booking.phone, entry.city, entry.notes, entry.addons.map(a => `${a.name} x ${a.qty}: ${a.amount}`).join('; '), quote.entryFee, quote.addOnsTotal, quote.subtotal, quote.discount, quote.couponCode, booking.amount_paise / 100, booking.razorpay_order_id, booking.razorpay_payment_id, booking.created_at, booking.paid_at, booking.email_status, booking.email_sent_at]);
+      const paid = booking.status === 'CONFIRMED' ? booking.amount_paise / 100 : 0;
+      const balance = Math.max(0, Math.round(quote.total * 100) - Math.round(paid * 100)) / 100;
+      rows.push([booking.id, booking.reference, booking.status, entry.sportName, entry.categories.map(c => `${c.sportName ? `${c.sportName} · ` : ''}${c.name}`).join(' + '), entry.categories.map(c => `${c.sportName ? `${c.sportName} · ` : ''}${c.name}: ${c.date ?? entry.date}`).join('; '), entry.squadSize, booking.captain_name, booking.team_name, booking.email, booking.phone, entry.city, entry.notes, entry.addons.map(a => `${a.name} x ${a.qty}: ${a.amount}`).join('; '), quote.entryFee, quote.addOnsTotal, quote.subtotal, quote.discount, quote.couponCode, quote.total, booking.razorpay_order_id, booking.razorpay_payment_id, booking.created_at, booking.paid_at, booking.email_status, booking.email_sent_at, entry.paymentPlan ?? 'FULL', booking.amount_paise / 100, paid, balance]);
     }
     if (bookings.length < 500) break;
   }

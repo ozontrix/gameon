@@ -1,4 +1,5 @@
 import { categoryDates, entryTickets, findCategory, findSport, type Category, type SportId } from "./data";
+import type { LeaguePaymentPlan } from '@/lib/league/payment-plan';
 
 /** Category ids are unique within a sport, not across sports. */
 export interface CartSelection { sportId: SportId; categoryId: string }
@@ -64,12 +65,13 @@ export interface Draft {
   addons: Record<string, number>;
   coupon: string | null;
   paymentMethod: string | null;
+  paymentPlan: LeaguePaymentPlan;
 }
 
 export const EMPTY_DRAFT: Draft = {
   selections: [], sport: null, categoryIds: [], date: null, slot: null, squadSize: 1,
   teamName: "", captainName: "", phone: "", email: "", city: "", notes: "",
-  addons: {}, coupon: null, paymentMethod: null,
+  addons: {}, coupon: null, paymentMethod: null, paymentPlan: 'FULL',
 };
 
 export function withSelections(draft: Draft, input: unknown): Draft {
@@ -93,6 +95,7 @@ export function restoreDraft(input: unknown): Draft {
     if (typeof saved[key] === "string") draft[key] = saved[key];
   }
   if (typeof saved.coupon === "string") draft.coupon = saved.coupon;
+  if (saved.paymentPlan === 'DEPOSIT_20') draft.paymentPlan = 'DEPOSIT_20';
   const legacyIds = Array.isArray(saved.categoryIds) ? saved.categoryIds : [saved.category];
   return withSelections(draft, Array.isArray(saved.selections) ? saved.selections
     : legacyIds.map((categoryId) => ({ sportId: saved.sport, categoryId })));

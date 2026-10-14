@@ -8,7 +8,8 @@ import {
   matchDayLabel,
 } from "./constants";
 import type { LeagueConfirmation } from "./confirmation";
-import { confirmationBrackets, confirmationSchedule } from "./confirmation";
+import { confirmationBalance, confirmationBrackets, confirmationSchedule } from "./confirmation";
+import { formatLeaguePayment } from './payment-plan';
 
 /**
  * The paid-entry confirmation email.
@@ -93,7 +94,9 @@ function describe(confirmation: LeagueConfirmation): EmailContext {
       quote.discount > 0 && quote.couponCode
         ? row(`Discount · ${quote.couponCode}`, `- ${formatINR(quote.discount)}`)
         : "",
-      row("Total paid", formatINR(confirmation.amount), true),
+      row("Booking total", formatLeaguePayment(quote.total)),
+      row(confirmationBalance(confirmation) > 0 ? "Advance paid (20%)" : "Total paid", formatLeaguePayment(confirmation.amount), true),
+      row("Remaining balance", formatLeaguePayment(confirmationBalance(confirmation)), confirmationBalance(confirmation) > 0),
     ].join(""),
   };
 }
@@ -119,6 +122,7 @@ function bodyHtml(confirmation: LeagueConfirmation, context: EmailContext): stri
             ${block("Your entry pass", context.passRows)}
             ${addOns}
             ${block("Payment summary", context.priceRows, 24)}
+            ${confirmationBalance(confirmation) > 0 ? `<p style="font-size:14px;line-height:1.7;color:#4a4a4a;">Your entry is reserved with a 20% advance. The remaining <strong>${escapeHtml(formatLeaguePayment(confirmationBalance(confirmation)))}</strong> is still payable. Our team will coordinate collection; it will not be charged automatically.</p>` : ''}
 
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf8f4;border-radius:14px;margin-bottom:24px;">
               <tr><td style="padding:18px 20px;font-family:${FONT};">
@@ -158,7 +162,7 @@ function shellHtml(confirmation: LeagueConfirmation, body: string): string {
           <tr><td style="background-color:#F38F2F;padding:15px 30px;text-align:center;">
             <p style="margin:0;font-size:19px;font-weight:800;color:#0B0B0C;font-family:${FONT};">You&rsquo;re in &mdash; entry confirmed 🎉</p>
             <p style="margin:6px 0 0;font-size:12px;color:#3b2a05;font-family:${FONT};">Paid ${escapeHtml(
-              formatINR(confirmation.amount)
+              formatLeaguePayment(confirmation.amount)
             )} &middot; Razorpay ${escapeHtml(confirmation.paymentId)}</p>
           </td></tr>
           ${body}
@@ -200,7 +204,10 @@ function buildText(confirmation: LeagueConfirmation, context: EmailContext): str
     `Player: ${entry.captainName}`,
     "",
     ...entry.addons.map((addOn) => `${addOn.name} × ${addOn.qty} — ${formatINR(addOn.amount)}`),
-    `Total paid: ${formatINR(confirmation.amount)}`,
+    `Booking total: ${formatLeaguePayment(confirmation.quote.total)}`,
+    `${confirmationBalance(confirmation) > 0 ? 'Advance paid (20%)' : 'Total paid'}: ${formatLeaguePayment(confirmation.amount)}`,
+    `Remaining balance: ${formatLeaguePayment(confirmationBalance(confirmation))}`,
+    confirmationBalance(confirmation) > 0 ? 'Your entry is reserved with a 20% advance. The remaining balance is still payable. Our team will coordinate collection; it will not be charged automatically.' : '',
     `Razorpay payment id: ${confirmation.paymentId}`,
     "",
     "Your exact match timing is shared on WhatsApp 24 hours before each category's match day.",

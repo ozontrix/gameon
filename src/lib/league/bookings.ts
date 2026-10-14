@@ -6,6 +6,7 @@ import type { Database, Json } from '@/types/database.types';
 import type { LeagueConfirmation } from './confirmation';
 import { entryReference, type EntryQuote, type LeagueEntry } from './entry';
 import { sendLeagueConfirmationEmail } from './email';
+import { leaguePaymentSchedule } from './payment-plan';
 
 export type LeagueBooking = Database['public']['Tables']['league_bookings']['Row'];
 
@@ -24,6 +25,7 @@ export function entrySnapshot(entry: LeagueEntry): LeagueConfirmation['entry'] {
     teamName: entry.teamName, captainName: entry.captainName,
     email: entry.email, phone: entry.phone, city: entry.city, notes: entry.notes,
     addons: entry.addons, coupon: entry.coupon,
+    ...(entry.paymentPlan === 'DEPOSIT_20' ? { paymentPlan: entry.paymentPlan } : {}),
   };
 }
 
@@ -54,7 +56,7 @@ export async function createLeagueBooking(entry: LeagueEntry, quote: EntryQuote)
   }
   const { data, error } = await supabaseAdmin.from('league_bookings').insert({
     sport: entry.sports.length > 1 ? 'multisport' : entry.sport.id, captain_name: entry.captainName, team_name: entry.teamName,
-    email: entry.email, phone: entry.phone, amount_paise: Math.round(quote.total * 100),
+    email: entry.email, phone: entry.phone, amount_paise: leaguePaymentSchedule(quote.total, entry.paymentPlan).dueNowPaise,
     entry: entrySnapshot(entry) as unknown as Json, quote: quote as unknown as Json,
   }).select('*').single();
   if (error) throw error;

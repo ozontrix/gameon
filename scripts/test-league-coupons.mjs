@@ -226,3 +226,25 @@ test('Review renders only fetched offers; hardcoded EARLYBIRD is gone', () => {
   for (const text of ['ADMIN15', 'FLAT500', '₹500 off', 'Tap to apply', 'Coupon code']) assert.ok(html.includes(text), text);
   assert.doesNotMatch(html, /EARLYBIRD/);
 });
+
+test('Discounted deposit orders charge 20% of authoritative total and reject an unmigrated full-price RPC', async () => {
+  const previous = [process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET];
+  process.env.RAZORPAY_KEY_ID = 'test'; process.env.RAZORPAY_KEY_SECRET = 'test';
+  let amount = 40820, calls = 0;
+  class BookingError extends Error { constructor(message, status) { super(message); this.status = status; } }
+  const route = loader({
+    '@/lib/middlewares/rate-limiter': { withRateLimit: async (req, _options, callback) => callback(req) },
+    '@/lib/league/bookings': { LeagueBookingError: BookingError, createLeagueBooking: async entry => { assert.equal(entry.paymentPlan, 'DEPOSIT_20'); return { id, amount_paise: amount, quote: { total: 2041, discount: 359 } }; }, attachLeagueOrder: async () => {} },
+    '@/lib/razorpay': { getRazorpay: () => ({ orders: { create: async args => { calls++; assert.equal(args.amount, 40820); assert.equal(args.notes.balance_paise, '163280'); return { id: 'order_deposit' }; } } }) },
+  })('src/app/api/v1/public/league/entries/order/route.ts');
+  try {
+    const post = () => route.POST(new Request('https://example.com/order', { method: 'POST', body: JSON.stringify({ entry: { ...entryInput, paymentPlan: 'DEPOSIT_20', amount: 1 } }) }));
+    const response = await post(); assert.equal(response.status, 201);
+    const order = await response.json(); assert.equal(order.amount, 40820); assert.equal(order.payment.balancePaise, 163280);
+    amount = 204100;
+    assert.equal((await post()).status, 409);
+    assert.equal(calls, 1);
+  } finally {
+    for (const [key, value] of [['RAZORPAY_KEY_ID', previous[0]], ['RAZORPAY_KEY_SECRET', previous[1]]]) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});

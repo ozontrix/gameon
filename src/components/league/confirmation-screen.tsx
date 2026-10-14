@@ -22,7 +22,8 @@ import {
   Users,
 } from "lucide-react";
 import { findSport, formatINR } from "@/components/league/data";
-import { LEAGUE_CONFIRMATION_KEY, confirmationBrackets, confirmationSchedule, type LeagueConfirmation } from "@/lib/league/confirmation";
+import { LEAGUE_CONFIRMATION_KEY, confirmationBalance, confirmationBrackets, confirmationSchedule, type LeagueConfirmation } from "@/lib/league/confirmation";
+import { formatLeaguePayment } from '@/lib/league/payment-plan';
 import { LEAGUE_HELP_PHONE, LEAGUE_VENUE } from "@/lib/league/constants";
 import { CategorySchedule } from "./category-schedule";
 import { Button, Chip, EmptyState, InfoRow, Kicker, Panel } from "./ui";
@@ -96,6 +97,7 @@ export function LeagueConfirmationScreen() {
   }
 
   const { entry, quote } = confirmation;
+  const balance = confirmationBalance(confirmation);
   const sport = findSport(entry.sport);
   const brackets = confirmationBrackets(entry);
   const day = confirmationSchedule(entry);
@@ -130,7 +132,7 @@ export function LeagueConfirmationScreen() {
           You&apos;re in!
         </motion.h1>
         <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-go-off/60">
-          Payment of <strong className="text-go-white">{formatINR(confirmation.amount)}</strong>{" "}
+          {balance > 0 ? 'Advance payment of ' : 'Payment of '}<strong className="text-go-white">{formatLeaguePayment(confirmation.amount)}</strong>{" "}
           received. Your {entry.sportName} · {brackets} entry on {day} is confirmed.
         </p>
 
@@ -139,7 +141,7 @@ export function LeagueConfirmationScreen() {
             {confirmation.reference}
           </Chip>
           <Chip tone="success" icon={Check}>
-            Paid
+            {balance > 0 ? '20% advance paid' : 'Paid in full'}
           </Chip>
         </div>
       </div>
@@ -254,8 +256,11 @@ export function LeagueConfirmationScreen() {
           {quote.discount > 0 && quote.couponCode ? (
             <InfoRow label={`Discount · ${quote.couponCode}`} value={`- ${formatINR(quote.discount)}`} />
           ) : null}
-          <InfoRow label="Total paid" value={formatINR(confirmation.amount)} strong />
+          <InfoRow label="Booking total" value={formatLeaguePayment(quote.total)} />
+          <InfoRow label={balance > 0 ? 'Advance paid (20%)' : 'Total paid'} value={formatLeaguePayment(confirmation.amount)} strong />
+          <InfoRow label="Remaining balance" value={formatLeaguePayment(balance)} strong={balance > 0} />
         </div>
+        {balance > 0 ? <p className="mt-3 rounded-xl border border-go-brand/30 bg-go-brand/10 p-3 text-sm leading-relaxed text-go-off">Your entry is reserved with a 20% advance. The remaining {formatLeaguePayment(balance)} is still payable; our team will coordinate collection. It will not be charged automatically.</p> : null}
 
         <div className="mt-3 border-t border-white/[0.07] pt-3">
           <InfoRow

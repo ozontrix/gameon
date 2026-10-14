@@ -20,6 +20,7 @@ import {
 import { findMatchDay } from "./constants";
 import { cartCategories, normalizeSelections, type CartCategory } from "@/components/league/cart";
 import { couponDiscount, type PublicCoupon } from "./coupons";
+import type { LeaguePaymentPlan } from './payment-plan';
 
 /* ───────────────────────────── Shape ───────────────────────────── */
 
@@ -43,6 +44,7 @@ export const LeagueEntrySchema = z.object({
   notes: z.string().trim().max(400).optional().default(""),
   addons: z.record(z.string().max(40), z.number().int().min(0).max(30)).optional().default({}),
   coupon: z.string().trim().max(20).nullish(),
+  paymentPlan: z.enum(['FULL', 'DEPOSIT_20']).optional().default('FULL'),
 });
 
 export type LeagueEntryInput = z.infer<typeof LeagueEntrySchema>;
@@ -64,6 +66,7 @@ export interface LeagueEntry {
   notes: string;
   addons: { id: string; name: string; emoji: string; qty: number; amount: number }[];
   coupon: string | null;
+  paymentPlan?: LeaguePaymentPlan;
 }
 
 export interface EntryQuote {
@@ -144,6 +147,7 @@ export function parseLeagueEntry(input: unknown): ParseResult {
     notes: data.notes.trim(),
     addons: data.selections ? [] : addons,
     coupon: data.coupon?.trim().toUpperCase() || null,
+    ...(data.paymentPlan === 'DEPOSIT_20' ? { paymentPlan: data.paymentPlan } : {}),
   };
 
   return { ok: true, entry, quote: quoteEntry({ categories: entry.categories, addons: data.selections ? {} : data.addons, coupon: entry.coupon }) };

@@ -8,6 +8,7 @@
 
 import type { EntryQuote } from "./entry";
 import { scheduleLabel } from "@/components/league/data";
+import type { LeaguePaymentPlan } from './payment-plan';
 
 export const LEAGUE_CONFIRMATION_KEY = "go-league-confirmation";
 
@@ -47,8 +48,15 @@ export interface LeagueConfirmation {
     notes: string;
     addons: LeagueConfirmationAddOn[];
     coupon: string | null;
+    /** Missing on older/full-payment receipts. */
+    paymentPlan?: LeaguePaymentPlan;
   };
   quote: EntryQuote;
+}
+
+/** Amount means captured payment; quote.total remains the complete booking price. */
+export function confirmationBalance(confirmation: LeagueConfirmation): number {
+  return Math.max(0, Math.round(confirmation.quote.total * 100) - Math.round(confirmation.amount * 100)) / 100;
 }
 
 /** "Men's Doubles + Men's Singles" — the brackets of an entry in one label. */
