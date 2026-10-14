@@ -90,6 +90,7 @@ function navGroups(refundsPending: number): NavGroup[] {
     {
       label: 'Administration',
       items: [
+        { href: '/admin/app-support', label: 'App support & deletion', icon: ClipboardList, adminOnly: true },
         { href: '/admin/team', label: 'Team & roles', icon: ShieldCheck, adminOnly: true },
         { href: '/admin/activity', label: 'Activity log', icon: History, adminOnly: true },
         { href: '/admin/account', label: 'My account', icon: UserCog },

@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         notes: validation.data.notes,
       });
 
-      return NextResponse.json({ success: true, orderId: order.id, amount: order.amount_paid }, { status: 201 });
+      return NextResponse.json({ success: true, orderId: order.id, amount: order.amount_paid, confirmed: Number(order.amount_paid) === 0 }, { status: 201 });
     } catch (error) {
       if (error instanceof EventError) {
         return NextResponse.json({ success: false, error: error.message }, { status: error.status });

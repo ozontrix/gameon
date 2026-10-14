@@ -21,12 +21,12 @@ export async function GET(request: Request) {
            events ( id, title, starts_on, ends_on, daily_start_time, daily_end_time, venues ( name ) )`
         )
         .eq('user_id', user.id)
-        .in('status', ['CONFIRMED', 'PENDING'])
+        .or(`status.eq.CONFIRMED,payment_status.eq.PAID,and(status.eq.PENDING,expires_at.gt.${new Date().toISOString()})`)
         .order('created_at', { ascending: false })
         .limit(MAX_ROWS);
 
       if (error) throw error;
-      return NextResponse.json({ success: true, data: data ?? [] });
+      return NextResponse.json({ success: true, data: data ?? [] }, { headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
       console.error('List Event Orders Error:', error);
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });

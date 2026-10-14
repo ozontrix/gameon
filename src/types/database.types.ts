@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_support_requests: {
+        Row: { id: string; user_id: string | null; kind: string; topic: string; message: string; reply_email: string | null; rating: number | null; status: string; created_at: string; completed_at: string | null }
+        Insert: { id?: string; user_id?: string | null; kind: string; topic: string; message: string; reply_email?: string | null; rating?: number | null; status?: string; created_at?: string; completed_at?: string | null }
+        Update: Partial<Database['public']['Tables']['app_support_requests']['Insert']>
+        Relationships: []
+      }
       open_play_registrations: {
         Row: {
           email_status: string

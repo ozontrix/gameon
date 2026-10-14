@@ -24,7 +24,7 @@ const updateProfileSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be YYYY-MM-DD')
     .refine((value) => {
       const at = new Date(`${value}T00:00:00Z`);
-      return !Number.isNaN(at.getTime()) && at.getTime() < Date.now();
+      return !Number.isNaN(at.getTime()) && at.toISOString().slice(0, 10) === value && at.getTime() < Date.now();
     }, 'That date of birth is not valid')
     .nullish(),
   /**

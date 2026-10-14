@@ -102,6 +102,11 @@ test('Malformed contacts and injected verification/photo fields are rejected', a
     reset('phone'); assert.equal((await route.PATCH(request(body))).status, 400); assert.equal(written, null);
   }
 });
+test('Date of birth rejects rolled-over calendar dates', async () => {
+  reset();
+  assert.equal((await route.PATCH(request({ dateOfBirth: '2025-02-31' }))).status, 400);
+  assert.equal(written, null);
+});
 test('Photo upload stores only under the caller folder and replaces old photo', async () => {
   reset(); const old = `${id}/old.jpg`; row.avatar_path = old;
   const form = new FormData(); form.append('photo', new File([png], 'photo.png', { type: 'image/png' }));

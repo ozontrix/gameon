@@ -10,6 +10,9 @@ import { assertCapturedPayment, PaymentValidationError } from './payment-validat
 
 /** How long a checkout holds a slot before someone else may take it. */
 const HOLD_MINUTES = 10;
+const APP_BOOKING_SELECT = `id, booking_date, start_time, end_time, amount_paid, status, payment_status, payment_method,
+  players, razorpay_order_id, paid_at, created_at,
+  facilities (id, name, venues (name, address, timezone), court_types (is_indoor, has_ac, surface_type, sports (name)))`;
 
 /** A failure the API can report as-is, with the HTTP status that fits it. */
 export class BookingError extends Error {
@@ -415,36 +418,39 @@ export class BookingService {
     userId: string,
     { status, page, limit }: { status: AppBookingStatus; page: number; limit: number }
   ) {
-    const today = wallClockIn(DEFAULT_TIMEZONE).date;
-    const upcoming = status !== 'past';
+    // Current venues operate on India's clock. Filter BEFORE pagination so
+    // today's ongoing/past rows cannot shorten a page or make load-more repeat.
+    const { date: today, time: now } = wallClockIn(DEFAULT_TIMEZONE);
     const from = (page - 1) * limit;
 
     let query = supabaseAdmin
       .from('bookings')
       .select(
-        `id, booking_date, start_time, end_time, amount_paid, status, payment_status, payment_method,
-         players, razorpay_order_id, paid_at, created_at,
-         facilities (
-           id, name,
-           venues ( name, address, timezone ),
-           court_types ( is_indoor, has_ac, surface_type, sports ( name ) )
-         )`,
+        APP_BOOKING_SELECT,
         { count: 'exact' }
       )
       .eq('user_id', userId)
       .eq('status', 'CONFIRMED');
 
-    query = upcoming
-      ? query.gte('booking_date', today).order('booking_date').order('start_time')
-      : query
-          .lte('booking_date', today)
-          .order('booking_date', { ascending: false })
-          .order('start_time', { ascending: false });
+    if (status === 'upcoming') query = query.or(`booking_date.gt.${today},and(booking_date.eq.${today},start_time.gt.${now})`)
+      .order('booking_date').order('start_time').order('id');
+    else if (status === 'ongoing') query = query.eq('booking_date', today).lte('start_time', now).gt('end_time', now)
+      .order('start_time').order('id');
+    else query = query.or(`booking_date.lt.${today},and(booking_date.eq.${today},end_time.lte.${now})`)
+      .order('booking_date', { ascending: false }).order('start_time', { ascending: false }).order('id');
 
     const { data, count, error } = await query.range(from, from + limit - 1);
     if (error) throw error;
 
     return { rows: data ?? [], total: count ?? 0, hasMore: from + (data?.length ?? 0) < (count ?? 0) };
+  }
+
+  /** Direct ID lookup, independent of which page of the list was loaded. */
+  static async getUserBooking(userId: string, bookingId: string) {
+    const { data, error } = await supabaseAdmin.from('bookings').select(APP_BOOKING_SELECT)
+      .eq('id', bookingId).eq('user_id', userId).eq('status', 'CONFIRMED').maybeSingle();
+    if (error) throw error;
+    return data;
   }
 
   /**

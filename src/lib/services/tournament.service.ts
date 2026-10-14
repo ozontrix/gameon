@@ -197,9 +197,10 @@ export class TournamentService {
         contact_email: input.contactEmail || null,
         notes: input.notes || null,
         amount_paid: tournament.entry_fee,
-        status: 'PENDING',
-        payment_status: 'UNPAID',
-        expires_at: expiresAt,
+        status: Number(tournament.entry_fee) === 0 ? 'CONFIRMED' : 'PENDING',
+        payment_status: Number(tournament.entry_fee) === 0 ? 'PAID' : 'UNPAID',
+        expires_at: Number(tournament.entry_fee) === 0 ? null : expiresAt,
+        paid_at: Number(tournament.entry_fee) === 0 ? new Date().toISOString() : null,
       })
       .select('id, amount_paid, expires_at')
       .single();

@@ -22,12 +22,12 @@ export async function GET(request: Request) {
              venues ( name ), court_types ( name, sports ( name ) ) )`
         )
         .eq('user_id', user.id)
-        .in('status', ['CONFIRMED', 'PENDING'])
+        .or(`status.eq.CONFIRMED,payment_status.eq.PAID,and(status.eq.PENDING,expires_at.gt.${new Date().toISOString()})`)
         .order('created_at', { ascending: false })
         .limit(MAX_ROWS);
 
       if (error) throw error;
-      return NextResponse.json({ success: true, data: data ?? [] });
+      return NextResponse.json({ success: true, data: data ?? [] }, { headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
       console.error('List Tournament Registrations Error:', error);
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });

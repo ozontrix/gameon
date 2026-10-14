@@ -177,9 +177,10 @@ export class EventService {
         contact_email: input.contactEmail || null,
         notes: input.notes || null,
         amount_paid: amount,
-        status: 'PENDING',
-        payment_status: 'UNPAID',
-        expires_at: expiresAt,
+        status: amount === 0 ? 'CONFIRMED' : 'PENDING',
+        payment_status: amount === 0 ? 'PAID' : 'UNPAID',
+        expires_at: amount === 0 ? null : expiresAt,
+        paid_at: amount === 0 ? new Date().toISOString() : null,
       })
       .select('id, amount_paid, expires_at')
       .single();

@@ -35,7 +35,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       });
 
       return NextResponse.json(
-        { success: true, registrationId: registration.id, amount: registration.amount_paid },
+        { success: true, registrationId: registration.id, amount: registration.amount_paid, confirmed: Number(registration.amount_paid) === 0 },
         { status: 201 }
       );
     } catch (error) {

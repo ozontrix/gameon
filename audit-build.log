@@ -1,0 +1,159 @@
+▲ Next.js 16.2.10 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.6min
+  Running TypeScript ...
+  Finished TypeScript in 14.5s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/98) ...
+  Generating static pages using 7 workers (24/98) 
+  Generating static pages using 7 workers (48/98) 
+  Generating static pages using 7 workers (73/98) 
+✓ Generating static pages using 7 workers (98/98) in 1302ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /admin
+├ ƒ /admin/account
+├ ƒ /admin/activity
+├ ƒ /admin/app-support
+├ ƒ /admin/banners
+├ ƒ /admin/banners/[id]
+├ ƒ /admin/banners/new
+├ ƒ /admin/blogs
+├ ƒ /admin/blogs/[id]
+├ ƒ /admin/blogs/new
+├ ƒ /admin/bookings
+├ ƒ /admin/bookings/[id]
+├ ƒ /admin/bookings/export
+├ ƒ /admin/bookings/new
+├ ƒ /admin/cancellation-policy
+├ ƒ /admin/check-in
+├ ƒ /admin/closures
+├ ƒ /admin/court-types
+├ ƒ /admin/court-types/[id]
+├ ƒ /admin/court-types/new
+├ ƒ /admin/courts
+├ ƒ /admin/courts/[id]
+├ ƒ /admin/courts/new
+├ ƒ /admin/customers
+├ ƒ /admin/customers/[id]
+├ ƒ /admin/events
+├ ƒ /admin/events/[id]
+├ ƒ /admin/events/new
+├ ƒ /admin/login
+├ ƒ /admin/multisports-league
+├ ƒ /admin/multisports-league/[id]
+├ ƒ /admin/multisports-league/coupons
+├ ƒ /admin/multisports-league/export
+├ ƒ /admin/notifications
+├ ƒ /admin/open-play-registrations
+├ ƒ /admin/open-play-registrations/export
+├ ƒ /admin/referrals
+├ ƒ /admin/refunds
+├ ƒ /admin/schedule
+├ ƒ /admin/sports
+├ ƒ /admin/team
+├ ƒ /admin/tournaments
+├ ƒ /admin/tournaments/[id]
+├ ƒ /admin/tournaments/new
+├ ƒ /admin/venues
+├ ƒ /admin/venues/[id]
+├ ƒ /admin/venues/new
+├ ○ /api-docs
+├ ƒ /api/cron/booking-reminders
+├ ƒ /api/cron/clear-expired
+├ ƒ /api/delete-account
+├ ƒ /api/notify
+├ ƒ /api/v1/admin/bookings/verify-qr
+├ ƒ /api/v1/admin/facilities
+├ ƒ /api/v1/admin/sports
+├ ƒ /api/v1/admin/venues
+├ ƒ /api/v1/auth/exchange
+├ ƒ /api/v1/auth/logout
+├ ƒ /api/v1/auth/refresh
+├ ƒ /api/v1/public/cancellation-policy
+├ ƒ /api/v1/public/events
+├ ƒ /api/v1/public/events/[id]
+├ ƒ /api/v1/public/facilities
+├ ƒ /api/v1/public/feedback
+├ ƒ /api/v1/public/home
+├ ƒ /api/v1/public/league/coupons
+├ ƒ /api/v1/public/league/entries/confirm
+├ ƒ /api/v1/public/league/entries/order
+├ ƒ /api/v1/public/open-play/registrations
+├ ƒ /api/v1/public/search
+├ ƒ /api/v1/public/sports
+├ ƒ /api/v1/public/sports/catalog
+├ ƒ /api/v1/public/sports/catalog/[id]
+├ ƒ /api/v1/public/tournaments
+├ ƒ /api/v1/public/tournaments/[id]
+├ ƒ /api/v1/public/venues
+├ ƒ /api/v1/user/account-deletion
+├ ƒ /api/v1/user/bookings
+├ ƒ /api/v1/user/bookings/[id]
+├ ƒ /api/v1/user/bookings/[id]/cancel
+├ ƒ /api/v1/user/bookings/[id]/cancellation-preview
+├ ƒ /api/v1/user/bookings/[id]/confirm-with-wallet
+├ ƒ /api/v1/user/event-orders
+├ ƒ /api/v1/user/event-orders/[id]
+├ ƒ /api/v1/user/event-orders/[id]/cancel
+├ ƒ /api/v1/user/event-orders/[id]/payments/create-order
+├ ƒ /api/v1/user/event-orders/[id]/payments/verify
+├ ƒ /api/v1/user/events/[id]/tickets
+├ ƒ /api/v1/user/notifications
+├ ƒ /api/v1/user/notifications/read
+├ ƒ /api/v1/user/payments/create-order
+├ ƒ /api/v1/user/payments/verify
+├ ƒ /api/v1/user/profile
+├ ƒ /api/v1/user/profile/photo
+├ ƒ /api/v1/user/referral
+├ ƒ /api/v1/user/slots
+├ ƒ /api/v1/user/tournament-registrations
+├ ƒ /api/v1/user/tournament-registrations/[id]
+├ ƒ /api/v1/user/tournament-registrations/[id]/cancel
+├ ƒ /api/v1/user/tournament-registrations/[id]/payments/create-order
+├ ƒ /api/v1/user/tournament-registrations/[id]/payments/verify
+├ ƒ /api/v1/user/tournaments/[id]/register
+├ ƒ /api/v1/user/transactions
+├ ƒ /api/v1/user/wallet
+├ ƒ /api/v1/user/wallet/transactions
+├ ƒ /api/v1/webhooks/razorpay
+├ ƒ /blogs
+├ ƒ /blogs/[slug]
+├ ○ /delete-account
+├ ○ /email-confirmed
+├ ○ /gameon-multisports-league
+├ ○ /gameon-multisports-league-updated
+├ ○ /gameon-multisports-league/book/details
+├ ○ /gameon-multisports-league/book/payment
+├ ○ /gameon-multisports-league/book/review
+├ ○ /gameon-multisports-league/book/success
+├ ○ /gameon-multisports-league/bookings
+├ ● /gameon-multisports-league/sports/[sport]
+│ ├ /gameon-multisports-league/sports/badminton
+│ ├ /gameon-multisports-league/sports/pickleball
+│ ├ /gameon-multisports-league/sports/cricket
+│ └ /gameon-multisports-league/sports/football
+├ ƒ /open-play-registrations
+├ ƒ /open-play-registrations/social-preview
+├ ○ /privacy
+├ ○ /robots.txt
+├ ○ /site-map
+├ ƒ /sitemap.xml
+├ ƒ /social-preview
+├ ○ /sponsorship
+└ ○ /terms
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
