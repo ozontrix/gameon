@@ -2,6 +2,18 @@
 
 Updated: October 7, 2026. This is a completed first implementation batch, not a declaration that the app is ready to launch.
 
+> **Update — 15 October 2026.** Two claims below are now out of date.
+> **The backend *is* deployed**: `POST /api/v1/user/account-deletion` returns
+> 401, `POST /api/v1/public/feedback` returns 400 with its validation message,
+> and `GET /api/v1/user/bookings/{id}` returns 401, so those routes exist in
+> production (`node scripts/audit-release-checks.mjs --api`). Consequently the
+> "backend source changes are local, not deployed" note under Deployment status
+> and item 1 of the launch blockers no longer describe the live system.
+>
+> The remaining launch blockers, what has since been fixed in the app, and the
+> current store-submission checklist are consolidated in
+> `../gameon-multisports/docs/RELEASE-READINESS-2026-10-15.md`.
+
 ## Implemented
 
 - Live Supabase `wallet_adjust` is restricted to the trusted backend. Anonymous and ordinary authenticated users cannot execute it. Its search path is fixed.
