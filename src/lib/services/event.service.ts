@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../db/supabase';
 import { sportKeyFor } from '../utils/sport-key';
 import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
 import { WhatsAppService } from './whatsapp.service';
+import { BookingEmailService } from './booking-email.service';
 
 /** How long an order holds its tickets before someone else may take them. */
 const HOLD_MINUTES = 10;
@@ -197,7 +198,10 @@ export class EventService {
 
     // A free entry is confirmed on creation — there is no gateway step to wait
     // for — so the WhatsApp confirmation goes out now.
-    if (Number(order.amount_paid) === 0) await WhatsAppService.sendEventConfirmation(order.id);
+    if (Number(order.amount_paid) === 0) {
+      BookingEmailService.schedule('event', order.id);
+      await WhatsAppService.sendEventConfirmation(order.id);
+    }
 
     return order;
   }
@@ -220,7 +224,10 @@ export class EventService {
    */
   static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ orderId: string; outcome: PaidEventOutcome }> {
     const result = await EventService.applyPaidOrder(orderId, paymentId);
-    if (result.outcome === 'confirmed') await WhatsAppService.sendEventConfirmation(result.orderId);
+    if (result.outcome === 'confirmed') {
+      BookingEmailService.schedule('event', result.orderId);
+      await WhatsAppService.sendEventConfirmation(result.orderId);
+    }
     return result;
   }
 

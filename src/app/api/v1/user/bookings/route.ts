@@ -13,6 +13,7 @@ const createBookingSchema = z.object({
   players: z.number().int().min(1).max(50).optional(),
   contactName: z.string().trim().max(100).optional(),
   contactPhone: z.string().trim().max(20).optional(),
+  contactEmail: z.string().trim().email().max(200).optional().or(z.literal('')),
   whatsappConsent: z.boolean().optional().default(false),
   notes: z.string().trim().max(200).optional(),
   // How many GameOn Points the player chose in the wallet block; clamped

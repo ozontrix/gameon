@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_emails: {
+        Row: { id: string; category: string; reference_id: string; recipient: string | null; status: string; attempts: number; available_at: string; lease_id: string | null; locked_until: string | null; error_code: string | null; sent_at: string | null; created_at: string }
+        Insert: { id?: string; category: string; reference_id: string; recipient?: string | null; status?: string; attempts?: number; available_at?: string; lease_id?: string | null; locked_until?: string | null; error_code?: string | null; sent_at?: string | null; created_at?: string }
+        Update: Partial<Database['public']['Tables']['booking_emails']['Insert']>
+        Relationships: []
+      }
       push_devices: {
         Row: { installation_id: string; secret_hash: string; user_id: string | null; token: string | null; platform: string; enabled: boolean; updated_at: string }
         Insert: { installation_id: string; secret_hash: string; user_id?: string | null; token?: string | null; platform: string; enabled?: boolean; updated_at?: string }
@@ -275,6 +281,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          contact_email: string | null
           whatsapp_consent: boolean
           amount_paid: number | null
           booking_date: string
@@ -310,6 +317,7 @@ export type Database = {
         }
         Insert: {
           whatsapp_consent?: boolean
+          contact_email?: string | null
           amount_paid?: number | null
           booking_date: string
           cancel_reason?: string | null
@@ -344,6 +352,7 @@ export type Database = {
         }
         Update: {
           whatsapp_consent?: boolean
+          contact_email?: string | null
           amount_paid?: number | null
           booking_date?: string
           cancel_reason?: string | null
@@ -1708,6 +1717,7 @@ export type Database = {
       }
     }
     Functions: {
+      claim_booking_emails: { Args: { p_category?: string; p_reference_id?: string }; Returns: Database['public']['Tables']['booking_emails']['Row'][] }
       register_push_device: { Args: { p_installation_id: string; p_secret_hash: string; p_token: string | null; p_platform: string; p_user_id: string | null; p_enabled: boolean }; Returns: undefined }
       claim_push_deliveries: { Args: { p_limit?: number; p_notification_id?: string }; Returns: Database['public']['Tables']['push_deliveries']['Row'][] }
       whatsapp_recover_stale: { Args: never; Returns: undefined }

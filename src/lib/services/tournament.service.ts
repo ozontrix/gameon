@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../db/supabase';
 import { sportKeyFor } from '../utils/sport-key';
 import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
 import { WhatsAppService } from './whatsapp.service';
+import { BookingEmailService } from './booking-email.service';
 
 /** How long a registration holds its team slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -220,7 +221,10 @@ export class TournamentService {
 
     // A free entry is confirmed on creation — there is no gateway step to wait
     // for — so the WhatsApp confirmation goes out now.
-    if (Number(registration.amount_paid) === 0) await WhatsAppService.sendTournamentConfirmation(registration.id);
+    if (Number(registration.amount_paid) === 0) {
+      BookingEmailService.schedule('tournament', registration.id);
+      await WhatsAppService.sendTournamentConfirmation(registration.id);
+    }
 
     return registration;
   }
@@ -243,7 +247,10 @@ export class TournamentService {
    */
   static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ registrationId: string; outcome: PaidTournamentOutcome }> {
     const result = await TournamentService.applyPaidOrder(orderId, paymentId);
-    if (result.outcome === 'confirmed') await WhatsAppService.sendTournamentConfirmation(result.registrationId);
+    if (result.outcome === 'confirmed') {
+      BookingEmailService.schedule('tournament', result.registrationId);
+      await WhatsAppService.sendTournamentConfirmation(result.registrationId);
+    }
     return result;
   }
 

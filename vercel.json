@@ -11,6 +11,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/booking-emails",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/push-deliveries",
       "schedule": "* * * * *"
     },

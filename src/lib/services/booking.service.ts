@@ -7,6 +7,7 @@ import { SlotService, lastBookableDate, type SlotOptions } from './slot.service'
 import { WalletService } from './wallet.service';
 import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
 import { WhatsAppService } from './whatsapp.service';
+import { BookingEmailService } from './booking-email.service';
 
 /** How long a checkout holds a slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -30,6 +31,7 @@ export type NewBooking = {
   players?: number;
   contactName?: string;
   contactPhone?: string;
+  contactEmail?: string;
   whatsappConsent?: boolean;
   notes?: string;
   /** How many GameOn Points the player chose to apply, from `WalletBlock`. */
@@ -112,6 +114,7 @@ export class BookingService {
         players: input.players ?? null,
         contact_name: input.contactName || null,
         contact_phone: input.contactPhone || null,
+        contact_email: input.contactEmail?.trim().toLowerCase() || null,
         whatsapp_consent: input.whatsappConsent === true,
         notes: input.notes || null,
         wallet_points_used: walletPointsUsed,
@@ -160,6 +163,7 @@ export class BookingService {
         players: input.players ?? null,
         contact_name: input.contactName || null,
         contact_phone: input.contactPhone || null,
+        contact_email: input.contactEmail?.trim().toLowerCase() || null,
         whatsapp_consent: input.whatsappConsent === true,
         notes: input.notes || null,
       })
@@ -174,6 +178,7 @@ export class BookingService {
     // A desk booking is confirmed on creation, so the customer gets the same
     // WhatsApp confirmation the app's checkout produces. Skipped when no number
     // was taken; a bad number is recorded in the delivery log.
+    BookingEmailService.schedule('booking', booking.id);
     await WhatsAppService.sendBookingConfirmation(booking.id);
 
     return booking;
@@ -297,6 +302,7 @@ export class BookingService {
     BookingService.assertFinancialResult(error);
     const result = data as { outcome: PaidOrderOutcome; changed: boolean };
     if (result.outcome === 'confirmed') {
+      BookingEmailService.schedule('booking', booking.id);
       if (result.changed) {
         await NotificationService.notifyBooking(booking.id, { type: 'confirmed' });
         // The customer's WhatsApp confirmation. Recorded in the delivery log and
@@ -322,6 +328,7 @@ export class BookingService {
     });
     BookingService.assertFinancialResult(error);
     const result = data as { outcome: PaidOrderOutcome; changed: boolean };
+    if (result.outcome === 'confirmed') BookingEmailService.schedule('booking', bookingId);
     if (result.changed) {
       await NotificationService.notifyBooking(bookingId, { type: 'confirmed' });
       await WhatsAppService.sendBookingConfirmation(bookingId);
