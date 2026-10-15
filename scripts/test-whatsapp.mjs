@@ -216,6 +216,16 @@ test('integration guards require consent, durable triggers, private RLS and reco
   }
   assert.match(readFileSync(resolve(root,'vercel.json'),'utf8'),/whatsapp-deliveries/);
 });
+test('every Vercel cron stays inside the Hobby once-per-day limit',()=>{
+  const {crons}=JSON.parse(readFileSync(resolve(root,'vercel.json'),'utf8'));
+  assert.ok(crons.some(cron=>cron.path==='/api/cron/whatsapp-deliveries'));
+  for(const {path,schedule} of crons){
+    const fields=schedule.split(' ');
+    assert.equal(fields.length,5,`${path} must use a five-field cron expression`);
+    for(const field of fields.slice(0,2))assert.match(field,/^\d{1,2}$/,
+      `${path} schedule "${schedule}" would run more than once per day; Vercel Hobby only allows daily cron jobs`);
+  }
+});
 for(const kind of ['event','tournament'])test(`${kind} QR checks payment/date and atomically rejects duplicate admission`,async()=>{
   const activity={status:'published',title:'Activity',starts_on:'2026-10-14',ends_on:'2026-10-14',daily_end_time:'22:00:00'};
   const row={id,status:'CONFIRMED',payment_status:'PAID',scanned_at:null,attendee_name:'Player',captain_name:'Player',contact_phone:'8572005698',tickets:2,team_name:'Team',events:activity,tournaments:activity};
