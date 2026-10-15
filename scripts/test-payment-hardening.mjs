@@ -21,6 +21,8 @@ function loader(mocks) {
     });
     const localRequire = id => {
       if (id in mocks) return mocks[id];
+      // Modules below the services opt into server-only; there is no bundler here.
+      if (id === 'server-only') return {};
       if (id.startsWith('.') || id.startsWith('@/')) {
         const target = id.startsWith('@/') ? resolve(root, 'src', id.slice(2)) : resolve(dirname(filename), id);
         return load(existsSync(`${target}.ts`) ? `${target}.ts` : target);

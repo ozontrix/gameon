@@ -14,6 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
+      whatsapp_opt_outs: { Row: {phone: string; created_at: string}; Insert: {phone: string; created_at?: string}; Update: {phone?: string; created_at?: string}; Relationships: [] }
       app_support_requests: {
         Row: { id: string; user_id: string | null; kind: string; topic: string; message: string; reply_email: string | null; rating: number | null; status: string; created_at: string; completed_at: string | null }
         Insert: { id?: string; user_id?: string | null; kind: string; topic: string; message: string; reply_email?: string | null; rating?: number | null; status?: string; created_at?: string; completed_at?: string | null }
@@ -262,6 +263,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          whatsapp_consent: boolean
           amount_paid: number | null
           booking_date: string
           cancel_reason: string | null
@@ -295,6 +297,7 @@ export type Database = {
           wallet_points_used: number
         }
         Insert: {
+          whatsapp_consent?: boolean
           amount_paid?: number | null
           booking_date: string
           cancel_reason?: string | null
@@ -328,6 +331,7 @@ export type Database = {
           wallet_points_used?: number
         }
         Update: {
+          whatsapp_consent?: boolean
           amount_paid?: number | null
           booking_date?: string
           cancel_reason?: string | null
@@ -1176,6 +1180,8 @@ export type Database = {
       }
       tournament_registrations: {
         Row: {
+          whatsapp_consent: boolean
+          scanned_at: string | null
           amount_paid: number
           captain_name: string
           contact_email: string | null
@@ -1195,6 +1201,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          whatsapp_consent?: boolean
+          scanned_at?: string | null
           amount_paid: number
           captain_name: string
           contact_email?: string | null
@@ -1214,6 +1222,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          whatsapp_consent?: boolean
+          scanned_at?: string | null
           amount_paid?: number
           captain_name?: string
           contact_email?: string | null
@@ -1395,6 +1405,8 @@ export type Database = {
       }
       event_orders: {
         Row: {
+          whatsapp_consent: boolean
+          scanned_at: string | null
           amount_paid: number
           attendee_name: string
           contact_email: string | null
@@ -1414,6 +1426,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          whatsapp_consent?: boolean
+          scanned_at?: string | null
           amount_paid: number
           attendee_name: string
           contact_email?: string | null
@@ -1433,6 +1447,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          whatsapp_consent?: boolean
+          scanned_at?: string | null
           amount_paid?: number
           attendee_name?: string
           contact_email?: string | null
@@ -1532,6 +1548,131 @@ export type Database = {
           },
         ]
       }
+      whatsapp_media: {
+        Row: {
+          media_id: string
+          purpose: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          media_id: string
+          purpose: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          media_id?: string
+          purpose?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_media_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          lock_token: string | null
+          locked_until: string | null
+          retryable: boolean
+          next_attempt_at: string
+          media_uploaded_at: string | null
+          consent_at: string | null
+          attempts: number
+          category: string
+          created_at: string
+          dedupe_key: string
+          delivered_at: string | null
+          error_code: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          language: string
+          media_id: string | null
+          payload: Json | null
+          read_at: string | null
+          reference_id: string
+          sent_at: string | null
+          status: string
+          template_name: string
+          to_phone: string
+          user_id: string | null
+          wa_message_id: string | null
+        }
+        Insert: {
+          lock_token?: string | null
+          locked_until?: string | null
+          retryable?: boolean
+          next_attempt_at?: string
+          media_uploaded_at?: string | null
+          consent_at?: string | null
+          attempts?: number
+          category: string
+          created_at?: string
+          dedupe_key: string
+          delivered_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          language: string
+          media_id?: string | null
+          payload?: Json | null
+          read_at?: string | null
+          reference_id: string
+          sent_at?: string | null
+          status?: string
+          template_name: string
+          to_phone: string
+          user_id?: string | null
+          wa_message_id?: string | null
+        }
+        Update: {
+          lock_token?: string | null
+          locked_until?: string | null
+          retryable?: boolean
+          next_attempt_at?: string
+          media_uploaded_at?: string | null
+          consent_at?: string | null
+          attempts?: number
+          category?: string
+          created_at?: string
+          dedupe_key?: string
+          delivered_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          language?: string
+          media_id?: string | null
+          payload?: Json | null
+          read_at?: string | null
+          reference_id?: string
+          sent_at?: string | null
+          status?: string
+          template_name?: string
+          to_phone?: string
+          user_id?: string | null
+          wa_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
     }
     Views: {
       account_transactions: {
@@ -1555,6 +1696,9 @@ export type Database = {
       }
     }
     Functions: {
+      whatsapp_recover_stale: { Args: never; Returns: undefined }
+      claim_whatsapp_delivery: { Args: {p_id: string; p_force?: boolean}; Returns: Json }
+      whatsapp_apply_receipt: { Args: {p_message_id: string; p_status: string; p_at: string; p_correlation?: string | null; p_error_code?: string | null; p_error_message?: string | null}; Returns: boolean }
       league_coupon_inventory: { Args: never; Returns: Json }
       league_create_coupon_booking: { Args: { p_entry: Json; p_quote: Json }; Returns: Database['public']['Tables']['league_bookings']['Row'] }
       admin_team_members: {

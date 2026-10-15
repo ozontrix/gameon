@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/middlewares/auth';
 import { TournamentError, TournamentService } from '@/lib/services/tournament.service';
 
 const registerSchema = z.object({
+  whatsappConsent: z.boolean().optional().default(false),
   teamName: z.string().trim().min(2).max(120),
   captainName: z.string().trim().min(2).max(120),
   contactPhone: z.string().trim().min(6).max(20),
@@ -30,6 +31,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         teamName: validation.data.teamName,
         captainName: validation.data.captainName,
         contactPhone: validation.data.contactPhone,
+        whatsappConsent: validation.data.whatsappConsent,
         contactEmail: validation.data.contactEmail || undefined,
         notes: validation.data.notes,
       });

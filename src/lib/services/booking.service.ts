@@ -7,6 +7,7 @@ import { NotificationService } from './notification.service';
 import { SlotService, lastBookableDate, type SlotOptions } from './slot.service';
 import { WalletService } from './wallet.service';
 import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
+import { WhatsAppService } from './whatsapp.service';
 
 /** How long a checkout holds a slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -30,6 +31,7 @@ export type NewBooking = {
   players?: number;
   contactName?: string;
   contactPhone?: string;
+  whatsappConsent?: boolean;
   notes?: string;
   /** How many GameOn Points the player chose to apply, from `WalletBlock`. */
   walletPointsToUse?: number;
@@ -114,6 +116,7 @@ export class BookingService {
         players: input.players ?? null,
         contact_name: input.contactName || null,
         contact_phone: input.contactPhone || null,
+        whatsapp_consent: input.whatsappConsent === true,
         notes: input.notes || null,
         wallet_points_used: walletPointsUsed,
       })
@@ -161,6 +164,7 @@ export class BookingService {
         players: input.players ?? null,
         contact_name: input.contactName || null,
         contact_phone: input.contactPhone || null,
+        whatsapp_consent: input.whatsappConsent === true,
         notes: input.notes || null,
       })
       .select('id, amount_paid')
@@ -170,6 +174,11 @@ export class BookingService {
       if (isSlotTaken(error.code)) throw new BookingError('Slot was just booked by someone else.', 409);
       throw new Error('Failed to create booking: ' + error.message);
     }
+
+    // A desk booking is confirmed on creation, so the customer gets the same
+    // WhatsApp confirmation the app's checkout produces. Skipped when no number
+    // was taken; a bad number is recorded in the delivery log.
+    await WhatsAppService.sendBookingConfirmation(booking.id);
 
     return booking;
   }
@@ -292,7 +301,12 @@ export class BookingService {
     BookingService.assertFinancialResult(error);
     const result = data as { outcome: PaidOrderOutcome; changed: boolean };
     if (result.outcome === 'confirmed') {
-      if (result.changed) await NotificationService.notifyBooking(booking.id, { type: 'confirmed' });
+      if (result.changed) {
+        await NotificationService.notifyBooking(booking.id, { type: 'confirmed' });
+        // The customer's WhatsApp confirmation. Recorded in the delivery log and
+        // idempotent, so a retried verify never sends a second message.
+        await WhatsAppService.sendBookingConfirmation(booking.id);
+      }
       // Retry the atomic referral operation even on an idempotent confirmation.
       if (booking.user_id) await BookingService.maybeCreditReferralBonus(booking.user_id, booking.id);
     } else if (result.changed) {
@@ -312,7 +326,10 @@ export class BookingService {
     });
     BookingService.assertFinancialResult(error);
     const result = data as { outcome: PaidOrderOutcome; changed: boolean };
-    if (result.changed) await NotificationService.notifyBooking(bookingId, { type: 'confirmed' });
+    if (result.changed) {
+      await NotificationService.notifyBooking(bookingId, { type: 'confirmed' });
+      await WhatsAppService.sendBookingConfirmation(bookingId);
+    }
     await BookingService.maybeCreditReferralBonus(userId, bookingId);
     return { bookingId };
   }

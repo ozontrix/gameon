@@ -2,11 +2,7 @@ import { NextResponse } from 'next/server';
 import { getStaffSession } from '@/lib/admin/session';
 import { leagueDetails, listLeagueBookings, readLeagueFilters } from '@/lib/admin/queries/league';
 
-export function csvCell(value: unknown): string {
-  let text = value == null ? '' : String(value);
-  if (/^[\s]*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text)) text = `'${text}`;
-  return `"${text.replace(/"/g, '""')}"`;
-}
+import { csvCell } from '@/lib/admin/csv';
 
 export async function GET(request: Request) {
   const actor = await getStaffSession();

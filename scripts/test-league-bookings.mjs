@@ -243,7 +243,8 @@ test('League filters normalise repeated URL params and remove query syntax', () 
 test('CSV export and email retry deny non-admin users before touching data', async () => {
   const exportRoute = loader({ '@/lib/admin/session': { getStaffSession: async () => ({ role: 'STAFF' }) }, '@/lib/admin/queries/league': {} })('src/app/admin/(panel)/multisports-league/export/route.ts');
   assert.equal((await exportRoute.GET(new Request('https://example.com/export'))).status, 403);
-  for (const text of ['=SUM(1,2)', '+123', '  @formula', '\ttext', '-formula']) assert.ok(exportRoute.csvCell(text).startsWith('"\''));
+  const { csvCell } = loader({})('src/lib/admin/csv.ts');
+  for (const text of ['=SUM(1,2)', '+123', '  @formula', '\ttext', '-formula']) assert.ok(csvCell(text).startsWith('"\''));
   const actions = loader({ '../session': { authorize: async () => null }, '../queries/league': {}, '../audit': {}, '@/lib/league/bookings': {}, 'next/cache': {} })('src/lib/admin/actions/league.ts');
   assert.equal((await actions.retryLeagueEmail(null, new FormData())).ok, false);
 });

@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { BookingError, BookingService } from '@/lib/services/booking.service';
+import { ReservationCheckInService } from '@/lib/services/reservation-check-in.service';
 import { NotificationService } from '@/lib/services/notification.service';
 import { NOT_ALLOWED, formValues, invalid, type ActionState } from '../action-result';
 import { recordAudit } from '../audit';
@@ -40,6 +41,7 @@ const createSchema = z
     contactPhone: z
       .string({ error: 'Enter a phone number.' })
       .regex(/^\+?[\d\s-]{10,16}$/, 'Enter a valid phone number.'),
+    whatsappConsent: z.string().optional().transform(v => v === 'on'),
     players: z.coerce.number().int().min(1).max(50).optional(),
     notes: z.string().max(200).optional(),
     paymentStatus: z.enum(['PAID', 'UNPAID']),
@@ -71,6 +73,7 @@ export async function createFrontDeskBooking(_state: ActionState, formData: Form
       endTime,
       contactName: input.contactName,
       contactPhone: input.contactPhone.replace(/[\s-]/g, ''),
+      whatsappConsent: input.whatsappConsent,
       players: input.players,
       notes: input.notes,
       createdBy: actor.id,
@@ -274,19 +277,20 @@ export async function checkInBooking(
   const parsed = checkInSchema.safeParse(formValues(formData));
   if (!parsed.success) return invalid(parsed.error);
 
-  const bookingId = await resolveBookingId(parsed.data.code);
+   const activityQr = /^gameon:(event|tournament):[0-9a-f-]{36}$/i.test(parsed.data.code.trim());
+   const bookingId = activityQr ? parsed.data.code.trim() : await resolveBookingId(parsed.data.code);
   if (!bookingId) return { ok: false, message: 'No confirmed booking matches that code.' };
 
   try {
-    const result = await BookingService.verifyQRCode(bookingId);
-    await recordAudit(actor, 'booking.check_in', 'booking', bookingId, {});
-    refreshBookingViews(bookingId);
+    const result = await ReservationCheckInService.verify(bookingId);
+    await recordAudit(actor, 'booking.check_in', 'booking', result.bookingId, { category: result.category });
+    refreshBookingViews(result.bookingId);
     return {
       ok: true,
       message: `Checked in ${result.userName}.`,
       data: {
-        bookingId,
-        shortId: shortBookingId(bookingId),
+        bookingId: result.bookingId,
+        shortId: shortBookingId(result.bookingId),
         facilityName: result.facilityName,
         userName: result.userName,
         userPhone: result.userPhone,

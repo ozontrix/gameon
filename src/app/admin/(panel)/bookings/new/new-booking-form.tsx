@@ -110,6 +110,12 @@ export function NewBookingForm({
         </div>
       </div>
 
+      <label className="flex items-start gap-2 text-sm text-zinc-700">
+        <input type="checkbox" name="whatsappConsent" className="mt-1" />
+        The customer agreed to receive this booking confirmation and check-in QR on WhatsApp at the number above.
+        Optional; no marketing. They can reply STOP to opt out.
+      </label>
+
       <fieldset className="space-y-3 rounded-lg border border-zinc-200 p-4">
         <legend className="px-1 text-sm font-medium text-zinc-800">Payment</legend>
         <div className="flex flex-wrap gap-4 text-sm">

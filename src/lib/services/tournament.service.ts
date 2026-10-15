@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../db/supabase';
 import { sportKeyFor } from '../utils/sport-key';
 import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
+import { WhatsAppService } from './whatsapp.service';
 
 /** How long a registration holds its team slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -18,6 +19,7 @@ export type NewTournamentRegistration = {
   teamName: string;
   captainName: string;
   contactPhone: string;
+  whatsappConsent?: boolean;
   contactEmail?: string;
   notes?: string;
 };
@@ -194,6 +196,7 @@ export class TournamentService {
         team_name: input.teamName,
         captain_name: input.captainName,
         contact_phone: input.contactPhone,
+        whatsapp_consent: input.whatsappConsent === true,
         contact_email: input.contactEmail || null,
         notes: input.notes || null,
         amount_paid: tournament.entry_fee,
@@ -215,6 +218,10 @@ export class TournamentService {
       throw new Error('Failed to create registration: ' + error.message);
     }
 
+    // A free entry is confirmed on creation — there is no gateway step to wait
+    // for — so the WhatsApp confirmation goes out now.
+    if (Number(registration.amount_paid) === 0) await WhatsAppService.sendTournamentConfirmation(registration.id);
+
     return registration;
   }
 
@@ -230,10 +237,21 @@ export class TournamentService {
   }
 
   /**
+   * Confirms the registration a paid Razorpay order belongs to, then sends the
+   * customer their WhatsApp confirmation. Safe to call more than once for the
+   * same order: the confirmation is idempotent, and the message is deduplicated.
+   */
+  static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ registrationId: string; outcome: PaidTournamentOutcome }> {
+    const result = await TournamentService.applyPaidOrder(orderId, paymentId);
+    if (result.outcome === 'confirmed') await WhatsAppService.sendTournamentConfirmation(result.registrationId);
+    return result;
+  }
+
+  /**
    * Confirms the registration a paid Razorpay order belongs to. Safe to call
    * more than once for the same order.
    */
-  static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ registrationId: string; outcome: PaidTournamentOutcome }> {
+  private static async applyPaidOrder(orderId: string, paymentId: string): Promise<{ registrationId: string; outcome: PaidTournamentOutcome }> {
     const { data: registration, error: fetchError } = await supabaseAdmin
       .from('tournament_registrations')
       .select('id, status, amount_paid, payment_status, razorpay_payment_id')

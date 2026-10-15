@@ -65,6 +65,14 @@ export default function PrivacyPage() {
 
       <Section title="3. How We Use Your Information">
         <P>
+          If you choose WhatsApp confirmation at checkout, we share the booking contact number,
+          customer name, reservation reference, sport or activity, schedule and check-in QR with
+          Meta&apos;s WhatsApp Business Platform to deliver that confirmation. We record your
+          permission and delivery status for support. This is optional and is not marketing permission.
+          Reply STOP to our WhatsApp number to stop future WhatsApp confirmations. Keep your QR private;
+          it can be used to check in your reservation.
+        </P>
+        <P>
           We use the information we collect to provide, maintain, and improve the Services, including to
           process and manage your bookings, confirm reservations, handle payments and refunds, and respond
           to your enquiries and requests.

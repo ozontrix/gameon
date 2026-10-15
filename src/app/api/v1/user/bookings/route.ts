@@ -13,6 +13,7 @@ const createBookingSchema = z.object({
   players: z.number().int().min(1).max(50).optional(),
   contactName: z.string().trim().max(100).optional(),
   contactPhone: z.string().trim().max(20).optional(),
+  whatsappConsent: z.boolean().optional().default(false),
   notes: z.string().trim().max(200).optional(),
   // How many GameOn Points the player chose in the wallet block; clamped
   // server-side against their actual balance and this booking's price.

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { BookingService } from '@/lib/services/booking.service';
+import { ReservationCheckInService } from '@/lib/services/reservation-check-in.service';
 import { withAuth, AuthenticatedUser } from '@/lib/middlewares/auth';
 
 const qrSchema = z.object({
-  bookingId: z.string().uuid("Invalid QR Code (Not a UUID)"),
+  bookingId: z.string().max(64).refine(value => z.string().uuid().safeParse(value).success || /^gameon:(event|tournament):[0-9a-f-]{36}$/i.test(value), 'Invalid reservation QR'),
 });
 
 export async function POST(request: Request) {
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const result = await BookingService.verifyQRCode(validation.data.bookingId);
+      const result = await ReservationCheckInService.verify(validation.data.bookingId);
 
       return NextResponse.json(result, { status: 200 });
 

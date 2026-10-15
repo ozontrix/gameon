@@ -10,6 +10,7 @@
     }
   ],
   "crons": [
+    { "path": "/api/cron/whatsapp-deliveries", "schedule": "*/5 * * * *" },
     {
       "path": "/api/cron/clear-expired",
       "schedule": "0 0 * * *"

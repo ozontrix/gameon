@@ -89,7 +89,7 @@ for (const kind of ['event', 'tournament']) {
     const db = { from() { const q = {
       select() { return q; }, eq() { return q; }, lt() { return Promise.resolve({ error: null }); }, update() { return q; },
       insert(value) { inserted = value; return q; },
-      async maybeSingle() { return { data: { status: 'published', entry_fee: fee, max_tickets_per_order: 5, registration_closes_at: '2099-01-01T00:00:00Z' }, error: null }; },
+      async maybeSingle() { return { data: { id: 'saved', status: 'published', entry_fee: fee, max_tickets_per_order: 5, registration_closes_at: '2099-01-01T00:00:00Z' }, error: null }; },
       async single() { return { data: { id: 'saved', ...inserted }, error: null }; },
     }; return q; } };
     const service = loader({ '../db/supabase': { supabaseAdmin: db } })(`src/lib/services/${kind}.service.ts`)[kind === 'event' ? 'EventService' : 'TournamentService'];

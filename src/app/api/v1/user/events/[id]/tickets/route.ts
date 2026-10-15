@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/middlewares/auth';
 import { EventError, EventService } from '@/lib/services/event.service';
 
 const buySchema = z.object({
+  whatsappConsent: z.boolean().optional().default(false),
   tickets: z.number().int().min(1).max(50),
   attendeeName: z.string().trim().min(2).max(120),
   contactPhone: z.string().trim().min(6).max(20),
@@ -30,6 +31,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         tickets: validation.data.tickets,
         attendeeName: validation.data.attendeeName,
         contactPhone: validation.data.contactPhone,
+        whatsappConsent: validation.data.whatsappConsent,
         contactEmail: validation.data.contactEmail || undefined,
         notes: validation.data.notes,
       });

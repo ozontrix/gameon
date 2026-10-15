@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../db/supabase';
 import { sportKeyFor } from '../utils/sport-key';
 import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
+import { WhatsAppService } from './whatsapp.service';
 
 /** How long an order holds its tickets before someone else may take them. */
 const HOLD_MINUTES = 10;
@@ -17,6 +18,7 @@ export type NewEventOrder = {
   tickets: number;
   attendeeName: string;
   contactPhone: string;
+  whatsappConsent?: boolean;
   contactEmail?: string;
   notes?: string;
 };
@@ -174,6 +176,7 @@ export class EventService {
         tickets,
         attendee_name: input.attendeeName,
         contact_phone: input.contactPhone,
+        whatsapp_consent: input.whatsappConsent === true,
         contact_email: input.contactEmail || null,
         notes: input.notes || null,
         amount_paid: amount,
@@ -192,6 +195,10 @@ export class EventService {
       throw new Error('Failed to create order: ' + error.message);
     }
 
+    // A free entry is confirmed on creation — there is no gateway step to wait
+    // for — so the WhatsApp confirmation goes out now.
+    if (Number(order.amount_paid) === 0) await WhatsAppService.sendEventConfirmation(order.id);
+
     return order;
   }
 
@@ -207,10 +214,21 @@ export class EventService {
   }
 
   /**
+   * Confirms the order a paid Razorpay order belongs to, then sends the
+   * customer their WhatsApp confirmation. Safe to call more than once for the
+   * same order: the confirmation is idempotent, and the message is deduplicated.
+   */
+  static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ orderId: string; outcome: PaidEventOutcome }> {
+    const result = await EventService.applyPaidOrder(orderId, paymentId);
+    if (result.outcome === 'confirmed') await WhatsAppService.sendEventConfirmation(result.orderId);
+    return result;
+  }
+
+  /**
    * Confirms the order a paid Razorpay order belongs to. Safe to call more
    * than once for the same order.
    */
-  static async confirmPaidOrder(orderId: string, paymentId: string): Promise<{ orderId: string; outcome: PaidEventOutcome }> {
+  private static async applyPaidOrder(orderId: string, paymentId: string): Promise<{ orderId: string; outcome: PaidEventOutcome }> {
     const { data: order, error: fetchError } = await supabaseAdmin
       .from('event_orders')
       .select('id, status, amount_paid, payment_status, razorpay_payment_id')
