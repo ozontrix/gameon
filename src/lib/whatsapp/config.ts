@@ -31,7 +31,7 @@ export type WhatsAppConfig = {
   version: string;
   templateName: string;
   language: string;
-  /** Default country code applied to local phone numbers, digits only. */
+  /** India-only booking recipients, digits only. */
   countryCode: string;
   verifyToken: string | null;
   appSecret: string | null;
@@ -48,13 +48,12 @@ export function getWhatsAppConfig(): WhatsAppConfig | null {
   const version = envValue('WHATSAPP_API_VERSION', DEFAULT_WHATSAPP_VERSION);
   const templateName = envValue('WHATSAPP_TEMPLATE_NAME', DEFAULT_WHATSAPP_TEMPLATE);
   const language = envValue('WHATSAPP_TEMPLATE_LANGUAGE', 'en');
-  const countryCode = envValue('WHATSAPP_DEFAULT_COUNTRY_CODE', '91').replace(/\D/g, '');
+  const countryCode = '91';
   const verifyToken = envValue('WHATSAPP_VERIFY_TOKEN') || null;
   const appSecret = envValue('WHATSAPP_APP_SECRET') || null;
 
   if (!token || !/^\d+$/.test(phoneNumberId) || !/^[a-z0-9_]+$/.test(templateName) || !/^[a-z]{2,3}(?:_[A-Z]{2})?$/.test(language)) return null;
   if (!/^v\d{1,2}\.\d$/.test(version)) return null;
-  if (countryCode.length < 1 || countryCode.length > 3) return null;
   // The header is generated from each booking, never from a shared image/id.
   if ([token, phoneNumberId, templateName, language].some((value) => /[\r\n]/.test(value))) return null;
 

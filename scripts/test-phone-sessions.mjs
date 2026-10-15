@@ -113,8 +113,8 @@ function device() {
     return { ...initial, refresh_token: 'b'.repeat(43), expires_at: Math.floor(Date.now() / 1000) + 900 };
   } };
   const load = loader(mobile, {
-    '@react-native-async-storage/async-storage': { getItem: async key => storage.get(key) ?? null,
-      setItem: async (key, value) => { storage.set(key, value); }, removeItem: async key => { storage.delete(key); } },
+    '@/lib/secure-storage': { readSecret: async key => storage.get(key) ?? null,
+      writeSecret: async (key, value) => { storage.set(key, value); }, removeSecret: async key => { storage.delete(key); } },
     '@/lib/api-client': { api, ApiError },
   });
   return { storage, calls, initial, api, ApiError, service: load('src/lib/phone-session.ts') };

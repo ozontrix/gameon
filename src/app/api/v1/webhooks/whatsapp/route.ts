@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   try {
     for (const message of values.flatMap(value => value.messages ?? [])) {
       if (message.type !== 'text' || !/^(STOP|UNSUBSCRIBE|CANCEL|END|QUIT)$/i.test(message.text?.body.trim() ?? '')) continue;
-      const phone = toWhatsAppNumber(message.from, whatsAppEnv('WHATSAPP_DEFAULT_COUNTRY_CODE', '91'));
+      const phone = toWhatsAppNumber(message.from);
       if (!phone) continue;
       const { error } = await supabaseAdmin.from('whatsapp_opt_outs').upsert({ phone }, { onConflict: 'phone' });
       if (error) throw error;

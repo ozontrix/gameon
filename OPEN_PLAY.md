@@ -4,7 +4,7 @@
 - Admin: **Events & tournaments → Open Play Registrations**, `/admin/open-play-registrations`
 - Public submission API: `POST /api/v1/public/open-play/registrations`
 - Event: **Sunday, October 18, 2026**, Sector 70, Gurugram.
-- Public paid court session dates begin **October 19, 2026**. Both slot availability and booking creation enforce this. Staff complimentary/front-desk flows and existing bookings are unchanged.
+- The campaign announces paid play from **October 19, 2026**, but that promotional date is not a booking cutoff. Live court availability and booking creation use venue operating hours, closures, existing reservations, current venue-local time and the booking window, including available slots before October 19.
 - League scheduling remains **October 24–25, 2026**.
 
 ## Registration

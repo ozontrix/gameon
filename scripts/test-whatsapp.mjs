@@ -97,8 +97,16 @@ function configured(name,fn){test(name,async()=>{const restore=setEnv();try{awai
 
 test('numbers normalize, malformed and foreign numbers are rejected',()=>{
   const {toWhatsAppNumber}=loader()('src/lib/whatsapp/phone.ts');
-  for(const n of ['8572005698','+91 85720 05698','00918572005698','08572005698'])assert.equal(toWhatsAppNumber(n),'918572005698');
-  for(const n of ['',null,'123','+12025550123'])assert.equal(toWhatsAppNumber(n),null);
+  for(const n of ['8572005698','+8572005698','918572005698','+91 85720 05698','00918572005698','08572005698','9123456789'])assert.equal(toWhatsAppNumber(n),n==='9123456789'?'919123456789':'918572005698');
+  for(const n of ['',null,'123','+12025550123','91857200569','91918572005698'])assert.equal(toWhatsAppNumber(n),null);
+});
+test('delivery log display includes +91 exactly once for local and international numbers',()=>{
+  const {prettyWhatsAppNumber}=loader()('src/lib/whatsapp/phone.ts');
+  for(const phone of ['8572005698','+8572005698','918572005698','+918572005698'])assert.equal(prettyWhatsAppNumber(phone),'+91 85720 05698');
+});
+configured('India recipients cannot be redirected by a country-code environment override',()=>{
+  const restore=setEnv({WHATSAPP_DEFAULT_COUNTRY_CODE:'1'});
+  try{assert.equal(loader()('src/lib/whatsapp/config.ts').getWhatsAppConfig().countryCode,'91');}finally{restore();}
 });
 configured('configuration defaults to v25.0 without shared header settings',()=>{
   delete process.env.WHATSAPP_API_VERSION;
@@ -118,10 +126,22 @@ test('each category generates a distinct PNG with authoritative QR payload',asyn
 configured('confirmation uploads reservation QR, exact template body, and cannot resend',async()=>{
   const h=harness();const row=h.state.whatsapp_messages[0];assert.equal((await h.service.process(row.id)).ok,true);
   await h.service.process(row.id);await h.service.retryMessage(row.id);assert.equal(h.calls.sent.length,1);assert.equal(h.calls.images.length,1);
-  const p=h.calls.sent[0];assert.equal(p.to,'918572005698');assert.equal(p.template.name,'booking_with_qr_new');
+  const p=h.calls.sent[0];assert.equal(p.to,'+918572005698');assert.equal(row.to_phone,p.to);assert.equal(row.payload.to,p.to);assert.equal(p.template.name,'booking_with_qr_new');
   assert.equal(p.template.components[0].parameters[0].image.id,'media-1');assert.equal(p.biz_opaque_callback_data,`${row.id}:${row.lock_token}`);
   assert.deepEqual(p.template.components[1].parameters.map(p=>p.parameter_name),['customer_name','booking_id','sport','booking_date','booking_time']);
   assert.equal(p.template.components[1].parameters[1].text,'#11111111');
+});
+for(const phone of ['8572005698','+8572005698','918572005698','+918572005698','9123456789'])configured(`booking recipient includes +91 exactly once: ${phone}`,async()=>{
+  const expected=phone==='9123456789'?'+919123456789':'+918572005698';
+  const h=harness({bookings:[booking({contact_phone:phone})]});
+  const row=h.state.whatsapp_messages[0];
+  assert.equal((await h.service.process(row.id)).ok,true);
+  assert.equal(row.to_phone,expected);assert.equal(row.payload.to,expected);assert.equal(h.calls.sent[0].to,expected);
+});
+configured('preparation failures still log the full +91 recipient',async()=>{
+  const h=harness({client:{upload:()=>({ok:false,code:'HTTP_429',message:'Rate limited',retryable:true})}});
+  const row=h.state.whatsapp_messages[0];await h.service.process(row.id);
+  assert.equal(row.status,'failed');assert.equal(row.to_phone,'+918572005698');assert.equal(h.calls.sent.length,0);
 });
 configured('separate reservations never reuse each other\'s QR or media id',async()=>{
   const h=harness({rows:[message(),message('booking',id2)],bookings:[booking(),booking({id:id2})]});
@@ -133,6 +153,7 @@ for(const kind of ['event','tournament'])configured(`${kind} QR uses its own cat
   const activity={title:'Open Play',starts_on:'2026-10-19',ends_on:'2026-10-20',daily_start_time:'19:00:00',daily_end_time:'20:00:00',sports:{name:'Pickleball'},court_types:{sports:{name:'Pickleball'}}};
   const h=harness({rows:[message(kind)],tables:kind==='event'?{event_orders:[{id,status:'CONFIRMED',whatsapp_consent:true,contact_phone:'8572005698',attendee_name:'Player',events:activity}]}:{tournament_registrations:[{id,status:'CONFIRMED',whatsapp_consent:true,contact_phone:'8572005698',captain_name:'Player',tournaments:activity}]}});
   assert.equal((await h.service.process(h.state.whatsapp_messages[0].id)).ok,true);assert.equal(h.calls.images[0].filename,`${kind}-${id}.png`);
+  assert.equal(h.calls.sent[0].to,'+918572005698');assert.equal(h.state.whatsapp_messages[0].to_phone,'+918572005698');
   assert.equal(h.calls.sent[0].template.components[1].parameters[3].text,'19 October 2026 - 20 October 2026');
 });
 configured('concurrent worker and admin retries produce only one send',async()=>{

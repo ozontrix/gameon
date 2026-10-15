@@ -11,6 +11,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/push-deliveries",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/whatsapp-deliveries",
       "schedule": "30 0 * * *"
     },

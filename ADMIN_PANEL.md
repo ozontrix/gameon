@@ -68,7 +68,9 @@ role can write. Removing the role takes effect on the next page load.
 - **Notifications** — what is in the app's notification bell. Booking updates
   (confirmed, cancelled, refunded, closures) and the morning reminder are sent
   automatically; this page sends broadcasts to every app user and lists what was
-  sent, with how many people have read it. In-app only: no push or SMS yet.
+  sent, with how many people have read it. New messages also queue Firebase push
+  for registered Android/iOS devices. Push requires the rebuilt app, notification
+  permission and configured Firebase/APNs credentials; see `PUSH_NOTIFICATIONS.md`.
 - **Venues & hours / Courts / Sports / Closures** — the catalogue the app and
   slot engine read. Sports also carry the photo used on Home's "Trending now"
   cards. Changing hours or prices never alters existing bookings;

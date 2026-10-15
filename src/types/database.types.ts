@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      push_devices: {
+        Row: { installation_id: string; secret_hash: string; user_id: string | null; token: string | null; platform: string; enabled: boolean; updated_at: string }
+        Insert: { installation_id: string; secret_hash: string; user_id?: string | null; token?: string | null; platform: string; enabled?: boolean; updated_at?: string }
+        Update: Partial<Database['public']['Tables']['push_devices']['Insert']>
+        Relationships: []
+      }
+      push_deliveries: {
+        Row: { id: string; notification_id: string; installation_id: string; recipient_user_id: string | null; status: string; attempts: number; available_at: string; lease_id: string | null; error_code: string | null; sent_at: string | null; created_at: string }
+        Insert: { id?: string; notification_id: string; installation_id: string; recipient_user_id?: string | null; status?: string; attempts?: number; available_at?: string; lease_id?: string | null; error_code?: string | null; sent_at?: string | null; created_at?: string }
+        Update: Partial<Database['public']['Tables']['push_deliveries']['Insert']>
+        Relationships: []
+      }
       whatsapp_opt_outs: { Row: {phone: string; created_at: string}; Insert: {phone: string; created_at?: string}; Update: {phone?: string; created_at?: string}; Relationships: [] }
       app_support_requests: {
         Row: { id: string; user_id: string | null; kind: string; topic: string; message: string; reply_email: string | null; rating: number | null; status: string; created_at: string; completed_at: string | null }
@@ -1696,6 +1708,8 @@ export type Database = {
       }
     }
     Functions: {
+      register_push_device: { Args: { p_installation_id: string; p_secret_hash: string; p_token: string | null; p_platform: string; p_user_id: string | null; p_enabled: boolean }; Returns: undefined }
+      claim_push_deliveries: { Args: { p_limit?: number; p_notification_id?: string }; Returns: Database['public']['Tables']['push_deliveries']['Row'][] }
       whatsapp_recover_stale: { Args: never; Returns: undefined }
       claim_whatsapp_delivery: { Args: {p_id: string; p_force?: boolean}; Returns: Json }
       whatsapp_apply_receipt: { Args: {p_message_id: string; p_status: string; p_at: string; p_correlation?: string | null; p_error_code?: string | null; p_error_message?: string | null}; Returns: boolean }

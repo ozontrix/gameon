@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../db/supabase';
 import { formatDate, formatMoney, formatTime, formatTimeRange } from '../admin/format';
+import { PushService } from './push.service';
 
 export const NOTIFICATION_KINDS = ['booking', 'reminder', 'tournament', 'wallet', 'facility', 'offer', 'general'] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
@@ -56,6 +57,7 @@ export class NotificationService {
       if (error.code !== '23505') console.error('[notifications] could not save', input.dedupeKey ?? input.title, error.message);
       return null;
     }
+    PushService.schedule(data.id);
     return data.id;
   }
 

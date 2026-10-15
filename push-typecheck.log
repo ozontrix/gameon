@@ -1,0 +1,46 @@
+✔ Deletion requires an authenticated confirmation and rejects substituted user IDs (233.3637ms)
+✔ Deletion saves the caller identity, is idempotent and never claims completed deletion (15.7666ms)
+✔ Deletion storage failure returns failure, not a fake receipt (15.4623ms)
+✔ Feedback persists privately and validates before saving (19.4422ms)
+✔ event: free entry confirms without a gateway (289.8924ms)
+✔ event: paid entry remains an unpaid hold (79.3412ms)
+✔ tournament: free entry confirms without a gateway (71.6421ms)
+✔ tournament: paid entry remains an unpaid hold (74.8803ms)
+✔ Direct booking lookup is scoped to caller and confirmed status, independent of pagination (197.2849ms)
+✔ Booking status filters precede pagination and have stable ordering (278.228ms)
+✔ Auth links ignore foreign origins and non-auth routes before adopting credentials (13.2526ms)
+✔ Release guards: private inbox RLS, discoverable deletion, native checkout, tappable tickets (1.8634ms)
+✔ iOS config declares the UPI intent schemes and the export-compliance answer (0.4404ms)
+✔ Purchases are real-world services only, so Apple IAP does not apply (0.5906ms)
+✔ FCM payload contains visible alerts, channel, sound, APNs headers and string data (100.6246ms)
+✔ Firebase configuration fails closed and supports split environment variables (35.5315ms)
+✔ sender uses OAuth HTTP v1 and caches the bearer without exposing private keys (30.7584ms)
+✔ FCM UNREGISTERED is classified without disabling valid devices (10.5323ms)
+✔ FCM INVALID_ARGUMENT is classified without disabling valid devices (8.7973ms)
+✔ FCM QUOTA_EXCEEDED is classified without disabling valid devices (15.6093ms)
+✔ FCM UNAVAILABLE is classified without disabling valid devices (7.9399ms)
+✔ FCM THIRD_PARTY_AUTH_ERROR is classified without disabling valid devices (9.9215ms)
+✔ worker marks Firebase acceptance sent and registration hashes installation credentials (17.3634ms)
+✔ missing server credentials leave the durable queue untouched (12.611ms)
+✔ worker skips switched account (7.7157ms)
+✔ worker skips disabled device (5.5733ms)
+✔ worker skips missing notification (8.8461ms)
+✔ guest broadcasts send, invalid tokens disable only the matching device (13.4643ms)
+✔ transport failure retries durably and exhausted attempts stop (14.7517ms)
+✔ worker respects Firebase Retry-After and schedules immediate post-response delivery (6.5978ms)
+✔ device API supports guests and authenticated identities without trusting a supplied user id (114.5926ms)
+✔ device registration rejects invalid enabled/token (7.357ms)
+✔ device registration rejects invalid platform (6.9403ms)
+✔ device registration rejects invalid secret (15.4402ms)
+✔ device registration rejects invalid token (9.7286ms)
+✔ device registration rejects invalid installationId (10.4566ms)
+✔ permission revocation can disable registration and detach an account (19.9273ms)
+✔ cron is authenticated and missing credentials are not reported as successful sends (8.5562ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1673.0074

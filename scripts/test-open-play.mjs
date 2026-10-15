@@ -175,15 +175,86 @@ test('Lead tracking is consent-aware, PII-free and deduplicated only after succe
     assert.doesNotMatch(JSON.stringify(events), /Test Player|9811000000|example.com/);
   } finally { globalThis.window = previous; }
 });
-test('Paid court dates reject October 18 and permit October 19; guards run before database queries', async () => {
-  const { isPublicPaidBookingDate } = load('src/lib/utils/booking-dates.ts');
-  assert.equal(isPublicPaidBookingDate('2026-10-18'), false); assert.equal(isPublicPaidBookingDate('2026-10-19'), true);
-  let reads = 0;
-  const mockedLoad = loader({ '../db/supabase': { supabaseAdmin: { from: () => { reads++; throw new Error('DB'); } } } });
-  const { SlotService } = mockedLoad('src/lib/services/slot.service.ts');
-  assert.deepEqual(await SlotService.getSlots('court', '2026-10-18', { durationMinutes: 60 }), []); assert.equal(reads, 0);
-  const { BookingService } = mockedLoad('src/lib/services/booking.service.ts');
-  await assert.rejects(() => BookingService.createBooking('user', { facilityId: 'court', date: '2026-10-18', startTime: '10:00', endTime: '11:00' }), /19 October/); assert.equal(reads, 0);
+function slotHarness({ bookings = [], closures = [] } = {}) {
+  const tables = {
+    facilities: [{ id: 'court', venue_id: 'venue', court_type_id: 'type', is_active: true, venues: { timezone: 'Asia/Kolkata', is_active: true, booking_window_days: 14 } }],
+    court_type_slot_options: [{ id: 'option', court_type_id: 'type', duration_minutes: 60, price: 500, is_active: true }],
+    operating_hours: Array.from({ length: 7 }, (_, day_of_week) => ({ venue_id: 'venue', day_of_week, open_time: '06:00:00', close_time: '22:00:00' })),
+    holidays_and_closures: closures,
+    bookings,
+  };
+  const db = { from(table) {
+    const filters = []; let inserted, updated;
+    const query = {
+      select() { return query; },
+      eq(key, value) { filters.push(row => row[key] === value); return query; },
+      in(key, values) { filters.push(row => values.includes(row[key])); return query; },
+      lt(key, value) { filters.push(row => row[key] < value); return query; },
+      gt(key, value) { filters.push(row => row[key] > value); return query; },
+      or() { return query; },
+      insert(value) { inserted = value; return query; },
+      update(value) { updated = value; return query; },
+      async single() { const result = run(); return { ...result, data: result.data[0] ?? null }; },
+      async maybeSingle() { return query.single(); },
+      then(ok, bad) { return Promise.resolve(run()).then(ok, bad); },
+    };
+    function run() {
+      if (inserted) { const row = { id: 'new-booking', ...inserted }; tables[table].push(row); return { data: [row], error: null }; }
+      const data = tables[table].filter(row => filters.every(filter => filter(row)));
+      if (updated) data.forEach(row => Object.assign(row, updated));
+      return { data, error: null };
+    }
+    return query;
+  } };
+  const dateHelpers = load('src/lib/utils/date-helpers.ts');
+  const mockedLoad = loader({
+    '../db/supabase': { supabaseAdmin: db },
+    '../utils/date-helpers': { ...dateHelpers, wallClockIn: () => ({ date: '2026-10-15', time: '10:30:00' }) },
+  });
+  return { slots: mockedLoad('src/lib/services/slot.service.ts').SlotService, bookings: mockedLoad('src/lib/services/booking.service.ts').BookingService };
+}
+
+test('First four days offer real slots before the campaign launch date', async () => {
+  const { slots } = slotHarness();
+  for (const date of ['2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18', '2026-10-19']) {
+    const result = await slots.getSlots('court', date, { durationMinutes: 60 });
+    assert.equal(result.length, 16, date);
+    assert.equal(result.find(slot => slot.start_time === '11:00:00').available, true, date);
+    assert.equal(result[0].available, date !== '2026-10-15', date);
+  }
+});
+test('Yesterday, elapsed times, booking-window limits and unsupported lengths stay unavailable', async () => {
+  const { slots } = slotHarness();
+  assert.ok((await slots.getSlots('court', '2026-10-14', { durationMinutes: 60 })).every(slot => !slot.available));
+  const today = await slots.getSlots('court', '2026-10-15', { durationMinutes: 60 });
+  assert.equal(today.find(slot => slot.start_time === '10:00:00').available, false);
+  assert.equal((await slots.getSlots('court', '2026-10-28', { durationMinutes: 60 })).length, 16);
+  assert.deepEqual(await slots.getSlots('court', '2026-10-29', { durationMinutes: 60 }), []);
+  assert.deepEqual(await slots.getSlots('court', '2026-10-16', { durationMinutes: 90 }), []);
+});
+test('Bookings, active checkout holds and closures still block first-four-day slots', async () => {
+  const { slots } = slotHarness({
+    bookings: [
+      { facility_id: 'court', booking_date: '2026-10-16', start_time: '11:00:00', end_time: '12:00:00', status: 'CONFIRMED' },
+      { facility_id: 'court', booking_date: '2026-10-16', start_time: '12:00:00', end_time: '13:00:00', status: 'PENDING', expires_at: '2099-01-01' },
+      { facility_id: 'court', booking_date: '2026-10-16', start_time: '14:00:00', end_time: '15:00:00', status: 'PENDING', expires_at: '2000-01-01' },
+    ],
+    closures: [{ venue_id: 'venue', date: '2026-10-16', start_time: '13:00:00', end_time: '14:00:00' }],
+  });
+  const result = await slots.getSlots('court', '2026-10-16', { durationMinutes: 60 });
+  for (const time of ['11:00:00', '12:00:00', '13:00:00']) assert.equal(result.find(slot => slot.start_time === time).available, false);
+  assert.equal(result.find(slot => slot.start_time === '14:00:00').available, true);
+  const closed = slotHarness({ closures: [{ venue_id: 'venue', date: '2026-10-18', start_time: null, end_time: null }] });
+  assert.deepEqual(await closed.slots.getSlots('court', '2026-10-18', { durationMinutes: 60 }), []);
+});
+test('Booking creation accepts available first-four-day slots and refuses elapsed slots', async () => {
+  for (const date of ['2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18']) {
+    const { bookings } = slotHarness();
+    const booking = await bookings.createBooking('user', { facilityId: 'court', date, startTime: '11:00:00', endTime: '12:00:00' });
+    assert.equal(booking.booking_date, date); assert.equal(booking.status, 'PENDING'); assert.equal(booking.amount_paid, 500);
+  }
+  const { bookings } = slotHarness();
+  for (const date of ['2026-10-14', '2026-10-15']) await assert.rejects(() => bookings.createBooking('user', { facilityId: 'court', date, startTime: '10:00:00', endTime: '11:00:00' }), /no longer available/);
 });
 
 test('Email and city are required, reject blanks/missing values and trim valid details', () => {

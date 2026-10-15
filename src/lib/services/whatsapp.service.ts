@@ -73,8 +73,11 @@ export class WhatsAppService {
     try {
       const delivery=await WhatsAppService.loadDelivery(row.category as QrCategory,row.reference_id);
       if(!delivery) return await WhatsAppService.failure(row,'INELIGIBLE','Booking cancelled, removed, or messaging permission missing.',false);
-      const to=toWhatsAppNumber(delivery.phone,config.countryCode);
+      const to=toWhatsAppNumber(delivery.phone);
       if(!to) return await WhatsAppService.failure(row,'INVALID_PHONE','The booking phone is not a valid WhatsApp number.',false);
+      const recipient=`+${to}`;
+      // Persist before preparation/opt-out checks so failed logs also include +91.
+      await WhatsAppService.updateOwned(row,{to_phone:recipient},['processing']);
       const optOut=await supabaseAdmin.from('whatsapp_opt_outs').select('phone').eq('phone',to).maybeSingle();
       if(optOut.error) throw optOut.error;
       if(optOut.data) return await WhatsAppService.failure(row,'OPTED_OUT','Recipient opted out of WhatsApp messages.',false);
@@ -87,11 +90,11 @@ export class WhatsAppService {
         mediaId=uploaded.data.mediaId;
         await WhatsAppService.updateOwned(row,{media_id:mediaId,media_uploaded_at:new Date().toISOString()});
       }
-      const payload=buildTemplatePayload(config,{to,mediaId,customerName:delivery.name,
+      const payload=buildTemplatePayload(config,{to:recipient,mediaId,customerName:delivery.name,
         bookingId:referenceFor(row.category as QrCategory,row.reference_id),sport:delivery.sport,date:delivery.date,time:delivery.time});
       // Save correlation BEFORE dispatch; early webhooks can find the local row.
       const correlated={...payload,biz_opaque_callback_data:`${row.id}:${row.lock_token}`};
-      await WhatsAppService.updateOwned(row,{status:'sending',locked_until:new Date(Date.now()+120000).toISOString(),to_phone:to,template_name:config.templateName,language:config.language,payload:correlated as unknown as Json},['processing']);
+      await WhatsAppService.updateOwned(row,{status:'sending',locked_until:new Date(Date.now()+120000).toISOString(),to_phone:recipient,template_name:config.templateName,language:config.language,payload:correlated as unknown as Json},['processing']);
       dispatched=true;
       const sent=await sendTemplateMessage(config,correlated);
       if(!sent.ok) {

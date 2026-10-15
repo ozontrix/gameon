@@ -178,7 +178,7 @@ export async function sendBroadcast(_state: ActionState, formData: FormData): Pr
 
   await recordAudit(actor, 'notification.broadcast', 'notification', id, parsed.data);
   revalidatePath('/admin/notifications');
-  return { ok: true, message: 'Sent. Every app user sees it in their notifications.' };
+  return { ok: true, message: 'Published to the app inbox. Push delivery is queued for registered Android and iOS devices with notifications enabled.' };
 }
 
 export async function deleteBroadcast(_state: ActionState, formData: FormData): Promise<ActionState> {

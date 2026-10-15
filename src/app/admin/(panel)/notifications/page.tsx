@@ -10,8 +10,14 @@ import { PAGE_SIZE } from '@/lib/admin/constants';
 import { formatDateTime, titleCase } from '@/lib/admin/format';
 import { requireAdmin } from '@/lib/admin/session';
 import { supabaseAdmin } from '@/lib/db/supabase';
+import { firebaseCredentials } from '@/lib/push/firebase';
 
 export const metadata: Metadata = { title: 'Notifications' };
+export const maxDuration = 300;
+
+function activeDeviceCutoff() {
+  return new Date(Date.now() - 90 * 86400_000).toISOString();
+}
 
 export default async function NotificationsAdminPage({
   searchParams,
@@ -37,17 +43,33 @@ export default async function NotificationsAdminPage({
   if (error) throw error;
 
   const { count: appUsers } = await supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true });
+  const [devices, pending, failed] = await Promise.all([
+    supabaseAdmin.from('push_devices').select('installation_id', { count: 'exact', head: true }).eq('enabled', true).not('token', 'is', null)
+      .gt('updated_at', activeDeviceCutoff()),
+    supabaseAdmin.from('push_deliveries').select('id', { count: 'exact', head: true }).in('status', ['pending', 'sending']),
+    supabaseAdmin.from('push_deliveries').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
+  ]);
+  const pushConfigured = Boolean(firebaseCredentials());
+  const pushDatabaseReady = !devices.error && !pending.error && !failed.error;
 
   return (
     <>
       <PageHeader
         title="Notifications"
-        description="Messages in the app's notification bell. Booking updates are sent automatically; use broadcasts for news and offers."
+        description="App inbox messages and Firebase push notifications for Android and iOS. Booking updates are automatic; use broadcasts for news and offers."
       />
+
+      <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700" role="status">
+        {!pushDatabaseReady ? 'Push database unavailable. Apply the Firebase push migration and check database access.' : (
+          <p>{devices.count ?? 0} registered devices · {pending.count ?? 0} queued/in progress · {failed.count ?? 0} failed deliveries.</p>
+        )}
+        {!pushConfigured ? <p className="mt-1 text-amber-800">Firebase server credentials are missing. Inbox messages still save, but push delivery cannot run until credentials are configured.</p> : null}
+        <p className="mt-1 text-xs text-zinc-500">Device registration requires the rebuilt app and notification permission. Queued or Firebase-accepted messages do not prove device receipt.</p>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="h-fit">
-          <CardHeader title="Send to all app users" description={`${appUsers ?? 0} accounts. In-app only — no push or SMS yet.`} />
+          <CardHeader title="Send to all app users" description={`${appUsers ?? 0} accounts. Push also reaches registered guest devices. No SMS is sent.`} />
           <CardBody>
             <ActionForm action={sendBroadcast} resetOnSuccess className="space-y-3">
               <FormMessage />
