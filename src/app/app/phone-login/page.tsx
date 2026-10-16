@@ -14,13 +14,16 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AuthBackdrop } from '@/components/mobile/auth/auth-backdrop';
+import { AuthWait } from '@/components/mobile/auth/auth-wait';
 import { OtpInput } from '@/components/mobile/auth/otp-input';
 import { useSession } from '@/components/mobile/session-provider';
+import { useRedirectWhenSignedIn } from '@/components/mobile/use-auth-guard';
 import {
   AppHeader,
   Button,
   Card,
   InfoNote,
+  Ion,
   Screen,
   ScreenScroll,
   Spinner,
@@ -46,6 +49,8 @@ const RESEND_SECONDS = 30;
 export default function PhoneLoginPage() {
   const router = useRouter();
   const { signIn } = useSession();
+  // A signed-in player has no business on a login screen.
+  const { waiting } = useRedirectWhenSignedIn();
 
   const [step, setStep] = useState<'number' | 'code'>('number');
   const [number, setNumber] = useState('');
@@ -64,6 +69,9 @@ export default function PhoneLoginPage() {
 
   // Leaving the screen must not leave a spent reCAPTCHA widget behind.
   useEffect(() => () => resetPhoneAuth(), []);
+
+  // Every hook above this point, so the early return below is not conditional.
+  if (waiting) return <AuthWait />;
 
   const digits = number.replace(/\D/g, '').slice(0, 10);
   const referralValid = !referral || isUsableReferralCode(referral);
@@ -160,6 +168,21 @@ export default function PhoneLoginPage() {
                 error={referralValid ? null : 'A code is at least 6 characters.'}
                 hint="Applied only if this number is new to GameOn."
               />
+
+              {/* The handset's own invitation, in its own words. */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: Spacing.xs,
+                  justifyContent: 'center',
+                  color: Brand.textSecondary,
+                }}>
+                <Ion name="giftOutline" size={13} color={Brand.textSecondary} />
+                <span style={{ ...Typography.caption, color: Brand.textSecondary }}>
+                  New to GameOn? A friend earns Points once you complete your first booking.
+                </span>
+              </div>
             </>
           ) : (
             <OtpInput label="One-time password" value={code} onChange={setCode} autoFocus />

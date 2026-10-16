@@ -13,9 +13,10 @@ build uses.
 
 | Route | Screen | Reached from |
 |---|---|---|
-| `/app` | Sign in — phone, email, or guest | direct |
+| `/app` | Sign in — phone, email, or guest, plus a direct "Create an account" | direct |
 | `/app/phone-login` | 10 digits + referral code, then the 6-digit SMS code | "Continue with Phone" |
-| `/app/email-login` | Email sign-in **and** sign-up on one screen | "Continue with Email" |
+| `/app/email-login` | Email sign-in | "Continue with Email" |
+| `/app/email-signup` | Create an account — the same form with a name and a referral code | "Create an account", or the email screen's "New to GameOn?" |
 | `/app/home` | Dashboard: hero, next booking, sports, promo, events, features | first tab |
 | `/app/sports` | Every bookable card, filtered server-side | second tab |
 | `/app/bookings` | The player's own bookings, upcoming/ongoing/past | third tab |
@@ -53,9 +54,9 @@ group name never appears in a URL.
 | Checkout pieces | `src/components/mobile/payment/*` | `components/payment/*` |
 | The kit | `src/components/mobile/ui/*` | `components/ui/*` |
 | Home sections | `src/components/mobile/home/*` | `components/home/*` |
-| Auth pieces and the OTP field | `src/components/mobile/auth/*` | `components/auth/*` |
+| Auth pieces and the OTP field | `src/components/mobile/auth/*` | `components/auth/*` (email sign-in and sign-up share one screen; the handset's two routes are kept as two URLs) |
 
-### Three web-specific decisions
+### Four web-specific decisions
 
 1. **Glyphs are the same glyphs.** The handset app draws icons with
    `@expo/vector-icons` (Ionicons for chrome, MaterialCommunityIcons for subject
@@ -78,6 +79,20 @@ group name never appears in a URL.
 `:focus-within`, `::placeholder`, keyframes, the safe-area frame and scrollbar
 suppression. Colours there are the literal values from `theme.ts`, because a
 stylesheet cannot import them.
+
+4. **A login screen renders its form, not a spinner.** The app gates its auth
+   screens on the stored session, and the handset holds the whole screen back while
+   it reads it. A browser cannot read that session before its scripts run, so
+   holding the *content* back means the server sends a spinner where the login form
+   should be, and the form then appears only if the client bundle arrives and
+   executes — on a stale build, a blocked script or a slow connection the screen
+   looks **deleted** rather than slow. The auth screens therefore render their form
+   as the first paint, and the session only decides whether to redirect; the tab
+   screens still hold back behind `useAccountGate`, and that wait is bounded
+   (`RESTORE_PATIENCE_MS`) so a stalled client cannot trap the shell either.
+   `/app/email-login` and `/app/email-signup` are two routes over one component
+   (`components/mobile/auth/email-screen.tsx`) — it is one form — because the
+   handset has two addresses and a shared link has to land on the right one.
 
 ## The booking flow
 

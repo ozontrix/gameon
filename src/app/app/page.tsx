@@ -130,6 +130,29 @@ export default function AppSignInPage() {
           />
         </div>
 
+        {/*
+          The email screen carries the handset's own "New to GameOn?" link; this
+          is the same door from the first screen, so nobody has to go through the
+          sign-in form to find the sign-up one.
+        */}
+        <div
+          style={{
+            marginTop: Spacing.four,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: Spacing.xs,
+            flexWrap: 'wrap',
+          }}>
+          <span style={{ ...Typography.caption, color: Brand.textSecondary }}>
+            New to GameOn?
+          </span>
+          <TextLink
+            label="Create an account"
+            onPress={() => router.push('/app/email-signup')}
+          />
+        </div>
+
         <div style={{ flex: 1, minHeight: 40 }} />
 
         <footer
