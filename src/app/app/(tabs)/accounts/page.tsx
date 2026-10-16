@@ -32,6 +32,18 @@ import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
 /** The rows under the profile card, in the order the mockups list them. */
 const ROWS = [
   {
+    href: '/app/accounts/wallet',
+    icon: 'walletOutline' as const,
+    title: 'GameOn Wallet',
+    subtitle: 'Your GameOn Points balance and rewards',
+  },
+  {
+    href: '/app/accounts/transactions',
+    icon: 'receiptOutline' as const,
+    title: 'Transactions',
+    subtitle: 'Bookings, tickets, tournaments and Points activity',
+  },
+  {
     href: '/app/notifications',
     icon: 'notificationsOutline' as const,
     title: 'Notifications',

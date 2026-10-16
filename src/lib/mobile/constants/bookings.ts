@@ -118,3 +118,12 @@ export function cancellationWindowLabel(tiers: CancellationTier[], index: number
   if (tier.minHoursBefore === 0) return `Under ${upper} hours before`;
   return `${tier.minHoursBefore}–${upper} hours before`;
 }
+
+/**
+ * Footnote under the refund table, and the canonical policy wording — the same
+ * sentence the handset app shows. A cancellation never returns money to the
+ * original rail: the refund is credited to the wallet as GameOn Points, which is
+ * why the Booking Detail screen refreshes the wallet as well as the bookings.
+ */
+export const REFUND_NOTE =
+  'Refunds are credited as GameOn Points to your wallet — there are no direct refunds to your original payment method.';

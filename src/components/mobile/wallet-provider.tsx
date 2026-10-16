@@ -27,17 +27,15 @@ import { useSession } from './session-provider';
 /** How many ledger rows one page holds. */
 const PAGE_SIZE = 20;
 
-/** One row of the Points ledger, as `GET /user/transactions?filter=wallet` returns it. */
-export type WalletLedgerEntry = {
-  key: string;
-  title: string;
-  subtitle: string;
-  amount: number;
-  /** `+240 PTS` / `-1,200 PTS`, already signed for display. */
-  signedAmount: string;
-  date: string;
-  kind: string;
-};
+/**
+ * One row of the Points ledger, as `GET /user/wallet/transactions` returns it.
+ * The shape lives with the rest of the ledger presentation in
+ * `constants/transactions.ts`, so the wallet screen and the transactions screen
+ * cannot drift apart.
+ */
+import type { WalletLedgerEntry } from '@/lib/mobile/constants/transactions';
+
+export type { WalletLedgerEntry };
 
 /** `GET /user/wallet` — the balance a booking can draw on, plus lifetime totals. */
 export type WalletSummary = { balance: number; totalEarned: number; totalUsed: number };
@@ -118,7 +116,7 @@ function WalletStore({ userId, children }: { userId: string | null; children: Re
     setLedgerError(null);
     try {
       const res = (await api.get(
-        `/user/transactions?filter=wallet&page=${page}&limit=${PAGE_SIZE}`,
+        `/user/wallet/transactions?page=${page}&limit=${PAGE_SIZE}`,
       )) as { data?: WalletLedgerEntry[]; total?: number; hasMore?: boolean };
       if (ledgerTicket.current !== ticket) return;
       const rows = Array.isArray(res?.data) ? res.data : [];

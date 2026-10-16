@@ -29,6 +29,9 @@ build uses.
 | `/app/event/[id]` | Event detail: hero, facts, ticket purchase | an Events card |
 | `/app/tournament/[id]` | Tournament detail: hero, facts, team registration | a Tournaments card |
 | `/app/my-tickets` | Event tickets and tournament entries, in two lists | the Events tab card, or Accounts → My Tickets |
+| `/app/booking/[id]` | Booking detail: check-in QR, court facts, invoice, cancel with refund | a booking card |
+| `/app/accounts/wallet` | GameOn Wallet: Points balance, lifetime totals, recent ledger | Accounts → GameOn Wallet |
+| `/app/accounts/transactions` | The wider history, filtered — payments and Points activity | Accounts → Transactions |
 
 `(tabs)` is a Next.js route group, so the five tab screens share one layout and
 the tab bar is mounted once — the same thing a native tab navigator does. The
@@ -150,16 +153,38 @@ Every figure — the fee, the tickets left, the per-order cap — comes from the
 listing or detail response. `spotsLeft`, `registrationOpen` and `entryFeeLabel` in
 `constants/events.ts` only *read* those fields.
 
+## Wallet and Points
+
+The wallet is the one place where a figure has to be exactly right, so nothing on
+either screen is computed locally:
+
+- `GameOnWalletProvider` reads `GET /user/wallet` (balance, lifetime earned, lifetime
+  used) and the first page of `GET /user/wallet/transactions`. A failed read shows
+  **zero** rather than a stale balance — Points must never look spendable when we
+  could not confirm them — and the store is keyed on the account, so a different
+  player signing in never sees the previous player's balance.
+- `/app/accounts/transactions` reads `GET /user/transactions`, which mixes gateway
+  payments with Points movements. The table keeps the two units apart: a payment is
+  shown in rupees with the Points it consumed beside it, a Points row in PTS. A
+  filter changes what is fetched, not what is hidden — the server filters before it
+  paginates, so "Refunds" means twenty refunds rather than the refunds that happened
+  to be in the last twenty rows.
+- `constants/transactions.ts` maps both endpoints onto one row type, so the wallet's
+  recent list and the full history cannot drift apart.
+
+Cancelling a booking credits the refund to the wallet as Points inside the same
+request, which is why `/app/booking/[id]` refreshes both the bookings and the wallet
+after a cancellation succeeds.
+
 ## Still to port
 
 | # | Screen | Data |
 |---|---|---|
-| 1 | `/app/booking/[id]` — check-in QR, invoice, cancel with refund preview | `GET /user/bookings/:id`, `POST /user/bookings/:id/cancel`, `GET /user/bookings/:id/cancellation-preview` |
-| 2 | `/app/search` | `GET /public/search?q=` |
-| 3 | Accounts suite — wallet, transactions, refer & earn, profile management, policies, feedback | `/user/wallet`, `/user/transactions`, `/user/referral`, `/user/profile`, `/public/feedback` |
+| 1 | `/app/search` | `GET /public/search?q=` (sports and courts) |
+| 2 | Accounts suite, rest — refer & earn, profile management, policies, feedback | `/user/referral`, `/user/profile`, `/user/profile/photo`, `/public/feedback` |
 
-Until those land, the booking cards link to `/app/booking/…`, which does not exist
-yet. Sports cards, event cards and tournament cards all resolve now.
+Until `/app/search` lands, the Search row on the Accounts tab and any deep link to it
+do not resolve. Every other card in the app now opens a real screen.
 
 ## Environment
 
