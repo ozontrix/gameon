@@ -63,6 +63,7 @@ group name never appears in a URL.
 | The kit | `src/components/mobile/ui/*` | `components/ui/*` |
 | Home sections | `src/components/mobile/home/*` | `components/home/*` |
 | Auth pieces and the OTP field | `src/components/mobile/auth/*` | `components/auth/*` (email sign-in and sign-up share one screen; the handset's two routes are kept as two URLs) |
+| The auth chrome | inside the auth screens | the handset's own: no app header, but a round washed-out back button, the brand mark and a `STEP n OF 2` label |
 
 ### Four web-specific decisions
 
