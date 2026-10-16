@@ -1,0 +1,140 @@
+'use client';
+
+/**
+ * The sign-in screen — the web twin of `app/index.tsx` in the Expo app.
+ *
+ * Three ways in, in the order the brief lists them: a phone OTP (the fastest,
+ * and the one the design recommends), an email and password, or browsing as a
+ * guest. The guest route is not a lesser login: it is what §3 asks for, so it is
+ * offered plainly rather than hidden behind a "skip" link.
+ */
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Spacing, Typography, Brand } from '@/lib/mobile/theme';
+import { AuthBackdrop } from '@/components/mobile/AuthBackdrop';
+import { AuthCard } from '@/components/mobile/AuthCard';
+import { AuthWait } from '@/components/mobile/AuthWait';
+import { BrandLogo } from '@/components/mobile/BrandLogo';
+import { ShieldCheckIcon } from '@/components/mobile/Icons';
+import { useSession } from '@/components/mobile/session-provider';
+import { useRedirectWhenSignedIn } from '@/components/mobile/use-auth-guard';
+
+export default function AppSignInPage() {
+  // A signed-in player has no business on a login screen.
+  const { waiting } = useRedirectWhenSignedIn();
+  const router = useRouter();
+  const { continueAsGuest } = useSession();
+
+  /** Guests browse without an account; booking will prompt them to sign in. */
+  const continueToApp = () => {
+    continueAsGuest();
+    router.replace('/app/home');
+  };
+
+  if (waiting) return <AuthWait />;
+
+  return (
+    <div style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      <AuthBackdrop />
+
+      <div
+        className="mobile-scroll"
+        style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100%',
+          paddingTop: `calc(env(safe-area-inset-top, 0px) + ${Spacing.five}px)`,
+          paddingBottom: Spacing.five,
+          paddingLeft: Spacing.four,
+          paddingRight: Spacing.four,
+        }}>
+        <header
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: Spacing.four,
+            marginTop: Spacing.five,
+            textAlign: 'center',
+          }}>
+          <BrandLogo />
+          <h1 style={{ ...Typography.display, color: Brand.text, margin: 0, fontSize: 27, lineHeight: '34px' }}>
+            Welcome to <span style={{ color: Brand.accent }}>GameOn</span>
+          </h1>
+          <p style={{ ...Typography.body, color: Brand.textSecondary, margin: 0, maxWidth: 300 }}>
+            Book your favorite sports, events and facilities anytime, anywhere.
+          </p>
+        </header>
+
+        <div style={{ marginTop: Spacing.five, display: 'flex', flexDirection: 'column', gap: Spacing.two }}>
+          <div style={{ height: 1, background: Brand.divider }} />
+          <span
+            style={{
+              ...Typography.label,
+              color: Brand.textMuted,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+            }}>
+            Login or sign up to continue
+          </span>
+        </div>
+
+        <div style={{ marginTop: Spacing.four, display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
+          <AuthCard
+            icon="phone"
+            title="Continue with Phone"
+            subtitle="We'll text you a one-time password to verify your number"
+            emphasis="primary"
+            tag="FASTEST"
+            onPress={() => router.push('/app/phone-login')}
+          />
+          <AuthCard
+            icon="email"
+            title="Continue with Email"
+            subtitle="Sign in with your email ID and password"
+            onPress={() => router.push('/app/email-login')}
+          />
+          <AuthCard
+            icon="user"
+            title="Continue as Guest"
+            subtitle="Browse sports, events and facilities without an account"
+            onPress={continueToApp}
+          />
+        </div>
+
+        <div style={{ flex: 1, minHeight: 40 }} />
+
+        <footer
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 8,
+            paddingTop: Spacing.four,
+          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: Brand.text }}>
+            <ShieldCheckIcon size={18} color={Brand.accent} />
+            <span style={{ ...Typography.body }}>We keep your data safe and secure.</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <Link
+              href="/privacy"
+              className="mobile-link"
+              style={{ color: Brand.accent, fontSize: 13, fontWeight: 600 }}>
+              Privacy Policy
+            </Link>
+            <span style={{ color: Brand.textSecondary, fontSize: 13 }}>|</span>
+            <Link
+              href="/terms"
+              className="mobile-link"
+              style={{ color: Brand.accent, fontSize: 13, fontWeight: 600 }}>
+              Terms &amp; Conditions
+            </Link>
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
+}
