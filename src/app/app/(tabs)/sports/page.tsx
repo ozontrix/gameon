@@ -1,108 +1,178 @@
 'use client';
 
 /**
- * The Sports tab.
+ * The Sports tab — the web twin of the app `app/(tabs)/sports.tsx`.
  *
- * Reads the same public summary the Home screen does — courts grouped per
- * sport with the cheapest active slot price — because that is the shape the
- * decision needs: how many courts, and what a slot costs. The raw
- * `/public/sports` list carries neither.
+ * One card per bookable (venue, sport, indoor/outdoor, AC, surface) combination,
+ * which is what `/public/sports/catalog` returns. Filtering is server-side,
+ * exactly as the handset app does it: picking a chip re-requests the catalog with
+ * that query param rather than filtering an already-fetched list, so a card is
+ * never shown as available when the server would have excluded it.
  */
 
-import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-import { SportDiscIcon } from '@/components/mobile/Icons';
-import { Screen, ScreenTitle } from '@/components/mobile/Screen';
-import { Card, EmptyState, ErrorNote, Spinner } from '@/components/mobile/ui';
-import { rupees } from '@/lib/mobile/format';
+import { SportGlyph } from '@/components/mobile/sport-icons';
+import { VenueCard } from '@/components/mobile/sports/venue-card';
+import { fetchSportsCatalog, useSportsCatalog } from '@/components/mobile/sports-catalog-provider';
 import {
-  Brand,
-  DEFAULT_SPORT_COLOR,
-  Radius,
-  Spacing,
-  SportColors,
-  Typography,
-  type SportKey,
-} from '@/lib/mobile/theme';
-import { useApi } from '@/lib/mobile/use-api';
+  AppHeader,
+  Chip,
+  EmptyState,
+  FilterBar,
+  InfoNote,
+  Screen,
+  ScreenScroll,
+  SectionHeader,
+  Skeleton,
+} from '@/components/mobile/ui';
+import {
+  SPORT_LABELS,
+  type SportKind,
+  type Venue,
+} from '@/lib/mobile/constants/sports';
+import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
 
-type HomeSport = {
-  id: string;
-  key: string | null;
-  name: string;
-  courtCount: number;
-  priceFrom: number;
-  bookingsLast30Days: number;
-  imageUrl: string | null;
-};
+const SPORTS: SportKind[] = ['badminton', 'pickleball', 'cricket', 'football'];
+
+/** The filter dimensions the backend understands, in the order the bar shows them. */
+const DIMENSIONS = [
+  { key: 'surface', label: 'Surface' },
+  { key: 'setting', label: 'Setting' },
+  { key: 'climate', label: 'Climate' },
+] as const;
+
+type Filters = Partial<Record<'sport' | 'surface' | 'setting' | 'climate', string>>;
+
+function queryFor(filters: Filters): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) params.set(key, value);
+  }
+  return params.toString();
+}
 
 export default function SportsPage() {
-  const { data, loading, error, refetch } = useApi<{ sports: HomeSport[] }>('/public/home');
-  const sports = data?.sports ?? [];
+  const searchParams = useSearchParams();
+  const { cards: shared, loading: sharedLoading } = useSportsCatalog();
 
-  if (loading && !data) {
-    return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spinner size={28} />
-      </div>
-    );
-  }
+  // A `?sport=` handed over by the Home sport grid is the starting filter.
+  const handedOver = searchParams.get('sport');
+  const [filters, setFilters] = useState<Filters>(
+    handedOver ? { sport: handedOver as SportKind } : {},
+  );
+  const [cards, setCards] = useState<Venue[] | null>(null);
+  // Which filter the cards in hand belong to. `query !== loadedQuery` *is* the
+  // loading state, so there is no separate flag to race with the request.
+  const [loadedQuery, setLoadedQuery] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const query = queryFor(filters);
+  const activeCount = Object.values(filters).filter(Boolean).length;
+
+  // Unfiltered is the shared catalog, already in memory from the provider.
+  useEffect(() => {
+    if (!query) return;
+    let active = true;
+    void (async () => {
+      try {
+        const next = await fetchSportsCatalog(query);
+        if (!active) return;
+        setCards(next);
+        setError(null);
+        setLoadedQuery(query);
+      } catch (cause) {
+        if (!active) return;
+        setError(cause instanceof Error ? cause.message : 'Could not load sports.');
+        setLoadedQuery(query);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [query]);
+
+  const visible = (query ? cards : shared) ?? [];
+  const busy = query ? loadedQuery !== query : sharedLoading;
 
   return (
     <Screen>
-      <ScreenTitle title="Sports" subtitle="Every court open for booking right now." />
-
-      {error ? <ErrorNote message={error} /> : null}
-
-      {sports.length ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
-          {sports.map((sport) => {
-            const tint = SportColors[sport.key as SportKey] ?? DEFAULT_SPORT_COLOR;
-            return (
-              <Link key={sport.id} href="/app/home" style={{ textDecoration: 'none' }}>
-                <Card style={{ display: 'flex', alignItems: 'center', gap: Spacing.md }}>
-                  <span
-                    style={{
-                      width: 44,
-                      height: 44,
-                      flexShrink: 0,
-                      borderRadius: Radius.pill,
-                      background: tint,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                    <SportDiscIcon size={24} color={Brand.onAccent} />
-                  </span>
-
-                  <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ ...Typography.cardTitle, color: Brand.text }}>
-                      {sport.name}
-                    </span>
-                    <span style={{ ...Typography.bodySmall, color: Brand.textSecondary }}>
-                      {sport.courtCount} {sport.courtCount === 1 ? 'court' : 'courts'} available
-                    </span>
-                  </span>
-
-                  <span
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <span style={{ ...Typography.priceSmall, color: Brand.accent }}>
-                      {rupees(sport.priceFrom)}
-                    </span>
-                    <span style={{ ...Typography.micro, color: Brand.textMuted }}>PER SLOT</span>
-                  </span>
-                </Card>
-              </Link>
-            );
-          })}
+      <AppHeader />
+      <ScreenScroll bottomLayer="tabBar" gap={Spacing.md}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
+          <span style={{ ...Typography.screenTitle, color: Brand.text }}>Sports</span>
+          <span style={{ ...Typography.body, color: Brand.textSecondary }}>
+            {visible.length} {visible.length === 1 ? 'court' : 'courts'} across the facility.
+          </span>
         </div>
-      ) : (
-        <EmptyState
-          title="No sports are live yet"
-          body="Courts appear here as soon as they are published in the admin panel."
-          action={{ label: 'Refresh', onPress: refetch }}
+
+        {/* The sport chips: the fastest way into one sport's courts. */}
+        <div style={{ display: 'flex', gap: Spacing.sm, flexWrap: 'wrap' }}>
+          {SPORTS.map((sport) => (
+            <Chip
+              key={sport}
+              label={SPORT_LABELS[sport]}
+              icon={<SportGlyph sport={sport} size={14} color={Brand.accent} />}
+              selected={filters.sport === sport}
+              variant="outline"
+              onPress={() =>
+                setFilters((current) => ({
+                  ...current,
+                  sport: current.sport === sport ? undefined : sport,
+                }))
+              }
+            />
+          ))}
+        </div>
+
+        <FilterBar
+          items={DIMENSIONS.map((dimension) => ({
+            key: dimension.key,
+            label: dimension.label,
+            value: filters[dimension.key],
+          }))}
+          activeCount={activeCount}
+          onSelect={(key) => setFilters((current) => ({ ...current, [key]: undefined }))}
+          onClearAll={() => setFilters({})}
         />
-      )}
+
+        {error ? <InfoNote body={error} tone="danger" title="Could not load sports" /> : null}
+
+        {busy && visible.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
+            <Skeleton height={214} radius={Radius.lg} />
+            <Skeleton height={214} radius={Radius.lg} />
+          </div>
+        ) : null}
+
+        {!busy && visible.length === 0 ? (
+          <EmptyState
+            icon="tennisballOutline"
+            title="No courts match those filters"
+            body="Clear a filter, or try another sport — the facility books badminton, pickleball, cricket and football."
+            actionLabel="Clear filters"
+            onAction={() => setFilters({})}
+          />
+        ) : null}
+
+        {visible.length ? (
+          <SectionHeader
+            title={filters.sport ? SPORT_LABELS[filters.sport as SportKind] : 'All courts'}
+            trailing={
+              <span style={{ ...Typography.caption, color: Brand.textMuted }}>
+                {visible.length} {visible.length === 1 ? 'card' : 'cards'}
+              </span>
+            }
+          />
+        ) : null}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
+          {visible.map((venue) => (
+            <VenueCard key={venue.key} venue={venue} />
+          ))}
+        </div>
+      </ScreenScroll>
     </Screen>
   );
 }

@@ -1,214 +1,126 @@
 'use client';
 
 /**
- * The My Bookings tab.
+ * My Bookings — the web twin of the app `app/(tabs)/bookings.tsx`.
  *
- * A booking belongs to an account, so this is the first screen that needs one:
- * a guest is offered the sign-in rather than shown an error. The read itself is
- * `GET /api/v1/user/bookings`, and the rows are the same `toAppBooking` shape
- * the handset app's booking cards render — date, slot, court and what was paid.
+ * Three statuses, each paged by the server: Upcoming, Ongoing, Past. Ongoing and
+ * upcoming are already cached by the bookings store (the Home card needs them),
+ * and Past loads the first time this tab is opened.
+ *
+ * A booking belongs to an account, so a guest is offered the sign-in rather than
+ * shown an error.
  */
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Screen, ScreenTitle } from '@/components/mobile/Screen';
+import { useBookings } from '@/components/mobile/bookings-store';
+import { BookingCard } from '@/components/mobile/bookings/booking-card';
 import { useSession } from '@/components/mobile/session-provider';
-import { Badge, Card, EmptyState, ErrorNote, Spinner } from '@/components/mobile/ui';
-import { rupees } from '@/lib/mobile/format';
-import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
-import { useApi } from '@/lib/mobile/use-api';
-
-type AppBooking = {
-  key: string;
-  bookingId: string;
-  sport: string;
-  status: string;
-  venue: string;
-  location: string;
-  date: string;
-  time: string;
-  tags: string[];
-  paid: number;
-  detailTitle: string;
-  court: string;
-  duration: string;
-};
-
-type BookingsResponse = {
-  data: AppBooking[];
-  page: number;
-  total: number;
-  hasMore: boolean;
-};
+import {
+  AppHeader,
+  Button,
+  EmptyState,
+  InfoNote,
+  Screen,
+  ScreenScroll,
+  SegmentedTabs,
+  SignInGate,
+  Skeleton,
+} from '@/components/mobile/ui';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { Spacing as Gap } from '@/lib/mobile/theme';
+import type { BookingStatus } from '@/lib/mobile/constants/bookings';
 
 const TABS = [
-  { id: 'upcoming', label: 'Upcoming' },
-  { id: 'past', label: 'Past' },
-] as const;
-
-type TabId = (typeof TABS)[number]['id'];
-
-const STATUS_TONE: Record<string, 'accent' | 'success' | 'neutral' | 'warning'> = {
-  ongoing: 'accent',
-  upcoming: 'success',
-  past: 'neutral',
-  completed: 'neutral',
-};
-
-/** The status switch, shared by this screen's two lists. */
-function StatusTabs({ tab, onChange }: { tab: TabId; onChange: (next: TabId) => void }) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Booking status"
-      style={{
-        display: 'flex',
-        gap: Spacing.xxs,
-        padding: Spacing.xxs,
-        borderRadius: Radius.pill,
-        background: Brand.highlightWash,
-        border: `1px solid ${Brand.cardBorder}`,
-      }}>
-      {TABS.map((option) => {
-        const selected = tab === option.id;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            className="mobile-press"
-            onClick={() => onChange(option.id)}
-            style={{
-              flex: 1,
-              padding: `${Spacing.sm}px 0`,
-              borderRadius: Radius.pill,
-              border: 'none',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              ...Typography.label,
-              background: selected ? Brand.accent : 'transparent',
-              color: selected ? Brand.onAccent : Brand.textSecondary,
-            }}>
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+  { key: 'upcoming' as BookingStatus, label: 'Upcoming', icon: 'calendarOutline' as const },
+  { key: 'ongoing' as BookingStatus, label: 'Ongoing', icon: 'timeOutline' as const },
+  { key: 'past' as BookingStatus, label: 'Past', icon: 'checkmarkCircleOutline' as const },
+];
 
 export default function BookingsPage() {
-  const router = useRouter();
-  const { user, isGuest } = useSession();
-  const [tab, setTab] = useState<TabId>('upcoming');
-  // Signed out, there is nothing to read: the endpoint is per-account.
-  const { data, loading, error, refetch } = useApi<BookingsResponse>(
-    user ? `/user/bookings?status=${tab}` : null,
-  );
+  const pathname = usePathname();
+  const { isGuest } = useSession();
+  const { list, refresh, loadMore, error } = useBookings();
+  const [status, setStatus] = useState<BookingStatus>('upcoming');
 
-  const bookings = data?.data ?? [];
+  // The past tab is the only one nobody has read yet at first paint.
+  const opened = useRef<string | null>(null);
+  useEffect(() => {
+    if (opened.current === pathname) return;
+    opened.current = pathname;
+    void refresh();
+  }, [pathname, refresh]);
+
+  if (isGuest) {
+    return (
+      <Screen>
+        <AppHeader />
+        <SignInGate
+          icon="calendarOutline"
+          title="Sign in to see your bookings"
+          body="Your slots live on your account, so sign in with your phone or email to see and manage them."
+        />
+      </Screen>
+    );
+  }
+
+  const current = list(status);
 
   return (
     <Screen>
-      <ScreenTitle
-        title="My Bookings"
-        subtitle="Your slots, past and upcoming."
-        action={
-          user ? (
-            <span style={{ ...Typography.caption, color: Brand.textMuted }}>
-              {data?.total ?? 0} total
-            </span>
-          ) : undefined
-        }
-      />
+      <AppHeader />
+      <ScreenScroll bottomLayer="tabBar" gap={Gap.md}>
+        <SegmentedTabs options={TABS} value={status} onChange={setStatus} />
 
-      {!user ? (
-        <EmptyState
-          title={isGuest ? "You're browsing as a guest" : 'Sign in to see your bookings'}
-          body="Bookings are tied to your account, so sign in with your phone or email to see and manage them."
-          action={{ label: 'Sign in', onPress: () => router.push('/app') }}
-        />
-      ) : (
-        <>
-          <StatusTabs tab={tab} onChange={setTab} />
+        {error ? <InfoNote body={error} tone="danger" title="Could not load bookings" /> : null}
 
-          {error ? <ErrorNote message={error} /> : null}
+        {current.loading && current.items.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: Gap.sm }}>
+            <Skeleton height={132} radius={14} />
+            <Skeleton height={132} radius={14} />
+          </div>
+        ) : null}
 
-          {loading && !data ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: Spacing.xl }}>
-              <Spinner size={26} />
-            </div>
-          ) : bookings.length ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
-              {bookings.map((booking) => (
-                <Card
-                  key={booking.key}
-                  style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: Spacing.sm,
-                    }}>
-                    <span style={{ ...Typography.cardTitle, color: Brand.text }}>
-                      {booking.detailTitle}
-                    </span>
-                    <Badge label={booking.status} tone={STATUS_TONE[booking.status] ?? 'neutral'} />
-                  </div>
+        {!current.loading && current.items.length === 0 ? (
+          <EmptyState
+            icon="calendarOutline"
+            title={
+              status === 'upcoming'
+                ? 'No upcoming bookings'
+                : status === 'ongoing'
+                  ? 'Nothing on right now'
+                  : 'No past bookings yet'
+            }
+            body={
+              status === 'past'
+                ? 'Once you have played your first slot it will be listed here.'
+                : 'Book a court from the Sports tab and it will appear here.'
+            }
+            actionLabel={status === 'past' ? 'Refresh' : undefined}
+            onAction={status === 'past' ? () => void refresh(status) : undefined}
+          />
+        ) : null}
 
-                  <span style={{ ...Typography.body, color: Brand.textSecondary }}>
-                    {booking.date} · {booking.time}
-                  </span>
-                  <span style={{ ...Typography.bodySmall, color: Brand.textMuted }}>
-                    {booking.location || booking.venue} · {booking.duration}
-                  </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Gap.sm }}>
+          {current.items.map((booking) => (
+            <BookingCard key={booking.key} booking={booking} />
+          ))}
+        </div>
 
-                  {booking.tags?.length ? (
-                    <div style={{ display: 'flex', gap: Spacing.sm, flexWrap: 'wrap' }}>
-                      {booking.tags.map((tag) => (
-                        <Badge key={tag} label={tag} tone="neutral" />
-                      ))}
-                    </div>
-                  ) : null}
+        {current.hasMore ? (
+          <Button
+            label={current.loading ? 'Loading…' : 'Load older bookings'}
+            variant="secondary"
+            size="md"
+            fullWidth
+            loading={current.loading}
+            onPress={() => void loadMore(status)}
+          />
+        ) : null}
 
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingTop: Spacing.sm,
-                      borderTop: `1px solid ${Brand.divider}`,
-                    }}>
-                    <span style={{ ...Typography.caption, color: Brand.textMuted }}>
-                      {booking.bookingId}
-                    </span>
-                    <span style={{ ...Typography.priceSmall, color: Brand.accent }}>
-                      {rupees(booking.paid)}
-                    </span>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title={tab === 'upcoming' ? 'No upcoming bookings' : 'No past bookings yet'}
-              body={
-                tab === 'upcoming'
-                  ? 'Book a court from the Sports tab and it will appear here.'
-                  : 'Once you have played your first slot it will be listed here.'
-              }
-              action={
-                tab === 'upcoming'
-                  ? { label: 'Browse sports', onPress: () => router.push('/app/sports') }
-                  : { label: 'Refresh', onPress: refetch }
-              }
-            />
-          )}
-        </>
-      )}
+        <div style={{ height: Gap.xs }} />
+      </ScreenScroll>
     </Screen>
   );
 }

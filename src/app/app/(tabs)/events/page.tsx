@@ -1,165 +1,87 @@
 'use client';
 
 /**
- * The Events tab.
+ * The Events tab — the web twin of the app `app/(tabs)/events.tsx`.
  *
- * Two rails on one screen, the way the Expo app presents them: events and
- * tournaments are separate resources with separate capacities, but a player
- * looking for "what is on" wants to see both. Both reads are public, so a guest
- * gets the same list a member does.
+ * Two rails on one screen: events and tournaments are separate resources with
+ * separate capacities, but a player looking for "what is on" wants to see both.
+ * Both reads are public, so a guest gets the same list a member does.
  */
 
-import { Screen, ScreenTitle } from '@/components/mobile/Screen';
-import { Badge, Card, EmptyState, ErrorNote, Spinner } from '@/components/mobile/ui';
-import { formatDateRange, rupees } from '@/lib/mobile/format';
-import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
+import { useState } from 'react';
+
+import { ListingCard, type Listing } from '@/components/mobile/events/listing-card';
+import {
+  AppHeader,
+  EmptyState,
+  InfoNote,
+  Screen,
+  ScreenScroll,
+  SegmentedTabs,
+  Skeleton,
+} from '@/components/mobile/ui';
 import { useApi } from '@/lib/mobile/use-api';
+import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
 
-/** The fields both rails share — `toPublicEvent` and `toPublicTournament`. */
-type Listing = {
-  id: string;
-  title: string;
-  category?: string | null;
-  description?: string | null;
-  sport?: string | null;
-  venue?: string | null;
-  address?: string | null;
-  capacity?: number | null;
-  taken?: number | null;
-  entryFee?: number | null;
-  feeUnit?: string | null;
-  startsOn?: string | null;
-  endsOn?: string | null;
-  registrationClosesAt?: string | null;
-  status?: string | null;
-  images?: string[];
-};
+type Tab = 'events' | 'tournaments';
 
-function ListingCard({ listing }: { listing: Listing }) {
-  const capacity = listing.capacity ?? 0;
-  const taken = listing.taken ?? 0;
-  const spotsLeft = Math.max(0, capacity - taken);
-  const full = capacity > 0 && spotsLeft === 0;
-  const closed = listing.status === 'registration_closed';
-
-  return (
-    <Card style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm, padding: 0, overflow: 'hidden' }}>
-      {listing.images?.length ? (
-        <div
-          style={{
-            height: 132,
-            backgroundImage: `url(${listing.images[0]})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
-      ) : null}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm, padding: Spacing.md }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' }}>
-          {listing.category ? <Badge label={listing.category} tone="accent" /> : null}
-          {full ? <Badge label="Full" tone="danger" /> : null}
-          {!full && closed ? <Badge label="Registration closed" tone="warning" /> : null}
-          {!full && !closed && spotsLeft > 0 ? (
-            <Badge label={`${spotsLeft} spots left`} tone="success" />
-          ) : null}
-        </div>
-
-        <span style={{ ...Typography.cardTitle, color: Brand.text }}>{listing.title}</span>
-
-        <span style={{ ...Typography.bodySmall, color: Brand.textSecondary }}>
-          {formatDateRange(listing.startsOn ?? null, listing.endsOn ?? null)}
-          {listing.venue ? ` · ${listing.venue}` : ''}
-        </span>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: Spacing.md,
-            paddingTop: Spacing.sm,
-            borderTop: `1px solid ${Brand.divider}`,
-          }}>
-          <span style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ ...Typography.priceSmall, color: Brand.accent }}>
-              {rupees(listing.entryFee ?? 0)}
-            </span>
-            <span style={{ ...Typography.micro, color: Brand.textMuted }}>
-              {(listing.feeUnit ?? 'entry').toUpperCase()}
-            </span>
-          </span>
-          <span
-            style={{
-              ...Typography.label,
-              color: Brand.textSecondary,
-              padding: `${Spacing.xs}px ${Spacing.sm}px`,
-              borderRadius: Radius.pill,
-              border: `1px solid ${Brand.cardBorder}`,
-            }}>
-            Registration closes {formatDateRange(listing.registrationClosesAt ?? null, null)}
-          </span>
-        </div>
-      </div>
-    </Card>
-  );
-}
+const TABS = [
+  { key: 'events' as Tab, label: 'Events', icon: 'trophyOutline' as const },
+  { key: 'tournaments' as Tab, label: 'Tournaments', icon: 'trophy' as const },
+];
 
 export default function EventsPage() {
+  const [tab, setTab] = useState<Tab>('events');
   const events = useApi<Listing[]>('/public/events');
   const tournaments = useApi<Listing[]>('/public/tournaments');
-  const loading = events.loading || tournaments.loading;
-  const nothing =
-    !loading &&
-    !events.data?.length &&
-    !tournaments.data?.length;
 
-  if (loading && !events.data && !tournaments.data) {
-    return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spinner size={28} />
-      </div>
-    );
-  }
+  const active = tab === 'events' ? events : tournaments;
+  const items = active.data ?? [];
 
   return (
     <Screen>
-      <ScreenTitle title="Events" subtitle="What's on at GameOn — and how to get in." />
+      <AppHeader />
+      <ScreenScroll bottomLayer="tabBar" gap={Spacing.md}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
+          <span style={{ ...Typography.screenTitle, color: Brand.text }}>Events</span>
+          <span style={{ ...Typography.body, color: Brand.textSecondary }}>
+            What&apos;s on at GameOn — and how to get in.
+          </span>
+        </div>
 
-      {events.error ? <ErrorNote message={events.error} /> : null}
-      {tournaments.error ? <ErrorNote message={tournaments.error} /> : null}
+        <SegmentedTabs options={TABS} value={tab} onChange={setTab} />
 
-      {events.data?.length ? (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
-          <h2 style={{ ...Typography.sectionTitle, color: Brand.text, margin: 0 }}>Upcoming</h2>
-          {events.data.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+        {active.error ? (
+          <InfoNote
+            body={active.error}
+            tone="danger"
+            title={tab === 'events' ? 'Could not load events' : 'Could not load tournaments'}
+          />
+        ) : null}
+
+        {active.loading && items.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
+            <Skeleton height={240} radius={Radius.lg} />
+            <Skeleton height={240} radius={Radius.lg} />
+          </div>
+        ) : null}
+
+        {!active.loading && items.length === 0 ? (
+          <EmptyState
+            icon="trophyOutline"
+            title={tab === 'events' ? 'Nothing scheduled yet' : 'No tournaments open yet'}
+            body="Published events appear here as soon as they open for entry."
+            actionLabel="Refresh"
+            onAction={() => void active.refetch()}
+          />
+        ) : null}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
+          {items.map((listing) => (
+            <ListingCard key={listing.id} listing={listing} kind={tab === 'events' ? 'event' : 'tournament'} />
           ))}
-        </section>
-      ) : null}
-
-      {tournaments.data?.length ? (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
-          <h2 style={{ ...Typography.sectionTitle, color: Brand.text, margin: 0 }}>Tournaments</h2>
-          {tournaments.data.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </section>
-      ) : null}
-
-      {nothing ? (
-        <EmptyState
-          title="Nothing is scheduled yet"
-          body="Published events and tournaments show up here as soon as they open."
-          action={{
-            label: 'Refresh',
-            onPress: () => {
-              events.refetch();
-              tournaments.refetch();
-            },
-          }}
-        />
-      ) : null}
+        </div>
+      </ScreenScroll>
     </Screen>
   );
 }

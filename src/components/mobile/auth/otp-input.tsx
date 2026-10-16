@@ -1,53 +1,35 @@
 'use client';
 
 /**
- * The app's form fields.
+ * The six-digit SMS code field, and the password field that sits beside it on
+ * the auth screens.
  *
- * The wrapper owns the height and the border, and the input inside it is a
- * plain, naturally sized text box — the same rule the handset build settled on,
- * where constraining an input's own height was the cause of every clipping bug.
- * `mobile.css` gives the wrapper its focus ring via `:focus-within`.
+ * Digits are collected into one string and drawn across `length` boxes: typing
+ * advances, backspace retreats, and pasting a code from the SMS fills every box
+ * at once. The handset build gets the same behaviour from one hidden input; a
+ * browser makes per-box inputs the simpler shape, because each box can take
+ * focus on its own.
  */
 
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 import { Brand, InputText, Radius, Spacing, Typography } from '@/lib/mobile/theme';
+import { Ion, type IonName } from '../ui';
 
-type SharedFieldProps = {
-  label?: string;
-  /** A reason the value was rejected, if one is known. */
-  error?: string | null;
-  /** Guidance shown under the field while the value is still accepted. */
-  hint?: string;
-  disabled?: boolean;
-};
-
-type TextFieldProps = SharedFieldProps & {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  type?: 'text' | 'email' | 'tel';
-  inputMode?: 'text' | 'email' | 'tel' | 'numeric' | 'decimal';
-  autoComplete?: string;
-  maxLength?: number;
-  /** Static text shown before the input — the `+91` dial code, for a phone field. */
-  prefix?: string;
-  autoFocus?: boolean;
-  name?: string;
-  /** Fired on Enter, so a single-field form submits from the keyboard. */
-  onEnter?: () => void;
-  style?: CSSProperties;
-};
-
+/** The bordered surface both fields sit on, matching `ui/text-field.tsx`. */
 function FieldShell({
   label,
   error,
   hint,
-  disabled,
   children,
-}: SharedFieldProps & { children: ReactNode }) {
+}: {
+  label?: string;
+  error?: string | null;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.sm, width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.xs, width: '100%' }}>
       {label ? (
         <span style={{ ...Typography.label, color: Brand.textSecondary }}>{label}</span>
       ) : null}
@@ -56,13 +38,12 @@ function FieldShell({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: Spacing.sm,
           minHeight: 50,
-          padding: `0 ${Spacing.md}px`,
           borderRadius: Radius.md,
           border: `1px solid ${error ? Brand.danger : Brand.cardBorder}`,
-          background: Brand.highlightWash,
-          opacity: disabled ? 0.6 : 1,
+          backgroundColor: Brand.backgroundElement,
+          paddingLeft: Spacing.md,
+          paddingRight: Spacing.md,
         }}>
         {children}
       </div>
@@ -75,59 +56,7 @@ function FieldShell({
   );
 }
 
-export function TextField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-  inputMode,
-  autoComplete,
-  maxLength,
-  prefix,
-  error,
-  hint,
-  disabled,
-  autoFocus,
-  name,
-  onEnter,
-  style,
-}: TextFieldProps) {
-  return (
-    <FieldShell label={label} error={error} hint={hint} disabled={disabled}>
-      {prefix ? (
-        <span style={{ ...InputText.md, color: Brand.textSecondary }}>{prefix}</span>
-      ) : null}
-      <input
-        className="mobile-input"
-        name={name}
-        type={type}
-        inputMode={inputMode}
-        autoComplete={autoComplete}
-        maxLength={maxLength}
-        placeholder={placeholder}
-        value={value}
-        disabled={disabled}
-        autoFocus={autoFocus}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && onEnter) onEnter();
-        }}
-        style={{ ...InputText.md, flex: 1, minWidth: 0, color: Brand.text, ...style }}
-      />
-    </FieldShell>
-  );
-}
-
-/**
- * The six-digit SMS code field.
- *
- * Digits are collected into one string and drawn across `length` boxes: typing
- * advances, backspace retreats, and pasting a code from the SMS notification
- * fills every box at once — the same behaviour the handset build gets from its
- * single hidden input.
- */
-export function CodeField({
+export function OtpInput({
   value,
   onChange,
   length = 6,
@@ -135,11 +64,14 @@ export function CodeField({
   error,
   hint,
   label,
-}: SharedFieldProps & {
+}: {
   value: string;
   onChange: (value: string) => void;
   length?: number;
   autoFocus?: boolean;
+  error?: string | null;
+  hint?: string;
+  label?: string;
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const digits = Array.from({ length }, (_, index) => value[index] ?? '');
@@ -156,6 +88,17 @@ export function CodeField({
     focusAt(code.length);
   };
 
+  const boxStyle = (filled: boolean): CSSProperties => ({
+    ...InputText.lg,
+    width: 46,
+    height: 54,
+    textAlign: 'center',
+    color: Brand.text,
+    borderRadius: Radius.md,
+    border: `1px solid ${filled ? Brand.accentBorder : Brand.cardBorder}`,
+    background: filled ? Brand.accentGlass : Brand.backgroundElement,
+  });
+
   return (
     <FieldShell label={label} error={error} hint={hint}>
       <div
@@ -163,7 +106,8 @@ export function CodeField({
           display: 'flex',
           gap: Spacing.sm,
           width: '100%',
-          padding: `${Spacing.sm}px 0`,
+          paddingTop: Spacing.sm,
+          paddingBottom: Spacing.sm,
           justifyContent: 'space-between',
         }}>
         {digits.map((digit, index) => (
@@ -201,22 +145,14 @@ export function CodeField({
               event.preventDefault();
               settle(`${value.slice(0, index)}${event.clipboardData.getData('text')}`);
             }}
-            style={{
-              ...InputText.lg,
-              width: 46,
-              height: 54,
-              textAlign: 'center',
-              color: Brand.text,
-              borderRadius: Radius.md,
-              border: `1px solid ${digit ? Brand.accentBorder : Brand.cardBorder}`,
-              background: digit ? Brand.accentGlass : Brand.highlightWash,
-            }}
+            style={boxStyle(Boolean(digit))}
           />
         ))}
       </div>
     </FieldShell>
   );
 }
+
 /** A password field with a show/hide toggle, so a mistyped password is visible. */
 export function PasswordField({
   label,
@@ -226,29 +162,42 @@ export function PasswordField({
   autoComplete = 'current-password',
   error,
   hint,
-  disabled,
   onEnter,
-}: Omit<TextFieldProps, 'type' | 'inputMode' | 'prefix'>) {
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  autoComplete?: string;
+  error?: string | null;
+  hint?: string;
+  onEnter?: () => void;
+}) {
   const [revealed, setRevealed] = useState(false);
+
   return (
-    <FieldShell label={label} error={error} hint={hint} disabled={disabled}>
+    <FieldShell label={label} error={error} hint={hint}>
       <input
         className="mobile-input"
         type={revealed ? 'text' : 'password'}
         autoComplete={autoComplete}
         placeholder={placeholder}
         value={value}
-        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && onEnter) onEnter();
         }}
-        style={{ ...InputText.md, flex: 1, minWidth: 0, color: Brand.text }}
+        style={{
+          ...InputText.md,
+          color: Brand.text,
+          paddingTop: Spacing.sm,
+          paddingBottom: Spacing.sm,
+        }}
       />
       <button
         type="button"
         onClick={() => setRevealed((current) => !current)}
-        className="mobile-link"
+        aria-label={revealed ? 'Hide password' : 'Show password'}
         style={{
           border: 'none',
           background: 'none',
@@ -262,4 +211,9 @@ export function PasswordField({
       </button>
     </FieldShell>
   );
+}
+
+/** A leading glyph in the muted tone the auth fields use. */
+export function FieldIcon({ name }: { name: IonName }) {
+  return <Ion name={name} size={15} color={Brand.textSecondary} />;
 }

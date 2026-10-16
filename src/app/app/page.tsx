@@ -9,16 +9,17 @@
  * offered plainly rather than hidden behind a "skip" link.
  */
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Spacing, Typography, Brand } from '@/lib/mobile/theme';
-import { AuthBackdrop } from '@/components/mobile/AuthBackdrop';
-import { AuthCard } from '@/components/mobile/AuthCard';
-import { AuthWait } from '@/components/mobile/AuthWait';
-import { BrandLogo } from '@/components/mobile/BrandLogo';
-import { ShieldCheckIcon } from '@/components/mobile/Icons';
+
+import { AuthBackdrop } from '@/components/mobile/auth/auth-backdrop';
+import { AuthCard } from '@/components/mobile/auth/auth-card';
+import { AuthWait } from '@/components/mobile/auth/auth-wait';
+import { BrandLogo } from '@/components/mobile/auth/brand-logo';
+import { ShieldCheckIcon } from '@/components/mobile/auth/icons';
 import { useSession } from '@/components/mobile/session-provider';
+import { TextLink } from '@/components/mobile/ui';
 import { useRedirectWhenSignedIn } from '@/components/mobile/use-auth-guard';
+import { Brand, Spacing, Typography } from '@/lib/mobile/theme';
 
 export default function AppSignInPage() {
   // A signed-in player has no business on a login screen.
@@ -60,15 +61,34 @@ export default function AppSignInPage() {
             textAlign: 'center',
           }}>
           <BrandLogo />
-          <h1 style={{ ...Typography.display, color: Brand.text, margin: 0, fontSize: 27, lineHeight: '34px' }}>
+          <h1
+            style={{
+              ...Typography.display,
+              color: Brand.text,
+              margin: 0,
+              fontSize: 27,
+              lineHeight: '34px',
+            }}>
             Welcome to <span style={{ color: Brand.accent }}>GameOn</span>
           </h1>
-          <p style={{ ...Typography.body, color: Brand.textSecondary, margin: 0, maxWidth: 300 }}>
+          <p
+            style={{
+              ...Typography.body,
+              color: Brand.textSecondary,
+              margin: 0,
+              maxWidth: 300,
+            }}>
             Book your favorite sports, events and facilities anytime, anywhere.
           </p>
         </header>
 
-        <div style={{ marginTop: Spacing.five, display: 'flex', flexDirection: 'column', gap: Spacing.two }}>
+        <div
+          style={{
+            marginTop: Spacing.five,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: Spacing.two,
+          }}>
           <div style={{ height: 1, background: Brand.divider }} />
           <span
             style={{
@@ -81,7 +101,13 @@ export default function AppSignInPage() {
           </span>
         </div>
 
-        <div style={{ marginTop: Spacing.four, display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
+        <div
+          style={{
+            marginTop: Spacing.four,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: Spacing.md,
+          }}>
           <AuthCard
             icon="phone"
             title="Continue with Phone"
@@ -119,19 +145,9 @@ export default function AppSignInPage() {
             <span style={{ ...Typography.body }}>We keep your data safe and secure.</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <Link
-              href="/privacy"
-              className="mobile-link"
-              style={{ color: Brand.accent, fontSize: 13, fontWeight: 600 }}>
-              Privacy Policy
-            </Link>
+            <TextLink label="Privacy Policy" size="sm" onPress={() => router.push('/privacy')} />
             <span style={{ color: Brand.textSecondary, fontSize: 13 }}>|</span>
-            <Link
-              href="/terms"
-              className="mobile-link"
-              style={{ color: Brand.accent, fontSize: 13, fontWeight: 600 }}>
-              Terms &amp; Conditions
-            </Link>
+            <TextLink label="Terms & Conditions" size="sm" onPress={() => router.push('/terms')} />
           </div>
         </footer>
       </div>

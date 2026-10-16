@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * One route into the app on the sign-in screen.
+ * One route into the app on the sign-in screen. The web twin of the app
+ * `components/auth/auth-card.tsx`.
  *
  * The three routes used to be identical cards, each with a solid accent tile,
  * separated by "OR" dividers — five elements of the same weight and nothing
@@ -12,8 +13,8 @@
 import type { ReactNode } from 'react';
 
 import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
-import { ChevronRightIcon, MailIcon, PhoneIcon, UserIcon } from './Icons';
-import { Badge, PressableScale } from './ui';
+import { Badge, PressableScale } from '../ui';
+import { ChevronRightIcon, MailIcon, PhoneIcon, UserIcon } from './icons';
 
 export type AuthCardIcon = 'phone' | 'email' | 'user';
 
@@ -26,14 +27,13 @@ export type AuthCardEmphasis = 'primary' | 'default';
 const TILE = 44;
 
 function CardIcon({ kind, color }: { kind: AuthCardIcon; color: string }): ReactNode {
-  const props = { size: 22, color };
   switch (kind) {
     case 'phone':
-      return <PhoneIcon {...props} />;
+      return <PhoneIcon size={22} color={color} />;
     case 'email':
-      return <MailIcon {...props} />;
+      return <MailIcon size={22} color={color} />;
     case 'user':
-      return <UserIcon {...props} />;
+      return <UserIcon size={22} color={color} />;
   }
 }
 
@@ -60,11 +60,16 @@ export function AuthCard({
       onPress={onPress}
       label={`${title}. ${subtitle}`}
       style={{
+        display: 'flex',
+        alignItems: 'center',
         gap: Spacing.md,
+        width: '100%',
         borderRadius: Radius.lg,
         border: `1px solid ${primary ? Brand.accent : Brand.cardBorder}`,
         background: primary ? Brand.accentGlass : Brand.card,
         padding: Spacing.md,
+        fontFamily: 'inherit',
+        textAlign: 'left',
       }}>
       <span
         style={{
@@ -72,7 +77,7 @@ export function AuthCard({
           height: TILE,
           flexShrink: 0,
           borderRadius: Radius.md,
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           // The one solid accent block on the screen.
@@ -81,7 +86,14 @@ export function AuthCard({
         <CardIcon kind={icon} color={primary ? Brand.onAccent : Brand.accent} />
       </span>
 
-      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: Spacing.xxs }}>
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: Spacing.xxs,
+        }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: Spacing.sm }}>
           <span style={{ ...Typography.cardTitle, color: Brand.text }}>{title}</span>
           {tag ? <Badge label={tag} tone="accent" /> : null}

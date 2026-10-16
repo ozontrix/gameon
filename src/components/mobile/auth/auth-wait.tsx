@@ -1,6 +1,4 @@
-import { Brand, Spacing } from '@/lib/mobile/theme';
-import { BrandLogo } from './BrandLogo';
-import { Spinner } from './ui';
+'use client';
 
 /**
  * What the auth screens show while the stored session is still being read.
@@ -9,6 +7,11 @@ import { Spinner } from './ui';
  * redirect to the dashboard fires, which reads as if the player had been signed
  * out.
  */
+
+import { Brand, Spacing, Typography } from '@/lib/mobile/theme';
+import { Spinner } from '../ui';
+import { BrandLogo } from './brand-logo';
+
 export function AuthWait() {
   return (
     <div
@@ -19,12 +22,14 @@ export function AuthWait() {
         alignItems: 'center',
         justifyContent: 'center',
         gap: Spacing.lg,
-        background: Brand.background,
+        backgroundColor: Brand.background,
         minHeight: '100%',
       }}>
       <BrandLogo />
       <Spinner />
-      <span style={{ color: Brand.textMuted, fontSize: 12 }}>Restoring your session…</span>
+      <span style={{ ...Typography.caption, color: Brand.textMuted }}>
+        Restoring your session…
+      </span>
     </div>
   );
 }

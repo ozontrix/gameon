@@ -3,22 +3,30 @@
 /**
  * Phone (SMS OTP) sign-in — the web twin of `app/phone-login.tsx`.
  *
- * Two steps in one screen: the ten digits, then the six the SMS carries. The
- * code is verified by Firebase, and the ID token it issues is what the GameOn
- * backend exchanges for a renewable phone session — the number is never taken
- * on trust from this screen.
+ * Two steps in one screen: the ten digits (with an optional referral code, which
+ * the backend only applies to a brand-new account), then the six the SMS
+ * carries. The code is verified by Firebase, and the ID token it issues is what
+ * the GameOn backend exchanges for a renewable phone session — the number is
+ * never taken on trust from this screen.
  */
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { AuthBackdrop } from '@/components/mobile/AuthBackdrop';
-import { BrandLogo } from '@/components/mobile/BrandLogo';
-import { Button } from '@/components/mobile/Button';
+import { AuthBackdrop } from '@/components/mobile/auth/auth-backdrop';
+import { OtpInput } from '@/components/mobile/auth/otp-input';
 import { useSession } from '@/components/mobile/session-provider';
-import { CodeField, TextField } from '@/components/mobile/TextField';
-import { TopBar } from '@/components/mobile/TopBar';
-import { Card, ErrorNote, Spinner, TextLink } from '@/components/mobile/ui';
+import {
+  AppHeader,
+  Button,
+  Card,
+  InfoNote,
+  Screen,
+  ScreenScroll,
+  Spinner,
+  TextField,
+  TextLink,
+} from '@/components/mobile/ui';
 import { api, ApiError } from '@/lib/mobile/api-client';
 import { sessionUserFromPhone } from '@/lib/mobile/identity';
 import { adoptPhoneSession, type ExchangeResponse } from '@/lib/mobile/phone-session';
@@ -29,6 +37,7 @@ import {
   resetPhoneAuth,
   sendPhoneOtp,
 } from '@/lib/mobile/phone-auth';
+import { isUsableReferralCode } from '@/lib/mobile/referral';
 import { Brand, Spacing, Typography } from '@/lib/mobile/theme';
 
 /** How long the Resend link stays quiet after a code is sent. */
@@ -40,6 +49,7 @@ export default function PhoneLoginPage() {
 
   const [step, setStep] = useState<'number' | 'code'>('number');
   const [number, setNumber] = useState('');
+  const [referral, setReferral] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +66,8 @@ export default function PhoneLoginPage() {
   useEffect(() => () => resetPhoneAuth(), []);
 
   const digits = number.replace(/\D/g, '').slice(0, 10);
+  const referralValid = !referral || isUsableReferralCode(referral);
 
-  /** Turns any failure into the one line the screen shows. */
   const describe = (thrown: unknown) =>
     thrown instanceof PhoneAuthError || thrown instanceof ApiError
       ? thrown.message
@@ -73,7 +83,6 @@ export default function PhoneLoginPage() {
       setSecondsLeft(RESEND_SECONDS);
     } catch (thrown) {
       setError(describe(thrown));
-    } finally {
       setBusy(false);
     }
   };
@@ -84,9 +93,11 @@ export default function PhoneLoginPage() {
     try {
       const firebaseUser = await confirmPhoneOtp(code);
       // The backend verifies the ID token and mints the session; only then is
-      // the number treated as proved.
+      // the number treated as proved. The referral code is read only when it
+      // creates the account, so a returning player is never re-attributed.
       const exchanged = (await api.post('/auth/exchange', {
         firebaseToken: firebaseUser.idToken,
+        ...(referral ? { referralCode: referral } : {}),
       })) as ExchangeResponse;
       await adoptPhoneSession(exchanged);
       signIn(sessionUserFromPhone(firebaseUser));
@@ -106,71 +117,71 @@ export default function PhoneLoginPage() {
   };
 
   return (
-    <div style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+    <Screen>
       <AuthBackdrop />
+      <AppHeader variant="back" title="Phone Login" showLocation={false} showBell={false} />
 
-      <div
-        className="mobile-scroll"
-        style={{
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: Spacing.lg,
-          minHeight: '100%',
-          padding: Spacing.four,
-          paddingTop: `calc(env(safe-area-inset-top, 0px) + ${Spacing.md}px)`,
-          paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${Spacing.five}px)`,
-        }}>
-        <TopBar title="Phone sign-in" subtitle="Verify your mobile number" />
-
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <BrandLogo />
+      <ScreenScroll>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
+          <span style={{ ...Typography.screenTitle, color: Brand.text }}>
+            {step === 'number' ? 'What is your mobile number?' : 'Enter the 6-digit code'}
+          </span>
+          <span style={{ ...Typography.body, color: Brand.textSecondary }}>
+            {step === 'number'
+              ? "We'll text you a one-time password to verify it."
+              : `Sent to ${maskPhoneNumber(digits)}. It may take a minute to arrive.`}
+          </span>
         </div>
 
         <Card style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.xxs }}>
-            <span style={{ ...Typography.blockTitle, color: Brand.text }}>
-              {step === 'number' ? 'What is your mobile number?' : 'Enter the 6-digit code'}
-            </span>
-            <span style={{ ...Typography.bodySmall, color: Brand.textSecondary }}>
-              {step === 'number'
-                ? "We'll text you a one-time password to verify it."
-                : `Sent to ${maskPhoneNumber(digits)}. It may take a minute to arrive.`}
-            </span>
-          </div>
-
           {step === 'number' ? (
-            <TextField
-              label="Mobile number"
-              prefix="+91"
-              value={number}
-              onChange={(value) => setNumber(value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="98765 43210"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel-national"
-              autoFocus
-              onEnter={() => {
-                if (digits.length === 10 && !busy) void send();
-              }}
-            />
+            <>
+              <TextField
+                label="Mobile number"
+                prefix="+91"
+                value={number}
+                onChange={(value) => setNumber(value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="98765 43210"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                autoFocus
+                onEnter={() => {
+                  if (digits.length === 10 && referralValid && !busy) void send();
+                }}
+              />
+              <TextField
+                label="Referral code (optional)"
+                value={referral}
+                onChange={(value) =>
+                  setReferral(value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12))
+                }
+                placeholder="A friend's code"
+                error={referralValid ? null : 'A code is at least 6 characters.'}
+                hint="Applied only if this number is new to GameOn."
+              />
+            </>
           ) : (
-            <CodeField label="One-time password" value={code} onChange={setCode} autoFocus />
+            <OtpInput label="One-time password" value={code} onChange={setCode} autoFocus />
           )}
 
-          {error ? <ErrorNote message={error} /> : null}
+          {error ? <InfoNote body={error} tone="danger" title="Could not sign you in" /> : null}
 
           {step === 'number' ? (
             <Button
               label="Send OTP"
+              size="md"
+              fullWidth
               onPress={() => void send()}
               loading={busy}
-              disabled={digits.length !== 10}
+              disabled={digits.length !== 10 || !referralValid}
             />
           ) : (
             <>
               <Button
                 label="Verify & Continue"
+                size="md"
+                fullWidth
                 onPress={() => void verify()}
                 loading={busy}
                 disabled={code.length !== 6}
@@ -207,14 +218,13 @@ export default function PhoneLoginPage() {
             gap: Spacing.sm,
             alignItems: 'center',
             justifyContent: 'center',
-            textAlign: 'center',
             color: Brand.textMuted,
             ...Typography.caption,
           }}>
           {busy ? <Spinner size={16} /> : null}
           <span>Protected by Google reCAPTCHA. Your number is never shared.</span>
         </div>
-      </div>
-    </div>
+      </ScreenScroll>
+    </Screen>
   );
 }

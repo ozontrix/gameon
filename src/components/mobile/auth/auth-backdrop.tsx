@@ -1,10 +1,14 @@
+'use client';
+
 /**
- * The floodlit-stadium backdrop behind the auth screens.
+ * The floodlit-stadium backdrop behind the auth screens. The web twin of the app
+ * `components/auth/auth-backdrop.tsx`.
  *
  * Its gradient stops are illustration shading rather than semantic colours, so
  * they stay local rather than going into `theme.ts` — the same rule the handset
  * build follows.
  */
+
 export function AuthBackdrop() {
   return (
     <div

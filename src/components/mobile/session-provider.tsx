@@ -16,18 +16,12 @@
  */
 
 import type { Session } from '@supabase/supabase-js';
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { api } from '@/lib/mobile/api-client';
 import { signOutOfSupabase } from '@/lib/mobile/email-auth';
 import { sessionUserFromSupabase, type SessionUser } from '@/lib/mobile/identity';
+import { fetchMyProfile, type Profile } from '@/lib/mobile/profiles';
 import {
   clearPhoneSession,
   hasPhoneSession,
@@ -55,6 +49,14 @@ type SessionValue = {
    * so a signed-in player never sees the login screen on a cold start.
    */
   restoring: boolean;
+  /** The player's row in `public.profiles`. */
+  profile: Profile | null;
+  /** True while the profile is being read for the first time. */
+  profileLoading: boolean;
+  /** Why the last profile read failed, if it did. */
+  profileError: string | null;
+  /** Re-reads the profile — call after saving it. */
+  refreshProfile: () => void;
   /** Enter the app without an account. */
   continueAsGuest: () => void;
   /** Enter the app as a registered user (phone OTP or email). */
@@ -201,12 +203,59 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  /**
+   * The profile row is a database read through the API, so it happens here —
+   * outside the auth callback — and only when the identity itself changes, not
+   * on every token refresh. The row is stored with the id it belongs to, so a
+   * different account signing in can never briefly see the previous player's
+   * details.
+   */
+  const userId = user?.id ?? null;
+
+  const [loadedProfile, setLoadedProfile] = useState<{ userId: string; row: Profile | null } | null>(
+    null,
+  );
+  const [profileError, setProfileError] = useState<string | null>(null);
+  // Bumped by `refreshProfile()` to re-read after a save — the same tick pattern
+  // the booking and wallet stores use.
+  const [profileTick, setProfileTick] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+
+    void fetchMyProfile()
+      .then((row) => {
+        if (!active) return;
+        setProfileError(null);
+        setLoadedProfile({ userId, row });
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setProfileError(cause instanceof Error ? cause.message : 'Could not load your profile.');
+        setLoadedProfile({ userId, row: null });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [userId, profileTick]);
+
+  const profile = userId && loadedProfile?.userId === userId ? loadedProfile.row : null;
+  /** Nothing has come back for this account yet — including a failed attempt. */
+  const profileLoading = Boolean(userId) && loadedProfile?.userId !== userId;
+  const refreshProfile = useCallback(() => setProfileTick((tick) => tick + 1), []);
+
   const value = useMemo<SessionValue>(
     () => ({
       mode,
       isGuest: mode === 'guest',
       user,
       restoring,
+      profile,
+      profileLoading,
+      profileError,
+      refreshProfile,
       continueAsGuest: () => {
         void releaseSessions();
         setUser(null);
@@ -232,7 +281,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         void releaseSessions();
       },
     }),
-    [mode, user, restoring],
+    [mode, user, restoring, profile, profileLoading, profileError, refreshProfile],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
