@@ -138,6 +138,14 @@ Four places where a browser needed a different mechanism, and what replaced what
 | Pull-to-refresh on the sport detail screen | A refresh action in that screen's header, which is where a browser keeps reload |
 | `StickyFooter onHeight` | The footer is measured with a `ResizeObserver`, so the scroll clears it whether or not the summary breakdown is expanded |
 
+The one visual difference that is deliberate: the handset paints its brand badge on the
+`#0B0908` ground, and this web app draws the brand from the shared assets instead. The
+`/app` header, every auth screen and the marketing navigation all render the official
+`public/game_on.png` wordmark — the same file the hero, footer, league and open-play
+pages already use — so the mark is never a retyped `GAME ⚡ N` that drifts from the real
+artwork. `BrandLogo` takes a `size` in pixels, which is the rendered height; the width
+follows the mark's own 893×250 ratio.
+
 ## Events and tournaments
 
 `/app/event/[id]` and `/app/tournament/[id]` are one screen each over a shared

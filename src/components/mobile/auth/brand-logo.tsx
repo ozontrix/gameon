@@ -1,36 +1,29 @@
 'use client';
 
 /**
- * The GAME⚡N wordmark. The web twin of the app `components/auth/brand-logo.tsx`.
+ * The GameOn wordmark.
  *
- * Written as text rather than shipped as an image so it stays crisp at any size,
- * with the bolt drawn in the brand orange between the two halves.
+ * This is the official `public/game_on.png`, used exactly as it ships — the same
+ * rule `components/league/landing.tsx` already follows: no rebuilt GAME ⚡ N text
+ * lockup and no separate power glyph, because the mark's own gradients are part of
+ * the brand and a retyped version never quite matches it.
+ *
+ * `size` is the rendered height; the width follows the mark's own 893×250 ratio, so
+ * it stays in proportion at every size the header and the auth screens ask for.
  */
 
-import { Brand, Fonts } from '@/lib/mobile/theme';
-import { PowerIcon } from './icons';
+import Image from 'next/image';
 
 export function BrandLogo({ size = 32 }: { size?: number }) {
-  const gap = Math.round(size * 0.16);
-  const power = Math.round(size * 0.94);
-  const spacing = Math.round(size * 0.11);
-  const word = {
-    fontFamily: Fonts.display,
-    fontSize: size,
-    letterSpacing: `${spacing}px`,
-    fontWeight: 800,
-    color: Brand.text,
-    lineHeight: 1,
-  } as const;
-
   return (
-    <span
-      style={{ display: 'inline-flex', alignItems: 'center', gap, color: Brand.text }}
-      role="img"
-      aria-label="GameOn">
-      <span style={word}>GAME</span>
-      <PowerIcon size={power} color={Brand.accent} strokeWidth={3.2} />
-      <span style={word}>N</span>
-    </span>
+    <Image
+      src="/game_on.png"
+      alt="GameOn"
+      width={893}
+      height={250}
+      sizes="180px"
+      priority
+      style={{ height: size, width: 'auto' }}
+    />
   );
 }

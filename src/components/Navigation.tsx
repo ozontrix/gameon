@@ -200,15 +200,21 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
                 : "bg-[rgba(14,17,22,0.85)] backdrop-blur-[12px] saturate-[140%]"
             )}
           >
-            {/* Brand */}
+            {/* Brand — the official wordmark image, not a retyped lockup */}
             <Link
               href="/"
-              className="flex items-center gap-2 shrink-0 cursor-pointer group"
+              className="flex items-center gap-2.5 shrink-0 cursor-pointer group"
               aria-label="Game On — go to home"
             >
-              <span className="text-base font-display font-bold tracking-tight text-go-white transition-colors group-hover:text-go-off">
-                GAME<span className="text-go-brand">ON</span>
-              </span>
+              <Image
+                src="/game_on.png"
+                alt="Game On"
+                width={893}
+                height={250}
+                priority
+                sizes="150px"
+                className="h-5 w-auto sm:h-6 2xl:h-7 transition-transform group-hover:scale-[1.03]"
+              />
               <span className="hidden 2xl:block text-[9px] uppercase tracking-[0.22em] text-go-off/60 font-medium pt-0.5">
                 Where the City Unplugs
               </span>

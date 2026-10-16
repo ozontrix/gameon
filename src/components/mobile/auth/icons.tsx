@@ -42,16 +42,6 @@ function Stroke({
   );
 }
 
-/** The bolt inside the GameOn wordmark. */
-export function PowerIcon({ size = 24, color = Brand.accent, strokeWidth = 2.5, style }: IconProps) {
-  return (
-    <Stroke size={size} color={color} strokeWidth={strokeWidth} style={style}>
-      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-      <line x1="12" y1="2" x2="12" y2="12" />
-    </Stroke>
-  );
-}
-
 export function PhoneIcon({ size = 24, color = Brand.text, strokeWidth = 2, style }: IconProps) {
   return (
     <Stroke size={size} color={color} strokeWidth={strokeWidth} style={style}>
