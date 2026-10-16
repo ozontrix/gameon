@@ -7,6 +7,13 @@
  * Its gradient stops are illustration shading rather than semantic colours, so
  * they stay local rather than going into `theme.ts` — the same rule the handset
  * build follows.
+ *
+ * **It is a positioned layer, so anything meant to appear above it must be
+ * positioned too.** A static sibling is painted *underneath* an absolutely
+ * positioned one regardless of DOM order — which is how this backdrop once covered
+ * a login form while the header, which is `position: relative`, stayed visible. The
+ * auth screens give their `ScreenScroll` `position: relative` for exactly that
+ * reason.
  */
 
 export function AuthBackdrop() {
@@ -16,6 +23,7 @@ export function AuthBackdrop() {
       style={{
         position: 'absolute',
         inset: 0,
+        zIndex: 0,
         pointerEvents: 'none',
         overflow: 'hidden',
       }}>

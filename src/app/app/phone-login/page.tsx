@@ -129,7 +129,7 @@ export default function PhoneLoginPage() {
       <AuthBackdrop />
       <AppHeader variant="back" title="Phone Login" showLocation={false} showBell={false} />
 
-      <ScreenScroll>
+      <ScreenScroll style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
           <span style={{ ...Typography.screenTitle, color: Brand.text }}>
             {step === 'number' ? 'What is your mobile number?' : 'Enter the 6-digit code'}

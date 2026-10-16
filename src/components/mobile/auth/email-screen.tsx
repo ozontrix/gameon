@@ -163,7 +163,13 @@ export function EmailScreen({ initialMode }: { initialMode: EmailMode }) {
         showBell={false}
       />
 
-      <ScreenScroll>
+      {/*
+        Positioned on purpose: `AuthBackdrop` is an absolutely positioned layer
+        behind this screen, and a positioned element paints above a static sibling
+        whichever order they are in. Without this the backdrop would cover the form
+        while the header — which is positioned — stayed visible.
+      */}
+      <ScreenScroll style={{ position: 'relative', zIndex: 1 }}>
         {awaitingConfirmation ? (
           <Card style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
             <span style={{ ...Typography.blockTitle, color: Brand.text }}>
