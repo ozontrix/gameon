@@ -8,13 +8,16 @@
  * Both reads are public, so a guest gets the same list a member does.
  */
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ListingCard, type Listing } from '@/components/mobile/events/listing-card';
 import {
   AppHeader,
+  Card,
   EmptyState,
   InfoNote,
+  Ion,
   Screen,
   ScreenScroll,
   SegmentedTabs,
@@ -31,6 +34,7 @@ const TABS = [
 ];
 
 export default function EventsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('events');
   const events = useApi<Listing[]>('/public/events');
   const tournaments = useApi<Listing[]>('/public/tournaments');
@@ -50,6 +54,43 @@ export default function EventsPage() {
         </div>
 
         <SegmentedTabs options={TABS} value={tab} onChange={setTab} />
+
+        {/*
+          The handset's own shortcut, in the same place: the list is what is on,
+          this is what you already hold.
+        */}
+        <Card
+          onPress={() => router.push('/app/my-tickets')}
+          accessibilityLabel="My tickets and tournament entries"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: Spacing.md,
+            borderColor: Brand.accent,
+          }}>
+          <span
+            style={{
+              width: 34,
+              height: 34,
+              flexShrink: 0,
+              borderRadius: Radius.pill,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: Brand.accentSoft,
+            }}>
+            <Ion name="ticketOutline" size={17} color={Brand.accent} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ ...Typography.label, color: Brand.text, display: 'block' }}>
+              My Tickets &amp; Entries
+            </span>
+            <span style={{ ...Typography.caption, color: Brand.textMuted, display: 'block' }}>
+              Event tickets and tournament teams you have already bought
+            </span>
+          </span>
+          <Ion name="chevronForward" size={16} color={Brand.textSecondary} />
+        </Card>
 
         {active.error ? (
           <InfoNote

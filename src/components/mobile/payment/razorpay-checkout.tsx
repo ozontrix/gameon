@@ -36,7 +36,11 @@ export type RazorpayOptions = {
   amount: number;
   name: string;
   order_id: string;
-  prefill: { name: string; email: string; contact: string };
+  /**
+   * What the gateway pre-fills. Every field is optional: an event order has no
+   * email when the buyer left it blank, and Razorpay asks for whatever is missing.
+   */
+  prefill: { name?: string; email?: string; contact?: string };
   theme: { color: string };
 };
 

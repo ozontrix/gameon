@@ -26,6 +26,9 @@ build uses.
 | `/app/sport/[id]` | Sport detail: gallery, courts, date & time, booking details | a Sports card |
 | `/app/book/payment` | Checkout: summary, GameOn Points, Razorpay | "Continue to Pay" |
 | `/app/book/success` | Confirmation, re-read from the server | the gateway's callback |
+| `/app/event/[id]` | Event detail: hero, facts, ticket purchase | an Events card |
+| `/app/tournament/[id]` | Tournament detail: hero, facts, team registration | a Tournaments card |
+| `/app/my-tickets` | Event tickets and tournament entries, in two lists | the Events tab card, or Accounts → My Tickets |
 
 `(tabs)` is a Next.js route group, so the five tab screens share one layout and
 the tab bar is mounted once — the same thing a native tab navigator does. The
@@ -52,6 +55,8 @@ group name never appears in a URL.
 | Points rate and trust marks | `src/lib/mobile/constants/payment.ts` | `constants/payment.ts` |
 | The booking steps | `src/components/mobile/booking/*` | `components/booking/*` |
 | Checkout pieces | `src/components/mobile/payment/*` | `components/payment/*` |
+| Events, tournaments and their date/countdown helpers | `src/lib/mobile/constants/events.ts` | `constants/events.ts` |
+| Event and tournament pieces | `src/components/mobile/events/*` | `components/events/*` |
 | The kit | `src/components/mobile/ui/*` | `components/ui/*` |
 | Home sections | `src/components/mobile/home/*` | `components/home/*` |
 | Auth pieces and the OTP field | `src/components/mobile/auth/*` | `components/auth/*` (email sign-in and sign-up share one screen; the handset's two routes are kept as two URLs) |
@@ -122,20 +127,39 @@ Four places where a browser needed a different mechanism, and what replaced what
 | Pull-to-refresh on the sport detail screen | A refresh action in that screen's header, which is where a browser keeps reload |
 | `StickyFooter onHeight` | The footer is measured with a `ResizeObserver`, so the scroll clears it whether or not the summary breakdown is expanded |
 
-## Still to port
+## Events and tournaments
 
-The remaining pushed screens, in priority order:
+`/app/event/[id]` and `/app/tournament/[id]` are one screen each over a shared
+body, exactly as on the handset: the same hero (`DetailHero`), the same facts and
+admin-written sections (`ActivityBody`), and the same free/live capacity rules
+read from the API's own `capacity`, `taken` and `registrationClosesAt` — nothing
+here decides whether an entry is still on sale.
+
+Buying is the same four steps as a court booking:
+
+1. `POST /user/events/:id/tickets` (or `/user/tournaments/:id/register`) holds the
+   tickets or the team slot for ten minutes.
+2. A free entry comes back `confirmed` and stops there — no gateway order is
+   created at all.
+3. Otherwise `.../payments/create-order` opens Razorpay for the fee the server set,
+   and `.../payments/verify` is what actually issues the tickets or confirms the
+   team.
+4. Backing out calls `.../cancel`, releasing the hold immediately.
+
+Every figure — the fee, the tickets left, the per-order cap — comes from the
+listing or detail response. `spotsLeft`, `registrationOpen` and `entryFeeLabel` in
+`constants/events.ts` only *read* those fields.
+
+## Still to port
 
 | # | Screen | Data |
 |---|---|---|
 | 1 | `/app/booking/[id]` — check-in QR, invoice, cancel with refund preview | `GET /user/bookings/:id`, `POST /user/bookings/:id/cancel`, `GET /user/bookings/:id/cancellation-preview` |
-| 2 | `/app/event/[id]`, `/app/tournament/[id]`, `/app/my-tickets` | `GET /public/events/:id`, `/public/tournaments/:id`, `/user/event-orders` |
-| 3 | `/app/search` | `GET /public/search?q=` |
-| 4 | Accounts suite — wallet, transactions, refer & earn, profile management, policies | `/user/wallet`, `/user/transactions`, `/user/referral`, `/user/profile` |
+| 2 | `/app/search` | `GET /public/search?q=` |
+| 3 | Accounts suite — wallet, transactions, refer & earn, profile management, policies, feedback | `/user/wallet`, `/user/transactions`, `/user/referral`, `/user/profile`, `/public/feedback` |
 
-Until those land, the Events cards link to `/app/event/…` and the booking cards to
-`/app/booking/…`, which do not exist yet. Sports cards resolve: `/app/sport/[id]`
-is live.
+Until those land, the booking cards link to `/app/booking/…`, which does not exist
+yet. Sports cards, event cards and tournament cards all resolve now.
 
 ## Environment
 
