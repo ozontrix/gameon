@@ -12,11 +12,11 @@
   "crons": [
     {
       "path": "/api/cron/booking-emails",
-      "schedule": "* * * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/cron/push-deliveries",
-      "schedule": "* * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/cron/whatsapp-deliveries",

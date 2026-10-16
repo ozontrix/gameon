@@ -20,8 +20,13 @@ text; QR images are generated in memory, not on a public third-party service.
 Existing Brevo settings are reused: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
 `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`. No SMTP credentials belong
 in either mobile app. The worker uses `CRON_SECRET` and runs at
-`/api/cron/booking-emails` every minute. Hosting must support minute crons or an
-external scheduler must call it with `Authorization: Bearer <CRON_SECRET>`.
+`/api/cron/booking-emails` once daily (`0 2 * * *`, 02:00 UTC / 07:30 IST),
+compatible with Vercel Hobby. Hobby execution can occur anywhere within that
+hour. Initial confirmation still schedules an immediate post-response attempt;
+failed deliveries can wait until the daily run. Each run processes at most five
+emails, so a backlog may take multiple days to drain. For faster recovery an
+external scheduler can call it with `Authorization: Bearer <CRON_SECRET>`;
+none is configured by this change.
 
 Confirmation schedules an immediate post-response attempt, with cron recovery.
 Safe failures retry up to five attempts with exponential delay. Interrupted SMTP

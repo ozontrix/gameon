@@ -239,12 +239,17 @@ test('integration guards require consent, durable triggers, private RLS and reco
 });
 test('every Vercel cron stays inside the Hobby once-per-day limit',()=>{
   const {crons}=JSON.parse(readFileSync(resolve(root,'vercel.json'),'utf8'));
-  assert.ok(crons.some(cron=>cron.path==='/api/cron/whatsapp-deliveries'));
+  assert.equal(new Set(crons.map(cron=>cron.path)).size,crons.length,'Cron paths must not be scheduled twice');
+  for(const path of ['/api/cron/booking-emails','/api/cron/push-deliveries','/api/cron/whatsapp-deliveries','/api/cron/clear-expired','/api/cron/booking-reminders']){
+    assert.ok(crons.some(cron=>cron.path===path),`${path} must retain its recovery schedule`);
+  }
   for(const {path,schedule} of crons){
     const fields=schedule.split(' ');
     assert.equal(fields.length,5,`${path} must use a five-field cron expression`);
     for(const field of fields.slice(0,2))assert.match(field,/^\d{1,2}$/,
       `${path} schedule "${schedule}" would run more than once per day; Vercel Hobby only allows daily cron jobs`);
+    assert.ok(Number(fields[0])<=59 && Number(fields[1])<=23,`${path} must have valid minute/hour values`);
+    assert.deepEqual(fields.slice(2),['*','*','*'],`${path} must run every day`);
   }
 });
 for(const kind of ['event','tournament'])test(`${kind} QR checks payment/date and atomically rejects duplicate admission`,async()=>{

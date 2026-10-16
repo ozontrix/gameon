@@ -29,11 +29,13 @@ failed counts, missing credentials and unavailable database state.
 3. Set `CRON_SECRET`. `GET /api/cron/push-deliveries` accepts only
    `Authorization: Bearer <CRON_SECRET>`. It drains up to 1000 jobs per call,
    subject to the 230-second work budget and function limits.
-4. `vercel.json` schedules recovery every minute. **Vercel Hobby does not support
-   sub-daily cron and will reject that schedule.** Use a supported hosting plan,
-   or remove this cron entry and configure an external scheduler to call the
-   same authenticated endpoint every minute. Do not silently downgrade to daily
-   recovery. No plan upgrade or external scheduler was purchased/configured.
+4. `vercel.json` schedules recovery once daily (`0 3 * * *`, 03:00 UTC /
+   08:30 IST) to support Vercel Hobby. Admin sends still start an immediate
+   post-response attempt; failed or overflow deliveries can wait until the next
+   daily recovery run (or later if the worker reaches its batch/time limit).
+   Hobby execution can occur anywhere within the scheduled hour. For faster
+   recovery, an external scheduler can call the same authenticated endpoint;
+   none is configured by this change. Keep `CRON_SECRET` private.
 5. Deploy the backend and build/install fresh Android/iOS apps. Native messaging
    cannot be added to already installed apps by JavaScript-only updates.
 6. Upload the APNs authentication key in Firebase for the iOS app and verify
