@@ -181,6 +181,18 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/**
+ * Third-party brand colours for the share targets on Refer & Earn. These are fixed
+ * by the platforms themselves, which is exactly why they live here rather than
+ * being retyped at each use.
+ */
+export const SocialColors = {
+  whatsapp: '#25D366',
+  instagram: '#E1306C',
+  facebook: '#1877F2',
+  more: Palette.darkSelected,
+} as const;
+
 /** The dark GameOn palette — what the app actually renders on every screen. */
 export const Brand = Colors.dark;
 

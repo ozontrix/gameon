@@ -92,6 +92,12 @@ import {
   trophyOutline,
   walletOutline,
   warningOutline,
+  camera,
+  chatbubbleEllipsesOutline,
+  closeCircleOutline,
+  documentTextOutline,
+  logOutOutline,
+  shareSocialOutline,
 } from 'ionicons/icons';
 import {
   mdiBadminton,
@@ -106,6 +112,7 @@ import {
   mdiTextureBox,
   mdiWall,
   mdiWater,
+  mdiAccountCogOutline,
 } from '@mdi/js';
 
 /** Every Ionicons glyph this build renders. */
@@ -178,6 +185,12 @@ const ION = {
   trophyOutline,
   walletOutline,
   warningOutline,
+  camera,
+  chatbubbleEllipsesOutline,
+  closeCircleOutline,
+  documentTextOutline,
+  logOutOutline,
+  shareSocialOutline,
 } as const;
 
 /** Every MaterialCommunityIcons glyph this build renders. */
@@ -194,6 +207,7 @@ const MDI = {
   seatOutline: mdiSeatOutline,
   shower: mdiShower,
   water: mdiWater,
+  accountCogOutline: mdiAccountCogOutline,
 } as const;
 
 export type IonName = keyof typeof ION;

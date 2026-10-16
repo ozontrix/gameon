@@ -1,235 +1,321 @@
 'use client';
 
 /**
- * The Accounts tab — the web twin of the app `app/(tabs)/accounts/index.tsx`.
+ * The Account tab — the web twin of the handset app's `(tabs)/accounts/index.tsx`.
  *
- * A member sees their profile, the notification/search/ticket shortcuts, the
- * legal pages and the sign-out. A guest is told plainly what an account would
- * add, since that is what this screen is for.
+ * The same profile card, the same nine rows in the same order, and the same guest
+ * behaviour: a guest sees the profile card in its "Browsing as Guest" state and only
+ * the public rows, so nothing offers them a screen they cannot open. Logging out asks
+ * first, and clears any half-built booking on the way out.
  */
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
+import { useBookingDraft } from '@/components/mobile/booking-draft-provider';
+import { useBookings } from '@/components/mobile/bookings-store';
 import { useSession } from '@/components/mobile/session-provider';
 import {
   AppHeader,
-  Badge,
+  BottomSheet,
   Button,
   Card,
-  CardRow,
-  Divider,
+  InfoNote,
   Ion,
+  Mdi,
+  PressableScale,
   RemoteImage,
   Screen,
   ScreenScroll,
-  SignInGate,
+  type IonName,
+  type MdiName,
 } from '@/components/mobile/ui';
-import { formatDate } from '@/lib/mobile/format';
-import { nationalNumber } from '@/lib/mobile/identity';
-import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
+import { Brand, Spacing } from '@/lib/mobile/theme';
 
-/** The rows under the profile card, in the order the mockups list them. */
-const ROWS = [
-  {
-    href: '/app/accounts/wallet',
-    icon: 'walletOutline' as const,
-    title: 'GameOn Wallet',
-    subtitle: 'Your GameOn Points balance and rewards',
-  },
-  {
-    href: '/app/accounts/transactions',
-    icon: 'receiptOutline' as const,
-    title: 'Transactions',
-    subtitle: 'Bookings, tickets, tournaments and Points activity',
-  },
-  {
-    href: '/app/notifications',
-    icon: 'notificationsOutline' as const,
-    title: 'Notifications',
-    subtitle: 'Bookings, reminders and venue updates',
-  },
-  {
-    href: '/app/my-tickets',
-    icon: 'ticketOutline' as const,
-    title: 'My Tickets',
-    subtitle: 'Event and tournament entries',
-  },
-  {
-    href: '/app/search',
-    icon: 'searchOutline' as const,
-    title: 'Search',
-    subtitle: 'Find a court, sport or venue',
-  },
-];
-
-const LEGAL = [
-  { href: '/privacy', title: 'Privacy Policy', subtitle: 'How we handle your data' },
-  { href: '/terms', title: 'Terms & Conditions', subtitle: 'The rules of play' },
-  { href: '/delete-account', title: 'Delete my account', subtitle: 'Permanently remove your data' },
-];
-
-/** One navigable row: a glyph tile, a title with its subtitle, and a chevron. */
-function LinkRow({
-  href,
-  icon,
-  title,
-  subtitle,
-  last,
-}: {
+type MenuItem = {
+  label: string;
+  /** Either an Ionicons glyph or a MaterialCommunityIcons one. */
+  icon: IonName | { mci: MdiName };
   href: string;
-  icon?: React.ComponentProps<typeof Ion>['name'];
-  title: string;
-  subtitle: string;
-  last?: boolean;
-}) {
-  return (
-    <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>
-      <CardRow last={last}>
-        {icon ? (
-          <span
-            style={{
-              width: 34,
-              height: 34,
-              flexShrink: 0,
-              borderRadius: Radius.md,
-              backgroundColor: Brand.accentGlass,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <Ion name={icon} size={17} color={Brand.accent} />
-          </span>
-        ) : null}
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ ...Typography.cardTitle, color: Brand.text, display: 'block' }}>
-            {title}
-          </span>
-          <span style={{ ...Typography.bodySmall, color: Brand.textSecondary, display: 'block' }}>
-            {subtitle}
-          </span>
-        </span>
-        <Ion name="chevronForward" size={16} color={Brand.textMuted} />
-      </CardRow>
-    </Link>
-  );
+  /** Rows without this are hidden while browsing as a guest. */
+  guest?: boolean;
+};
+
+const MENU: MenuItem[] = [
+  {
+    icon: { mci: 'accountCogOutline' },
+    label: 'Profile Management',
+    href: '/app/accounts/profile-management',
+  },
+  { icon: 'receiptOutline', label: 'Transactions', href: '/app/accounts/transactions' },
+  { icon: 'walletOutline', label: 'GameOn Wallet', href: '/app/accounts/wallet' },
+  { icon: 'giftOutline', label: 'Refer and Earn', href: '/app/accounts/refer-and-earn' },
+  {
+    icon: 'documentTextOutline',
+    label: 'Terms and Conditions',
+    href: '/app/accounts/terms',
+    guest: true,
+  },
+  { icon: 'shieldCheckmarkOutline', label: 'Policies', href: '/app/accounts/policies', guest: true },
+  { icon: 'lockClosedOutline', label: 'Privacy', href: '/app/accounts/privacy', guest: true },
+  {
+    icon: 'chatbubbleEllipsesOutline',
+    label: 'Feedback',
+    href: '/app/accounts/feedback',
+    guest: true,
+  },
+  { icon: 'trashOutline', label: 'Delete Account', href: '/app/accounts/delete-account' },
+];
+
+function MenuIcon({ icon }: { icon: MenuItem['icon'] }) {
+  if (typeof icon !== 'string') return <Mdi name={icon.mci} size={22} color={Brand.accent} />;
+  return <Ion name={icon} size={22} color={Brand.accent} />;
 }
 
 export default function AccountsPage() {
   const router = useRouter();
-  const { user, isGuest, profile, profileError, signOut } = useSession();
+  const { reset } = useBookingDraft();
+  const { isGuest, signOut, user, profile } = useSession();
+  const { refresh: refreshBookings } = useBookings();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
-  if (!user) {
-    return (
-      <Screen>
-        <AppHeader />
-        <SignInGate
-          icon="personCircleOutline"
-          title={isGuest ? "You're browsing as a guest" : 'Sign in to GameOn'}
-          body="Guests can browse sports, events and facilities. Booking a court, seeing your tickets and earning GameOn Points needs an account."
-        />
-      </Screen>
-    );
-  }
+  // The profile row is the record; the auth user covers the moment before it has
+  // loaded. Lines with nothing in them are left out rather than filled with a fixture.
+  const displayName = profile?.full_name || user?.fullName || 'Your profile';
+  const displayPhone = profile?.phone || user?.phoneNumber || '';
+  const displayEmail = profile?.email || user?.email || '';
+  const avatarUrl = profile?.avatarUrl ?? null;
 
-  const name = profile?.full_name?.trim() || user.fullName || 'GameOn player';
-  const contact =
-    user.provider === 'phone'
-      ? `+91 ${nationalNumber(user.phoneNumber)}`
-      : user.email ?? profile?.email ?? '—';
+  const menu = isGuest ? MENU.filter((item) => item.guest) : MENU;
+
+  /** Clears any in-progress booking and returns to the login screen. */
+  const logout = () => {
+    setConfirmLogout(false);
+    reset();
+    signOut();
+    void refreshBookings();
+    router.replace('/app');
+  };
 
   return (
     <Screen>
       <AppHeader />
-      <ScreenScroll bottomLayer="tabBar" gap={Spacing.md}>
-        <Card style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: Spacing.md }}>
+      <ScreenScroll bottomLayer="tabBar" gap={Spacing.four}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.one }}>
+          <span style={{ color: Brand.text, fontSize: 30, fontWeight: 800 }}>Account</span>
+          <span style={{ color: Brand.textSecondary, fontSize: 15 }}>
+            {isGuest
+              ? 'Sign in to book slots, earn Points and manage your profile'
+              : 'Manage your profile and account settings'}
+          </span>
+        </div>
+
+        {/* The profile card is the way into profile management. A guest gets the
+            same card in its "Browsing as Guest" form, with nothing to open. */}
+        {isGuest ? (
+          <Card
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: Spacing.md,
+            }}>
             <span
               style={{
-                width: 54,
-                height: 54,
+                width: 74,
+                height: 74,
+                borderRadius: 37,
                 flexShrink: 0,
-                borderRadius: Radius.pill,
-                overflow: 'hidden',
-                backgroundColor: Brand.accentGlass,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
+                backgroundColor: Brand.backgroundSelected,
               }}>
-              {profile?.avatarUrl ? (
-                <RemoteImage uri={profile.avatarUrl} style={{ width: '100%', height: '100%' }} />
-              ) : (
-                <Ion name="person" size={26} color={Brand.accent} />
-              )}
+              <Ion name="personOutline" size={38} color={Brand.textMuted} />
+            </span>
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}>
+              <span style={{ color: Brand.text, fontSize: 18, fontWeight: 700 }}>
+                Browsing as Guest
+              </span>
+              <span style={{ color: Brand.textSecondary, fontSize: 14 }}>
+                Sports, events and facility details are open to you.
+              </span>
+            </span>
+          </Card>
+        ) : (
+          <Card
+            onPress={() => router.push('/app/accounts/profile-management')}
+            accessibilityLabel="Profile management"
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: Spacing.md,
+            }}>
+            <span style={{ position: 'relative', width: 74, height: 74, flexShrink: 0 }}>
+              <span
+                style={{
+                  width: 74,
+                  height: 74,
+                  borderRadius: 37,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  backgroundColor: Brand.backgroundSelected,
+                }}>
+                {avatarUrl ? (
+                  <RemoteImage
+                    uri={avatarUrl}
+                    accessibilityLabel="Your profile photo"
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <Ion name="person" size={42} color={Brand.textMuted} />
+                )}
+              </span>
+              <span
+                style={{
+                  position: 'absolute',
+                  bottom: 2,
+                  right: 2,
+                  width: 26,
+                  height: 26,
+                  borderRadius: 13,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: Brand.accent,
+                  border: `2px solid ${Brand.background}`,
+                }}>
+                <Ion name="createOutline" size={13} color={Brand.onAccent} />
+              </span>
             </span>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.xxs, minWidth: 0 }}>
-              <span style={{ ...Typography.cardTitle, color: Brand.text }}>{name}</span>
-              <span style={{ ...Typography.bodySmall, color: Brand.textSecondary }}>{contact}</span>
-              <div style={{ display: 'flex', gap: Spacing.sm, flexWrap: 'wrap' }}>
-                <Badge
-                  label={user.provider === 'phone' ? 'Phone verified' : 'Email verified'}
-                  tone="success"
-                />
-                {profile?.created_at ? (
-                  <Badge
-                    label={`Since ${formatDate(profile.created_at.slice(0, 10))}`}
-                    tone="neutral"
-                    solid={false}
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
+            <span
+              style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ color: Brand.text, fontSize: 18, fontWeight: 700 }}>
+                {displayName}
+              </span>
+              {displayPhone ? (
+                <span style={{ color: Brand.textSecondary, fontSize: 14 }}>{displayPhone}</span>
+              ) : null}
+              {displayEmail ? (
+                <span
+                  style={{
+                    color: Brand.textSecondary,
+                    fontSize: 14,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                  {displayEmail}
+                </span>
+              ) : null}
+            </span>
 
-          {profileError ? (
-            <span style={{ ...Typography.caption, color: Brand.danger }}>{profileError}</span>
-          ) : null}
-        </Card>
+            <Ion name="chevronForward" size={20} color={Brand.accent} />
+          </Card>
+        )}
 
-        <Card
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            padding: `${Spacing.sm}px ${Spacing.md}px`,
-          }}>
-          {ROWS.map((row, index) => (
-            <LinkRow key={row.href} {...row} last={index === ROWS.length - 1} />
+        {isGuest ? (
+          <Button
+            label="Sign in or sign up"
+            icon={<Ion name="logInOutline" size={18} color={Brand.onAccent} />}
+            onPress={() => router.replace('/app')}
+            fullWidth
+          />
+        ) : null}
+
+        <Card padded={false}>
+          {menu.map((item, index) => (
+            <Link key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
+              <PressableScale
+                as="div"
+                scale={false}
+                label={item.label}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: Spacing.md,
+                  paddingTop: 15,
+                  paddingBottom: 15,
+                  paddingLeft: Spacing.md,
+                  paddingRight: Spacing.md,
+                  borderTop: index > 0 ? `1px solid ${Brand.divider}` : 'none',
+                }}>
+                <MenuIcon icon={item.icon} />
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    color: Brand.text,
+                    fontSize: 15,
+                    fontWeight: 600,
+                  }}>
+                  {item.label}
+                </span>
+                <Ion name="chevronForward" size={18} color={Brand.accent} />
+              </PressableScale>
+            </Link>
           ))}
         </Card>
 
-        <Button
-          label="Sign out"
-          variant="danger"
-          size="md"
-          fullWidth
-          icon={<Ion name="logInOutline" size={16} color={Brand.danger} />}
-          onPress={() => {
-            signOut();
-            router.replace('/app');
-          }}
-        />
-
-        <Card
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            padding: `${Spacing.sm}px ${Spacing.md}px`,
-          }}>
-          {LEGAL.map((row, index) => (
-            <div key={row.href}>
-              {index > 0 ? <Divider /> : null}
-              <LinkRow {...row} last={index === LEGAL.length - 1} />
-            </div>
-          ))}
-        </Card>
-
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <span style={{ ...Typography.caption, color: Brand.textMuted }}>
-            GameOn Multisports · v1.0 · Web
-          </span>
-        </div>
+        {!isGuest ? (
+          <Card padded={false}>
+            <PressableScale
+              label="Logout"
+              onPress={() => setConfirmLogout(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                paddingTop: 15,
+                paddingBottom: 15,
+              }}>
+              <Ion name="logOutOutline" size={22} color={Brand.danger} />
+              <span style={{ color: Brand.danger, fontSize: 15, fontWeight: 700 }}>Logout</span>
+            </PressableScale>
+          </Card>
+        ) : null}
       </ScreenScroll>
+
+      <BottomSheet
+        visible={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        title="Log out of GameOn?"
+        subtitle="You'll need to sign in again to book slots or view your bookings."
+        footer={
+          <>
+            <Button
+              label="Stay Signed In"
+              variant="secondary"
+              size="md"
+              onPress={() => setConfirmLogout(false)}
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Logout"
+              variant="danger"
+              size="md"
+              icon={<Ion name="logOutOutline" size={17} color={Brand.danger} />}
+              onPress={logout}
+              style={{ flex: 1 }}
+            />
+          </>
+        }>
+        <InfoNote body="Your bookings stay on your account and will be here when you sign back in." />
+      </BottomSheet>
     </Screen>
   );
 }

@@ -32,6 +32,13 @@ build uses.
 | `/app/booking/[id]` | Booking detail: check-in QR, court facts, invoice, cancel with refund | a booking card |
 | `/app/accounts/wallet` | GameOn Wallet: Points balance, lifetime totals, recent ledger | Accounts → GameOn Wallet |
 | `/app/accounts/transactions` | The wider history, filtered — payments and Points activity | Accounts → Transactions |
+| `/app/accounts/profile-management` | Name, contacts, photo, date of birth, gender, city, preferred sports | Accounts → Profile Management |
+| `/app/accounts/refer-and-earn` | The referral code, both bonus amounts, share targets, stats | Accounts → Refer and Earn |
+| `/app/accounts/policies` | The five facility policies, each opening to its clauses | Accounts → Policies |
+| `/app/accounts/privacy` | The privacy policy, in the app's own wording | Accounts → Privacy |
+| `/app/accounts/terms` | Terms & Conditions, with the acknowledgement checkbox | Accounts → Terms and Conditions |
+| `/app/accounts/feedback` | Rating, topic, message and reply address → `POST /public/feedback` | Accounts → Feedback |
+| `/app/accounts/delete-account` | The deletion request, typed `DELETE`, with a reference back | Accounts → Delete Account |
 
 `(tabs)` is a Next.js route group, so the five tab screens share one layout and
 the tab bar is mounted once — the same thing a native tab navigator does. The
@@ -177,15 +184,49 @@ Cancelling a booking credits the refund to the wallet as Points inside the same
 request, which is why `/app/booking/[id]` refreshes both the bookings and the wallet
 after a cancellation succeeds.
 
+## The Account tab
+
+The tab is the handset's own list, in the handset's own order: the profile card, then
+Profile Management, Transactions, GameOn Wallet, Refer and Earn, Terms and Conditions,
+Policies, Privacy, Feedback and Delete Account, then Logout behind a confirmation
+sheet. A guest sees the card in its "Browsing as Guest" state and only the rows marked
+`guest` — the four public pages — so the tab never offers a screen it cannot open.
+Logging out clears any half-built booking draft on the way out.
+
+The sub-screens share `components/accounts/`, the web twins of the handset's:
+`screen-shell` (back chevron over a scrolling body), `screen-title`, `field-row` and
+`legal-sections`. Three platform substitutions, and why:
+
+| Handset | Web |
+|---|---|
+| `expo-image-picker` for the profile photo | A real `<input type="file">`, with the same `image/jpeg,png,webp` allow-list and 3 MB ceiling checked before the upload starts |
+| A three-column `DatePickerSheet` | The browser's own `<input type="date">`, bounded to the same latest year the handset allows |
+| `expo-clipboard` and the native `Share` sheet | `navigator.clipboard` and `navigator.share`, with a copy fallback where a browser has no share sheet |
+
+Every account screen reads and writes the API, never the database: `GET`/`PATCH
+/user/profile` (only the fields that changed, so an untouched field can never be
+cleared), `POST /user/profile/photo`, `GET /user/referral`, `POST /public/feedback`
+and `POST /user/account-deletion`. Profile management patches only the login contact's
+*other* half: the server refuses an attempt to change the contact a player signs in
+with, and the field is read-only with a "Verified" pill for that reason.
+
+One structural difference, and it is the same one `wallet` and `transactions`
+already had: the handset keeps the tab bar visible on these screens because they are a
+nested stack *inside* the Account tab, whereas on the web they are ordinary pushed
+pages — the back chevron is the way out, which is what a browser's own back button
+does too. `src/app/app/accounts/layout.tsx` still carries the handset's gate, so a deep
+link with no session lands on the login screen rather than on a screen whose reads can
+only fail.
+
 ## Still to port
 
 | # | Screen | Data |
 |---|---|---|
 | 1 | `/app/search` | `GET /public/search?q=` (sports and courts) |
-| 2 | Accounts suite, rest — refer & earn, profile management, policies, feedback | `/user/referral`, `/user/profile`, `/user/profile/photo`, `/public/feedback` |
 
-Until `/app/search` lands, the Search row on the Accounts tab and any deep link to it
-do not resolve. Every other card in the app now opens a real screen.
+Nothing in the app links to `/app/search` — the handset's Account tab has no Search row
+either — so it is the only route left with no way in. Every other card in the app opens
+a real screen.
 
 ## Environment
 
