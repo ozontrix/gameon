@@ -22,6 +22,9 @@ build uses.
 | `/app/events` | Events and tournaments, one segmented control | fourth tab |
 | `/app/accounts` | Profile, shortcuts, legal links, sign out | fifth tab |
 | `/app/notifications` | Grouped by recency, filter pills, mark-all-read | the header bell |
+| `/app/sport/[id]` | Sport detail: gallery, courts, date & time, booking details | a Sports card |
+| `/app/book/payment` | Checkout: summary, GameOn Points, Razorpay | "Continue to Pay" |
+| `/app/book/success` | Confirmation, re-read from the server | the gateway's callback |
 
 `(tabs)` is a Next.js route group, so the five tab screens share one layout and
 the tab bar is mounted once — the same thing a native tab navigator does. The
@@ -43,6 +46,11 @@ group name never appears in a URL.
 | Notifications and the bell count | `src/components/mobile/notifications-provider.tsx` | `context/notifications.tsx` |
 | Bookings, a status at a time | `src/components/mobile/bookings-store.tsx` | `context/bookings-store.tsx` |
 | The bookable catalogue | `src/components/mobile/sports-catalog-provider.tsx` | `context/sports-catalog.tsx` |
+| The booking being assembled, and GameOn Points | `src/components/mobile/booking-draft-provider.tsx`, `wallet-provider.tsx` | `context/booking-draft.tsx`, `context/wallet.tsx` |
+| Slot dates, lengths and prices | `src/lib/mobile/constants/slots.ts` | `constants/slots.ts` — no `slotsForDate()`: availability is the server's and nothing here invents any |
+| Points rate and trust marks | `src/lib/mobile/constants/payment.ts` | `constants/payment.ts` |
+| The booking steps | `src/components/mobile/booking/*` | `components/booking/*` |
+| Checkout pieces | `src/components/mobile/payment/*` | `components/payment/*` |
 | The kit | `src/components/mobile/ui/*` | `components/ui/*` |
 | Home sections | `src/components/mobile/home/*` | `components/home/*` |
 | Auth pieces and the OTP field | `src/components/mobile/auth/*` | `components/auth/*` |
@@ -71,23 +79,48 @@ group name never appears in a URL.
 suppression. Colours there are the literal values from `theme.ts`, because a
 stylesheet cannot import them.
 
+## The booking flow
+
+`/app/sport/[id]` → `/app/book/payment` → `/app/book/success`, in that order and
+with the handset app's own order of operations, because that order is what keeps
+money and court time honest:
+
+1. The court is held by `POST /user/bookings`. The **server** prices the slot and
+   clamps the Points against the player's real balance, so no figure shown here is
+   trusted on the way back.
+2. Points that cover the whole price confirm the booking outright
+   (`POST /user/bookings/:id/confirm-with-wallet`) — there is nothing left for the
+   gateway to take, so no Razorpay order is created at all.
+3. Otherwise `POST /user/payments/create-order` returns an order for the remainder
+   and `POST /user/payments/verify` confirms it. The webhook confirms it too, so a
+   dropped connection on the way back does not lose the booking.
+4. Closing the gateway without paying calls `POST /user/bookings/:id/cancel` to
+   release the hold, so the slot is bookable again immediately rather than after
+   the hold lapses.
+
+Four places where a browser needed a different mechanism, and what replaced what:
+
+| Handset | Web |
+|---|---|
+| Razorpay's native SDK / WebView checkout | `checkout.js` and Razorpay's own modal — `payment/razorpay-checkout.tsx` renders nothing and only drives the gateway |
+| `Alert.alert` for a checkout problem | An inline notice card above the summary, so the message sits next to the thing it is about |
+| Pull-to-refresh on the sport detail screen | A refresh action in that screen's header, which is where a browser keeps reload |
+| `StickyFooter onHeight` | The footer is measured with a `ResizeObserver`, so the scroll clears it whether or not the summary breakdown is expanded |
+
 ## Still to port
 
-The pushed detail screens and the booking flow, in priority order:
+The remaining pushed screens, in priority order:
 
 | # | Screen | Data |
 |---|---|---|
-| 1 | `/app/sport/[id]` — gallery, amenities, slot options, Book Now | `GET /public/sports/catalog/:id`, `GET /public/facilities?courtTypeId=` |
-| 2 | The booking flow — date strip, slot grid, court picker, preferences, summary bar | `GET /user/slots?facilityId&date&duration` |
-| 3 | `/app/book/payment`, `/app/book/success` | `POST /user/bookings`, Razorpay order + verify |
-| 4 | `/app/booking/[id]` — check-in QR, invoice, cancel with refund preview | `GET /user/bookings/:id`, `POST /user/bookings/:id/cancel` |
-| 5 | `/app/event/[id]`, `/app/tournament/[id]`, `/app/my-tickets` | `GET /public/events/:id`, `/public/tournaments/:id`, `/user/event-orders` |
-| 6 | `/app/search` | `GET /public/search?q=` |
-| 7 | Accounts suite — wallet, transactions, refer & earn, profile management, policies | `/user/wallet`, `/user/transactions`, `/user/referral`, `/user/profile` |
+| 1 | `/app/booking/[id]` — check-in QR, invoice, cancel with refund preview | `GET /user/bookings/:id`, `POST /user/bookings/:id/cancel`, `GET /user/bookings/:id/cancellation-preview` |
+| 2 | `/app/event/[id]`, `/app/tournament/[id]`, `/app/my-tickets` | `GET /public/events/:id`, `/public/tournaments/:id`, `/user/event-orders` |
+| 3 | `/app/search` | `GET /public/search?q=` |
+| 4 | Accounts suite — wallet, transactions, refer & earn, profile management, policies | `/user/wallet`, `/user/transactions`, `/user/referral`, `/user/profile` |
 
-Until those land, the Sports cards link to `/app/sport/…`, the Events cards to
-`/app/event/…`, and the booking cards to `/app/booking/…`, which do not exist
-yet.
+Until those land, the Events cards link to `/app/event/…` and the booking cards to
+`/app/booking/…`, which do not exist yet. Sports cards resolve: `/app/sport/[id]`
+is live.
 
 ## Environment
 

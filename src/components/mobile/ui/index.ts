@@ -20,7 +20,17 @@ export { DetailRow } from './detail-row';
 export { EmptyState } from './empty-state';
 export { FilterBar, type FilterBarItem } from './filter-bar';
 export { IconButton } from './icon-button';
-export { Ion, Mdi, type IconProps, type IonName, type MdiName } from './icons';
+export {
+  Ion,
+  Mdi,
+  hasIon,
+  hasMdi,
+  ionFromFontName,
+  mdiFromFontName,
+  type IconProps,
+  type IonName,
+  type MdiName,
+} from './icons';
 export { InfoNote, type NoteTone } from './info-note';
 export { FadeIn, FadeUp, Pop, PressableScale } from './motion';
 export { PickerField } from './picker-field';

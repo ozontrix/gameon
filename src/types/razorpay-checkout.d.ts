@@ -32,6 +32,15 @@ interface RazorpayCheckoutOptions {
 interface RazorpayCheckoutInstance {
   open: () => void;
   close: () => void;
+  /**
+   * Subscribe to an event while the modal is open. Only the failure event is
+   * typed, because that is the one this app handles: the success path arrives
+   * through the `handler` option instead.
+   */
+  on?: (
+    event: 'payment.failed',
+    handler: (response: { error?: { description?: string } }) => void,
+  ) => void;
 }
 
 declare global {

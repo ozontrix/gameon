@@ -8,8 +8,6 @@
  * copied into `public/sports/` so this route owns its own asset namespace.
  */
 
-import type { ReactNode } from 'react';
-
 export type SportKind = 'badminton' | 'pickleball' | 'cricket' | 'football';
 
 export const SPORT_LABELS: Record<SportKind, string> = {
@@ -27,8 +25,16 @@ export const SPORT_TILES: Record<SportKind, string> = {
   football: '/sports/football.png',
 };
 
-/** One amenity tile on the Sport Detail screen. */
-export type Amenity = { label: string; icon: ReactNode };
+/** One amenity tile on the Sport Detail screen, as the API sends it. */
+export type Amenity = {
+  label: string;
+  /**
+   * The admin picks an icon per amenity from an icon-font list, so the name is a
+   * free-form string. `AmenitiesRow` resolves it against the glyph registry and
+   * falls back to a neutral glyph for one this build does not draw.
+   */
+  icon: { family: 'ion' | 'mci'; name: string };
+};
 
 /** A slot length a card sells and what one slot of it costs. */
 export type SlotOption = { durationMinutes: number; price: number };
@@ -51,6 +57,8 @@ export type Venue = {
   type: string;
   /** How far ahead this card's venue takes bookings, today counting as day 1. */
   bookingWindowDays: number;
+  /** Most players a single booking of this court type may have, set by the admin. */
+  maxPlayers: number;
   /** The slot lengths a player can book, shortest first, each with its own price. */
   slotOptions: SlotOption[];
   /** The cheapest slot option, for "from ₹X" on the listing. */

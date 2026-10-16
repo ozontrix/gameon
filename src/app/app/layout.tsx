@@ -2,10 +2,12 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
 import { BookingsProvider } from '@/components/mobile/bookings-store';
+import { BookingDraftProvider } from '@/components/mobile/booking-draft-provider';
 import { HomeContentProvider } from '@/components/mobile/home-content-provider';
 import { NotificationsProvider } from '@/components/mobile/notifications-provider';
 import { SessionProvider } from '@/components/mobile/session-provider';
 import { SportsCatalogProvider } from '@/components/mobile/sports-catalog-provider';
+import { WalletProvider } from '@/components/mobile/wallet-provider';
 import { SHEET_ROOT_ID } from '@/components/mobile/ui';
 import './mobile.css';
 
@@ -49,9 +51,13 @@ export default function MobileAppLayout({ children }: { children: ReactNode }) {
         <SessionProvider>
           <NotificationsProvider>
             <BookingsProvider>
-              <HomeContentProvider>
-                <SportsCatalogProvider>{children}</SportsCatalogProvider>
-              </HomeContentProvider>
+              <WalletProvider>
+                <BookingDraftProvider>
+                  <HomeContentProvider>
+                    <SportsCatalogProvider>{children}</SportsCatalogProvider>
+                  </HomeContentProvider>
+                </BookingDraftProvider>
+              </WalletProvider>
             </BookingsProvider>
           </NotificationsProvider>
         </SessionProvider>

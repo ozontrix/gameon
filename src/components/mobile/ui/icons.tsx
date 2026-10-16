@@ -24,16 +24,18 @@
  */
 
 import {
-  addOutline,
-  alertCircleOutline,
   arrowBack,
   arrowForward,
+  addOutline,
+  alertCircleOutline,
+  bulbOutline,
   calendar,
   calendarOutline,
   callOutline,
   cameraOutline,
   cardOutline,
   cashOutline,
+  chatbubbleOutline,
   checkmark,
   checkmarkCircle,
   checkmarkCircleOutline,
@@ -46,12 +48,15 @@ import {
   createOutline,
   downloadOutline,
   giftOutline,
+  gridOutline,
   helpCircleOutline,
   home,
   homeOutline,
   informationCircleOutline,
+  layersOutline,
   linkOutline,
   location,
+  lockClosed,
   lockClosedOutline,
   logInOutline,
   logoWhatsapp,
@@ -60,11 +65,13 @@ import {
   notificationsOutline,
   openOutline,
   optionsOutline,
+  peopleOutline,
   person,
   personCircleOutline,
   personOutline,
   pricetagOutline,
   qrCode,
+  receiptOutline,
   refresh,
   removeOutline,
   searchOutline,
@@ -74,6 +81,7 @@ import {
   speedometerOutline,
   star,
   starOutline,
+  sunnyOutline,
   tennisball,
   tennisballOutline,
   ticketOutline,
@@ -88,12 +96,16 @@ import {
 import {
   mdiBadminton,
   mdiCricket,
+  mdiFan,
   mdiGrass,
+  mdiSeatOutline,
+  mdiShower,
   mdiSnowflake,
   mdiSoccer,
   mdiTableTennis,
   mdiTextureBox,
   mdiWall,
+  mdiWater,
 } from '@mdi/js';
 
 /** Every Ionicons glyph this build renders. */
@@ -102,12 +114,14 @@ const ION = {
   alertCircleOutline,
   arrowBack,
   arrowForward,
+  bulbOutline,
   calendar,
   calendarOutline,
   callOutline,
   cameraOutline,
   cardOutline,
   cashOutline,
+  chatbubbleOutline,
   checkmark,
   checkmarkCircle,
   checkmarkCircleOutline,
@@ -120,12 +134,15 @@ const ION = {
   createOutline,
   downloadOutline,
   giftOutline,
+  gridOutline,
   helpCircleOutline,
   home,
   homeOutline,
   informationCircleOutline,
+  layersOutline,
   linkOutline,
   location,
+  lockClosed,
   lockClosedOutline,
   logInOutline,
   logoWhatsapp,
@@ -134,11 +151,13 @@ const ION = {
   notificationsOutline,
   openOutline,
   optionsOutline,
+  peopleOutline,
   person,
   personCircleOutline,
   personOutline,
   pricetagOutline,
   qrCode,
+  receiptOutline,
   refresh,
   removeOutline,
   searchOutline,
@@ -148,6 +167,7 @@ const ION = {
   speedometerOutline,
   star,
   starOutline,
+  sunnyOutline,
   tennisball,
   tennisballOutline,
   ticketOutline,
@@ -170,10 +190,49 @@ const MDI = {
   grass: mdiGrass,
   textureBox: mdiTextureBox,
   wall: mdiWall,
+  fan: mdiFan,
+  seatOutline: mdiSeatOutline,
+  shower: mdiShower,
+  water: mdiWater,
 } as const;
 
 export type IonName = keyof typeof ION;
 export type MdiName = keyof typeof MDI;
+
+/**
+ * Whether a name from the database is one this build draws. Amenity icons are
+ * picked per row in the admin panel, so the name arrives as a plain string and
+ * has to be checked before it reaches a typed glyph component.
+ */
+export function hasIon(name: string): name is IonName {
+  return name in ION;
+}
+
+export function hasMdi(name: string): name is MdiName {
+  return name in MDI;
+}
+
+/** `layers-outline` → `layersOutline`, `grass` → `grass`. */
+function toRegistryKey(fontName: string): string {
+  return fontName.replace(/-([a-z0-9])/g, (_, letter: string) => letter.toUpperCase());
+}
+
+/**
+ * Resolves an Ionicons name as the database holds it — `layers-outline`, exactly
+ * as the handset asks the font for it — to the glyph this build draws. `null`
+ * when the build has no such glyph, so a caller can fall back rather than lie
+ * about which amenity is shown.
+ */
+export function ionFromFontName(fontName: string): IonName | null {
+  const key = toRegistryKey(fontName);
+  return hasIon(key) ? key : null;
+}
+
+/** The MaterialCommunityIcons twin of {@link ionFromFontName}. */
+export function mdiFromFontName(fontName: string): MdiName | null {
+  const key = toRegistryKey(fontName);
+  return hasMdi(key) ? key : null;
+}
 
 /**
  * Ionicons exports a whole `<svg>` as a data URI. Its inner markup is extracted
