@@ -18,7 +18,7 @@ build uses.
 | `/app/email-login` | Email sign-in | "Continue with Email" |
 | `/app/email-signup` | Create an account — the same form with a name and a referral code | "Create an account", or the email screen's "New to GameOn?" |
 | `/app/home` | Dashboard: hero, next booking, sports, promo, events, features | first tab |
-| `/app/sports` | Every bookable card, one chip per sport, filtered server-side | second tab |
+| `/app/sports` | Every bookable card; multi-select sport chips, filtered server-side. One shared turf can appear under several sports | second tab |
 | `/app/bookings` | The player's own bookings, upcoming/ongoing/past | third tab |
 | `/app/events` | Events and tournaments, one segmented control | fourth tab |
 | `/app/accounts` | Profile, shortcuts, legal links, sign out | fifth tab |

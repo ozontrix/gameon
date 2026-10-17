@@ -571,6 +571,7 @@ export type Database = {
           slug: string
           sort_order: number
           sport_id: string
+          sport_keys: string[]
           surface_type: string
           updated_at: string
           venue_id: string
@@ -587,6 +588,7 @@ export type Database = {
           slug: string
           sort_order?: number
           sport_id: string
+          sport_keys?: string[]
           surface_type: string
           updated_at?: string
           venue_id: string
@@ -603,6 +605,7 @@ export type Database = {
           slug?: string
           sort_order?: number
           sport_id?: string
+          sport_keys?: string[]
           surface_type?: string
           updated_at?: string
           venue_id?: string

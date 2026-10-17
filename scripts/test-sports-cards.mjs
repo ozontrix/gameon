@@ -85,3 +85,28 @@ test('A summary containing only Non-AC does not leave an empty details row', () 
   assert.doesNotMatch(html, /<span[^>]*>\s*<\/span>/);
   assert.match(html, /1 court available/);
 });
+
+test('A dual-use turf shows every category it is listed under', () => {
+  const html = render(
+    venue({
+      key: 'box-football-cricket',
+      sport: 'football',
+      sports: ['football', 'cricket'],
+      title: 'Box Football / Cricket – Outdoor Turf',
+      type: 'Outdoor • Turf',
+      badges: ['Outdoor'],
+      courtsAvailable: 1,
+      href: '/app/sport/box-football-cricket',
+    }),
+  );
+  assert.match(html, />football</);
+  assert.match(html, />cricket</);
+  assert.match(html, /Box Football \/ Cricket/);
+  assert.match(html, /href="\/app\/sport\/box-football-cricket"/);
+});
+
+test('A card without the newer categories field falls back to its primary sport', () => {
+  const html = render(venue());
+  assert.match(html, />badminton</);
+  assert.doesNotMatch(html, />cricket</);
+});

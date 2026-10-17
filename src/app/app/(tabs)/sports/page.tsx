@@ -5,10 +5,14 @@
  *
  * One card per bookable (venue, sport, indoor/outdoor, AC, surface) combination,
  * which is what `/public/sports/catalog` returns. The sport chips are the only
- * filter on the screen, and filtering stays server-side exactly as the handset
- * app does it: picking a chip re-requests the catalog with `?sport=` rather than
+ * filter on the screen, and filtering stays server-side: picking chips
+ * re-requests the catalog with repeated `?sport=` parameters rather than
  * filtering an already-fetched list, so a card is never shown as available when
  * the server would have excluded it.
+ *
+ * Chips are multi-select because one turf can serve two sports. The box turf
+ * is a single card with one court and one booking calendar; it is returned once
+ * whether Football, Cricket, or both are selected.
  *
  * Surface, setting and climate remain card details, not filter controls on this
  * screen. The backend's corresponding query parameters are unchanged.
@@ -31,31 +35,37 @@ import {
   Skeleton,
 } from '@/components/mobile/ui';
 import {
+  SPORT_KINDS,
   SPORT_LABELS,
+  isSportKind,
   type SportKind,
   type Venue,
 } from '@/lib/mobile/constants/sports';
 import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
 
-const SPORTS: SportKind[] = ['badminton', 'pickleball', 'cricket', 'football'];
-
 export default function SportsPage() {
   const searchParams = useSearchParams();
   const { cards: shared, loading: sharedLoading } = useSportsCatalog();
 
-  // A `?sport=` handed over by the Home sport grid is the starting filter —
-  // taken only when it names a sport this build knows, so a stale or mistyped
-  // link shows every court instead of an empty list under a nameless heading.
-  const [sport, setSport] = useState<SportKind | null>(
-    () => SPORTS.find((kind) => kind === searchParams.get('sport')) ?? null,
-  );
+  // `?sport=` links from the Home sport grid, including repeated parameters
+  // for a shared link. Only sports this build knows are kept, so a stale or
+  // mistyped link shows every court instead of an empty nameless filter.
+  const [sports, setSports] = useState<SportKind[]>(() => {
+    const initial = new Set(
+      searchParams.getAll('sport').flatMap((value) => value.split(',')).filter(isSportKind),
+    );
+    return SPORT_KINDS.filter((kind) => initial.has(kind));
+  });
   const [cards, setCards] = useState<Venue[] | null>(null);
-  // Which sport the cards in hand belong to. `query !== loadedQuery` *is* the
+  // Which sports the cards in hand belong to. `query !== loadedQuery` *is* the
   // loading state, so there is no separate flag to race with the request.
   const [loadedQuery, setLoadedQuery] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const query = sport ? `sport=${sport}` : '';
+  // Canonical order, so toggling chips in a different order cannot create a
+  // second request for the same selection.
+  const selected = SPORT_KINDS.filter((kind) => sports.includes(kind));
+  const query = selected.map((kind) => `sport=${kind}`).join('&');
 
   useEffect(() => {
     if (!query) return;
@@ -93,18 +103,29 @@ export default function SportsPage() {
           </span>
         </div>
 
-        {/* The sport chips: the fastest way into one sport's courts. */}
-        <div style={{ display: 'flex', gap: Spacing.sm, flexWrap: 'wrap' }}>
-          {SPORTS.map((option) => (
-            <Chip
-              key={option}
-              label={SPORT_LABELS[option]}
-              icon={<SportGlyph sport={option} size={14} color={Brand.accent} />}
-              selected={sport === option}
-              variant="outline"
-              onPress={() => setSport((current) => (current === option ? null : option))}
-            />
-          ))}
+        {/* Multi-select: a football+cricket turf belongs in either and both. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.xs }}>
+          <div style={{ display: 'flex', gap: Spacing.sm, flexWrap: 'wrap' }}>
+            {SPORT_KINDS.map((option) => (
+              <Chip
+                key={option}
+                label={SPORT_LABELS[option]}
+                icon={<SportGlyph sport={option} size={14} color={Brand.accent} />}
+                selected={sports.includes(option)}
+                variant="outline"
+                onPress={() =>
+                  setSports((current) =>
+                    current.includes(option)
+                      ? current.filter((kind) => kind !== option)
+                      : [...current, option],
+                  )
+                }
+              />
+            ))}
+          </div>
+          <span style={{ ...Typography.caption, color: Brand.textMuted }}>
+            Pick one or more sports. A shared turf appears once, under every sport it hosts.
+          </span>
         </div>
 
         {error ? <InfoNote body={error} tone="danger" title="Could not load sports" /> : null}
@@ -119,16 +140,16 @@ export default function SportsPage() {
         {!busy && visible.length === 0 ? (
           <EmptyState
             icon="tennisballOutline"
-            title={sport ? 'No courts for that sport' : 'No courts to show'}
+            title={selected.length ? 'No courts for those sports' : 'No courts to show'}
             body="Try another sport — the facility books badminton, pickleball, cricket and football."
-            actionLabel={sport ? 'Show all courts' : undefined}
-            onAction={sport ? () => setSport(null) : undefined}
+            actionLabel={selected.length ? 'Show all courts' : undefined}
+            onAction={selected.length ? () => setSports([]) : undefined}
           />
         ) : null}
 
         {visible.length ? (
           <SectionHeader
-            title={sport ? SPORT_LABELS[sport] : 'All courts'}
+            title={selected.length ? selected.map((kind) => SPORT_LABELS[kind]).join(' + ') : 'All courts'}
             trailing={
               <span style={{ ...Typography.caption, color: Brand.textMuted }}>
                 {visible.length} {visible.length === 1 ? 'card' : 'cards'}

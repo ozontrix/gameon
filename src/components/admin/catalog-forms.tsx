@@ -3,6 +3,7 @@ import { checkboxClass, inputClass } from '@/components/admin/ui';
 import { saveCourt, saveCourtType, saveOperatingHours, saveVenue } from '@/lib/admin/actions/catalog';
 import { SURFACE_TYPES, TIMEZONES, WEEKDAYS } from '@/lib/admin/constants';
 import { titleCase } from '@/lib/admin/format';
+import { APP_SPORT_KEYS, APP_SPORT_LABELS } from '@/lib/utils/sport-key';
 
 function Label({ htmlFor, children, required }: { htmlFor: string; children: React.ReactNode; required?: boolean }) {
   return (
@@ -195,6 +196,7 @@ export function CourtTypeForm({
     description: string | null;
     venue_id: string;
     sport_id: string;
+    sport_keys: string[];
     surface_type: string;
     is_indoor: boolean;
     has_ac: boolean;
@@ -272,6 +274,33 @@ export function CourtTypeForm({
           </select>
           <FieldError name="sport_id" />
         </div>
+        <fieldset className="space-y-2 sm:col-span-2">
+          <legend className="block text-sm font-medium text-zinc-800">Show under sports</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {APP_SPORT_KEYS.map((key) => (
+              <label
+                key={key}
+                className="flex items-start gap-2 rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-800"
+              >
+                <input
+                  type="checkbox"
+                  name="sport_keys"
+                  value={key}
+                  defaultChecked={courtType?.sport_keys?.includes(key) ?? false}
+                  className={`${checkboxClass} mt-0.5`}
+                />
+                <span>{APP_SPORT_LABELS[key]}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-500">
+            Tick every sport this card serves, e.g. Football and Cricket for one turf. The primary
+            sport is always included, so leaving these unticked keeps the card in its main sport. It
+            stays a single card with one set of courts and one calendar, so a booking under one sport
+            blocks that time for every category.
+          </p>
+          <FieldError name="sport_keys" />
+        </fieldset>
         <div className="space-y-1.5">
           <Label htmlFor="surface_type" required>
             Surface

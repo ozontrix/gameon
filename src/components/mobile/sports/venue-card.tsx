@@ -23,6 +23,9 @@ function showCardDetail(detail: string): boolean {
 
 export function VenueCard({ venue }: { venue: Venue }) {
   const shortest = venue.slotOptions[0]?.durationMinutes ?? 60;
+  // A dual-use turf shows both categories, so a Football + Cricket result
+  // explains why this one card is listed under either chip.
+  const sports = venue.sports?.length ? venue.sports : [venue.sport];
   const badges = venue.badges.filter(showCardDetail);
   const type = venue.type.split(/[•·]/).map((detail) => detail.trim()).filter(showCardDetail).join(' • ');
 
@@ -42,7 +45,9 @@ export function VenueCard({ venue }: { venue: Venue }) {
 
         <div style={{ padding: Spacing.md, display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' }}>
-            <SportPill sport={venue.sport} />
+            {sports.map((sport) => (
+              <SportPill key={sport} sport={sport} />
+            ))}
             {badges.map((badge) => (
               <Badge key={badge} label={badge} tone="neutral" solid={false} />
             ))}

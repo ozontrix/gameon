@@ -75,7 +75,10 @@ role can write. Removing the role takes effect on the next page load.
   slot engine read. Sports also carry the photo used on Home's "Trending now"
   cards. Changing hours or prices never alters existing bookings;
   deactivating a venue or court stops new bookings only. Adding a closure warns
-  about confirmed bookings that fall inside it.
+  about confirmed bookings that fall inside it. On **Court types & pricing**, a
+  card can be ticked into more than one sport: the box turf, for example, is one
+  card and one set of courts shown under both Football and Cricket. A booking
+  made from either category blocks that court and time for every category.
 - **Activity log** — every change made from the panel, with who and when.
 - **GameOn Blogs** — admin-only article creation, content preview, cover upload,
   SEO fields, drafts, publishing/unpublishing and deletion for the public website.

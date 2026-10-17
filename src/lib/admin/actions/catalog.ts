@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { NotificationService } from '@/lib/services/notification.service';
+import { mergeSportKeys } from '@/lib/utils/sport-key';
 import { NOT_ALLOWED, formValues, invalid, type ActionState } from '../action-result';
 import { recordAudit } from '../audit';
 import { SURFACE_TYPES, WEEKDAYS } from '../constants';
@@ -204,8 +205,33 @@ export async function saveCourtType(_state: ActionState, formData: FormData): Pr
   const parsed = courtTypeSchema.safeParse(formValues(formData));
   if (!parsed.success) return invalid(parsed.error);
   const { id, ...raw } = parsed.data;
+
+  // The primary sport (which names and photographs the card) is always one of
+  // its categories. The admin can tick more, e.g. Football AND Cricket for one
+  // turf; this never creates a second card or a second set of courts.
+  const { data: primarySport, error: sportError } = await supabaseAdmin
+    .from('sports')
+    .select('name')
+    .eq('id', raw.sport_id)
+    .maybeSingle();
+  if (sportError || !primarySport) {
+    return { ok: false, message: 'Choose a sport.', fieldErrors: { sport_id: 'Choose a sport.' } };
+  }
+  const sportKeys = mergeSportKeys(
+    primarySport.name,
+    formData.getAll('sport_keys').filter((value): value is string => typeof value === 'string'),
+  );
+  if (sportKeys.length === 0) {
+    return {
+      ok: false,
+      message: 'Choose at least one sport category.',
+      fieldErrors: { sport_keys: 'Choose at least one category.' },
+    };
+  }
+
   const values = {
     ...raw,
+    sport_keys: sportKeys,
     description: raw.description?.trim() || null,
     sort_order: raw.sort_order ?? 0,
   };

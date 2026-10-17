@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SlotService } from '@/lib/services/slot.service';
 import { SportsCatalogService, type SportsCatalogCard } from '@/lib/services/sports-catalog.service';
+import { cardMatchesSports } from '@/lib/utils/sport-key';
 
 /**
  * Public, unauthenticated: the cards the app's Sports tab renders. See
@@ -33,7 +34,9 @@ async function hasAvailability(card: SportsCatalogCard, date: string, hour: stri
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const sportParam = searchParams.get('sport');
+    // Repeated `sport` parameters are the multi-select chips: one turf can be
+    // listed under football and cricket, so match ANY requested category.
+    const sportParams = searchParams.getAll('sport').filter(Boolean);
     const surfaceParam = searchParams.get('surface');
     const settingParam = searchParams.get('setting');
     const climateParam = searchParams.get('climate');
@@ -45,7 +48,7 @@ export async function GET(request: Request) {
 
     // Filtering and sorting run here rather than in the app: the same rules,
     // applied once, on the same data the cards were built from.
-    if (sportParam) cards = cards.filter((card) => card.sport === sportParam);
+    if (sportParams.length > 0) cards = cards.filter((card) => cardMatchesSports(card.sports, sportParams));
     if (surfaceParam) cards = cards.filter((card) => card.type.includes(surfaceParam));
     if (settingParam) cards = cards.filter((card) => card.badges.includes(settingParam));
     if (climateParam) cards = cards.filter((card) => card.badges.includes(climateParam));

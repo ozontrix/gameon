@@ -10,6 +10,13 @@
 
 export type SportKind = 'badminton' | 'pickleball' | 'cricket' | 'football';
 
+/** The chips on the Sports tab, in the order they are shown. */
+export const SPORT_KINDS: readonly SportKind[] = ['badminton', 'pickleball', 'cricket', 'football'];
+
+export function isSportKind(value: string | null | undefined): value is SportKind {
+  return (SPORT_KINDS as readonly string[]).includes(value ?? '');
+}
+
 export const SPORT_LABELS: Record<SportKind, string> = {
   badminton: 'Badminton',
   pickleball: 'Pickleball',
@@ -48,7 +55,13 @@ export type Venue = {
   key: string;
   /** Stable, readable identity within the venue, e.g. `badminton-wooden-ac`. */
   slug: string;
+  /** The primary category, kept for older clients. Always the first `sports`. */
   sport: SportKind;
+  /**
+   * Every category this card appears under. A box turf used for football and
+   * cricket lists both, but is one card with one shared booking calendar.
+   */
+  sports: SportKind[];
   title: string;
   description: string | null;
   /** Facility name and city, e.g. "GameOn Arena, Gurgaon". */

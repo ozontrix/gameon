@@ -8,6 +8,7 @@ import { formatMoney, titleCase } from '@/lib/admin/format';
 import { listCatalogOptions, listCourtTypes } from '@/lib/admin/queries/catalog';
 import { requireAdmin } from '@/lib/admin/session';
 import { cn } from '@/lib/utils';
+import { APP_SPORT_KEYS, APP_SPORT_LABELS, isAppSportKey } from '@/lib/utils/sport-key';
 
 export const metadata: Metadata = { title: 'Court types & pricing' };
 
@@ -24,7 +25,7 @@ export default async function CourtTypesPage({
     <>
       <PageHeader
         title="Court types & pricing"
-        description="What the app lists and prices. Each type sells its own slot lengths at its own prices; its courts are the bookable units."
+        description="What the app lists and prices. Each type sells its own slot lengths and can appear under several sports; its courts are the bookable units and keep one shared calendar."
         actions={
           <LinkButton href="/admin/court-types/new">
             <Plus className="size-4" aria-hidden /> Add court type
@@ -42,11 +43,11 @@ export default async function CourtTypesPage({
               </option>
             ))}
           </select>
-          <select name="sport" defaultValue={filters.sport ?? ''} className={cn(inputClass, 'w-auto')} aria-label="Sport">
+          <select name="sport" defaultValue={filters.sport ?? ''} className={cn(inputClass, 'w-auto')} aria-label="Sport category">
             <option value="">All sports</option>
-            {options.sports.map((sport) => (
-              <option key={sport.id} value={sport.id}>
-                {sport.name}
+            {APP_SPORT_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {APP_SPORT_LABELS[key]}
               </option>
             ))}
           </select>
@@ -79,6 +80,11 @@ export default async function CourtTypesPage({
                       {type.name}
                     </Link>
                     <div className="text-xs text-zinc-500">{type.sports?.name}</div>
+                    <div className="text-xs text-zinc-500">
+                      In{' '}
+                      {type.sport_keys.filter(isAppSportKey).map((key) => APP_SPORT_LABELS[key]).join(', ') ||
+                        'no app sport'}
+                    </div>
                   </Td>
                   <Td>{type.venues?.name ?? '—'}</Td>
                   <Td className="text-xs">

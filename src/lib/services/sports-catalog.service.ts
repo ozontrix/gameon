@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/db/supabase';
-import { sportKeyFor, type AppSportKey } from '@/lib/utils/sport-key';
+import { sportKeyFor, sportKeysFromColumn, type AppSportKey } from '@/lib/utils/sport-key';
 
 /**
  * A card on the app's Sports tab. One row of `court_types` — the sellable
@@ -12,7 +12,13 @@ export type SportsCatalogCard = {
   key: string;
   /** Stable, human-readable identity within the venue. For links and admin. */
   slug: string;
+  /** The primary category, kept for older clients. Always the first `sports`. */
   sport: AppSportKey;
+  /**
+   * Every category this one card appears under (at least one). A football and
+   * cricket turf lists both but is still one product with one set of courts.
+   */
+  sports: AppSportKey[];
   title: string;
   description: string | null;
   location: string;
@@ -41,6 +47,7 @@ type CourtTypeRow = {
   slug: string;
   name: string;
   description: string | null;
+  sport_keys: string[] | null;
   surface_type: string;
   is_indoor: boolean;
   has_ac: boolean;
@@ -57,7 +64,7 @@ type CourtTypeRow = {
 };
 
 const SELECT = `
-  id, slug, name, description, surface_type, is_indoor, has_ac, max_players, sort_order,
+  id, slug, name, description, sport_keys, surface_type, is_indoor, has_ac, max_players, sort_order,
   venues!inner ( name, address, is_active, booking_window_days ),
   sports!inner ( name, image_url, is_active ),
   facilities ( id, name, is_active ),
@@ -72,9 +79,13 @@ function capitalize(value: string): string {
 }
 
 function toCard(row: CourtTypeRow): SportsCatalogCard | null {
-  const sportKey = sportKeyFor(row.sports?.name);
-  // A sport the app has no screens for yet isn't bookable from it.
+  const primarySport = sportKeyFor(row.sports?.name);
+  const categories = sportKeysFromColumn(row.sport_keys, row.sports?.name);
+  // A card the app has no category for isn't bookable from it.
+  const sportKey = primarySport ?? categories[0];
   if (!sportKey) return null;
+  // The primary category stays first, exactly as the card was configured.
+  const sports = [sportKey, ...categories.filter((category) => category !== sportKey)];
   const slotOptions = row.court_type_slot_options
     .filter((option) => option.is_active)
     .sort((a, b) => a.duration_minutes - b.duration_minutes)
@@ -95,6 +106,7 @@ function toCard(row: CourtTypeRow): SportsCatalogCard | null {
     key: row.id,
     slug: row.slug,
     sport: sportKey,
+    sports,
     title: row.name,
     description: row.description,
     location: [row.venues?.name, row.venues?.address].filter(Boolean).join(', '),

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/db/supabase';
+import { isAppSportKey } from '@/lib/utils/sport-key';
 import { todayIn } from '../format';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,12 +56,14 @@ export async function listCourtTypes(filters: { venue?: string; sport?: string }
     .from('court_types')
     .select(
       `id, slug, name, surface_type, is_indoor, has_ac, max_players, is_active, sort_order,
-       venue_id, sport_id, venues ( name ), sports ( name ), facilities ( count ),
+       venue_id, sport_id, sport_keys, venues ( name ), sports ( name ), facilities ( count ),
        court_type_slot_options ( duration_minutes, price, is_active )`
     )
     .order('sort_order');
   if (filters.venue && UUID.test(filters.venue)) query = query.eq('venue_id', filters.venue);
-  if (filters.sport && UUID.test(filters.sport)) query = query.eq('sport_id', filters.sport);
+  // A card can appear under several sports, so the filter is a membership test
+  // against the category array rather than the primary sport.
+  if (filters.sport && isAppSportKey(filters.sport)) query = query.overlaps('sport_keys', [filters.sport]);
   const { data, error } = await query;
   if (error) throw error;
   return data.map(({ court_type_slot_options: options, ...type }) => ({
@@ -78,7 +81,7 @@ export async function getCourtType(id: string) {
     .from('court_types')
     .select(
       `id, slug, name, description, surface_type, is_indoor, has_ac, max_players,
-       sort_order, is_active, venue_id, sport_id`
+       sort_order, is_active, venue_id, sport_id, sport_keys`
     )
     .eq('id', id)
     .maybeSingle();
