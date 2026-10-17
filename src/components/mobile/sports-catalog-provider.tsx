@@ -36,8 +36,8 @@ function fromApi(card: ApiVenue): Venue {
 /**
  * Fetches the catalog, optionally scoped by the same query params the backend's
  * `GET /public/sports/catalog` understands (sport, surface, setting, climate,
- * court, sort). Exported so the Sports listing's filter hook can run the exact
- * same request the shared context does, just parameterised.
+ * court, sort). Exported so the Sports tab can re-request it with `?sport=` when
+ * a chip is picked, running the exact same request the shared context does.
  */
 export async function fetchSportsCatalog(query?: string): Promise<Venue[]> {
   const res = (await api.get(`/public/sports/catalog${query ? `?${query}` : ''}`)) as {

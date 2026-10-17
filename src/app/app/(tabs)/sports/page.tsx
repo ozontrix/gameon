@@ -4,10 +4,14 @@
  * The Sports tab — the web twin of the app `app/(tabs)/sports.tsx`.
  *
  * One card per bookable (venue, sport, indoor/outdoor, AC, surface) combination,
- * which is what `/public/sports/catalog` returns. Filtering is server-side,
- * exactly as the handset app does it: picking a chip re-requests the catalog with
- * that query param rather than filtering an already-fetched list, so a card is
- * never shown as available when the server would have excluded it.
+ * which is what `/public/sports/catalog` returns. The sport chips are the only
+ * filter on the screen, and filtering stays server-side exactly as the handset
+ * app does it: picking a chip re-requests the catalog with `?sport=` rather than
+ * filtering an already-fetched list, so a card is never shown as available when
+ * the server would have excluded it.
+ *
+ * Surface, setting and climate remain card details, not filter controls on this
+ * screen. The backend's corresponding query parameters are unchanged.
  */
 
 import { useSearchParams } from 'next/navigation';
@@ -20,7 +24,6 @@ import {
   AppHeader,
   Chip,
   EmptyState,
-  FilterBar,
   InfoNote,
   Screen,
   ScreenScroll,
@@ -36,42 +39,24 @@ import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
 
 const SPORTS: SportKind[] = ['badminton', 'pickleball', 'cricket', 'football'];
 
-/** The filter dimensions the backend understands, in the order the bar shows them. */
-const DIMENSIONS = [
-  { key: 'surface', label: 'Surface' },
-  { key: 'setting', label: 'Setting' },
-  { key: 'climate', label: 'Climate' },
-] as const;
-
-type Filters = Partial<Record<'sport' | 'surface' | 'setting' | 'climate', string>>;
-
-function queryFor(filters: Filters): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) {
-    if (value) params.set(key, value);
-  }
-  return params.toString();
-}
-
 export default function SportsPage() {
   const searchParams = useSearchParams();
   const { cards: shared, loading: sharedLoading } = useSportsCatalog();
 
-  // A `?sport=` handed over by the Home sport grid is the starting filter.
-  const handedOver = searchParams.get('sport');
-  const [filters, setFilters] = useState<Filters>(
-    handedOver ? { sport: handedOver as SportKind } : {},
+  // A `?sport=` handed over by the Home sport grid is the starting filter —
+  // taken only when it names a sport this build knows, so a stale or mistyped
+  // link shows every court instead of an empty list under a nameless heading.
+  const [sport, setSport] = useState<SportKind | null>(
+    () => SPORTS.find((kind) => kind === searchParams.get('sport')) ?? null,
   );
   const [cards, setCards] = useState<Venue[] | null>(null);
-  // Which filter the cards in hand belong to. `query !== loadedQuery` *is* the
+  // Which sport the cards in hand belong to. `query !== loadedQuery` *is* the
   // loading state, so there is no separate flag to race with the request.
   const [loadedQuery, setLoadedQuery] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const query = queryFor(filters);
-  const activeCount = Object.values(filters).filter(Boolean).length;
+  const query = sport ? `sport=${sport}` : '';
 
-  // Unfiltered is the shared catalog, already in memory from the provider.
   useEffect(() => {
     if (!query) return;
     let active = true;
@@ -93,6 +78,7 @@ export default function SportsPage() {
     };
   }, [query]);
 
+  // Unfiltered is the shared catalog, already in memory from the provider.
   const visible = (query ? cards : shared) ?? [];
   const busy = query ? loadedQuery !== query : sharedLoading;
 
@@ -109,33 +95,17 @@ export default function SportsPage() {
 
         {/* The sport chips: the fastest way into one sport's courts. */}
         <div style={{ display: 'flex', gap: Spacing.sm, flexWrap: 'wrap' }}>
-          {SPORTS.map((sport) => (
+          {SPORTS.map((option) => (
             <Chip
-              key={sport}
-              label={SPORT_LABELS[sport]}
-              icon={<SportGlyph sport={sport} size={14} color={Brand.accent} />}
-              selected={filters.sport === sport}
+              key={option}
+              label={SPORT_LABELS[option]}
+              icon={<SportGlyph sport={option} size={14} color={Brand.accent} />}
+              selected={sport === option}
               variant="outline"
-              onPress={() =>
-                setFilters((current) => ({
-                  ...current,
-                  sport: current.sport === sport ? undefined : sport,
-                }))
-              }
+              onPress={() => setSport((current) => (current === option ? null : option))}
             />
           ))}
         </div>
-
-        <FilterBar
-          items={DIMENSIONS.map((dimension) => ({
-            key: dimension.key,
-            label: dimension.label,
-            value: filters[dimension.key],
-          }))}
-          activeCount={activeCount}
-          onSelect={(key) => setFilters((current) => ({ ...current, [key]: undefined }))}
-          onClearAll={() => setFilters({})}
-        />
 
         {error ? <InfoNote body={error} tone="danger" title="Could not load sports" /> : null}
 
@@ -149,16 +119,16 @@ export default function SportsPage() {
         {!busy && visible.length === 0 ? (
           <EmptyState
             icon="tennisballOutline"
-            title="No courts match those filters"
-            body="Clear a filter, or try another sport — the facility books badminton, pickleball, cricket and football."
-            actionLabel="Clear filters"
-            onAction={() => setFilters({})}
+            title={sport ? 'No courts for that sport' : 'No courts to show'}
+            body="Try another sport — the facility books badminton, pickleball, cricket and football."
+            actionLabel={sport ? 'Show all courts' : undefined}
+            onAction={sport ? () => setSport(null) : undefined}
           />
         ) : null}
 
         {visible.length ? (
           <SectionHeader
-            title={filters.sport ? SPORT_LABELS[filters.sport as SportKind] : 'All courts'}
+            title={sport ? SPORT_LABELS[sport] : 'All courts'}
             trailing={
               <span style={{ ...Typography.caption, color: Brand.textMuted }}>
                 {visible.length} {visible.length === 1 ? 'card' : 'cards'}

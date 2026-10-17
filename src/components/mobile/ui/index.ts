@@ -18,7 +18,6 @@ export { Card, CardRow, Divider } from './card';
 export { Chip, type ChipTrailing, type ChipVariant } from './chip';
 export { DetailRow } from './detail-row';
 export { EmptyState } from './empty-state';
-export { FilterBar, type FilterBarItem } from './filter-bar';
 export { IconButton } from './icon-button';
 export {
   Ion,
