@@ -24,7 +24,7 @@ export const DEFAULT_WHATSAPP_VERSION = 'v25.0';
 export const WHATSAPP_MEDIA_MAX_AGE_DAYS = 25;
 
 export type WhatsAppConfig = {
-  /** Permanent System User token. Never logged, never sent to the client. */
+  /** Authorized user/system-user access token. Never logged or sent to the client. */
   token: string;
   phoneNumberId: string;
   /** e.g. `v22.0`, substituted for `{{Version}}` in the Graph URL. */

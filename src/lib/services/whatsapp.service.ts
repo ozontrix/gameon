@@ -1,4 +1,3 @@
-import { after } from 'next/server';
 import { supabaseAdmin } from '../db/supabase';
 import type { Tables, Json } from '@/types/database.types';
 import { getWhatsAppConfig } from '../whatsapp/config';
@@ -13,21 +12,25 @@ type Delivery = { phone: string; name: string; sport: string; date: string; time
 export function referenceFor(_category: QrCategory, id: string) { return `#${id.slice(0,8).toUpperCase()}`; }
 
 export class WhatsAppService {
-  /** The DB enqueues transactionally; after() does not block checkout responses. */
-  static async sendBookingConfirmation(id: string) { WhatsAppService.schedule('booking', id); }
-  static async sendEventConfirmation(id: string) { WhatsAppService.schedule('event', id); }
-  static async sendTournamentConfirmation(id: string) { WhatsAppService.schedule('tournament', id); }
-  private static schedule(category: QrCategory, id: string) {
+  /** Send immediately after confirmation commits; messaging must never undo a booking. */
+  static async sendBookingConfirmation(id: string) { await WhatsAppService.sendConfirmation('booking', id); }
+  static async sendEventConfirmation(id: string) { await WhatsAppService.sendConfirmation('event', id); }
+  static async sendTournamentConfirmation(id: string) { await WhatsAppService.sendConfirmation('tournament', id); }
+  private static async sendConfirmation(category: QrCategory, id: string) {
     try {
-      after(async () => {
-        try {
-          const { data, error } = await supabaseAdmin.from('whatsapp_messages').select('id')
-            .eq('dedupe_key',`${category}-confirmed:${id}`).maybeSingle();
-          if (error) throw error;
-          if (data) await WhatsAppService.process(data.id);
-        } catch { console.error('[whatsapp] queued delivery deferred to worker',category,id); }
-      });
-    } catch { /* Outside a request context: the durable cron worker owns the send. */ }
+      // The existing transactional row supplies consent, logging and a dedupe lease,
+      // not a scheduled job. No cron or response-tail callback is needed to send.
+      const { data, error } = await supabaseAdmin.from('whatsapp_messages').select('id')
+        .eq('dedupe_key',`${category}-confirmed:${id}`).maybeSingle();
+      if (error) throw error;
+      if (data) {
+        const result = await WhatsAppService.process(data.id);
+        if (!result.ok) console.warn('[whatsapp] confirmation not sent; inspect delivery log',category,id);
+      }
+    } catch {
+      // Do not expose provider errors, tokens or customer details in checkout/logs.
+      console.error('[whatsapp] confirmation delivery failed; booking remains confirmed',category,id);
+    }
   }
 
   private static async loadDelivery(category: QrCategory, id: string): Promise<Delivery | null> {
@@ -76,7 +79,7 @@ export class WhatsAppService {
       const to=toWhatsAppNumber(delivery.phone);
       if(!to) return await WhatsAppService.failure(row,'INVALID_PHONE','The booking phone is not a valid WhatsApp number.',false);
       const recipient=`+${to}`;
-      // Persist before preparation/opt-out checks so failed logs also include +91.
+      // Keep the display/log number international; Meta's payload uses digits only.
       await WhatsAppService.updateOwned(row,{to_phone:recipient},['processing']);
       const optOut=await supabaseAdmin.from('whatsapp_opt_outs').select('phone').eq('phone',to).maybeSingle();
       if(optOut.error) throw optOut.error;
@@ -90,7 +93,7 @@ export class WhatsAppService {
         mediaId=uploaded.data.mediaId;
         await WhatsAppService.updateOwned(row,{media_id:mediaId,media_uploaded_at:new Date().toISOString()});
       }
-      const payload=buildTemplatePayload(config,{to:recipient,mediaId,customerName:delivery.name,
+      const payload=buildTemplatePayload(config,{to,mediaId,customerName:delivery.name,
         bookingId:referenceFor(row.category as QrCategory,row.reference_id),sport:delivery.sport,date:delivery.date,time:delivery.time});
       // Save correlation BEFORE dispatch; early webhooks can find the local row.
       const correlated={...payload,biz_opaque_callback_data:`${row.id}:${row.lock_token}`};
@@ -111,7 +114,7 @@ export class WhatsAppService {
       return {ok:true,message:'QR confirmation accepted by Meta. Delivery is tracked separately.'};
     } catch {
       return await WhatsAppService.failure(row,dispatched?'UNCERTAIN_SEND':'PREPARATION_FAILED',
-        dispatched?'Delivery may have been accepted. Check Meta before resending.':'QR preparation failed; queued for retry.',!dispatched,dispatched);
+        dispatched?'Delivery may have been accepted. Check Meta before resending.':'QR preparation failed; inspect the delivery log before retrying.',!dispatched,dispatched);
     }
   }
   private static async updateOwned(row:Message,patch:Partial<Message>,statuses?:string[]) {

@@ -150,10 +150,11 @@ Creates a `PENDING` booking for the signed-in user, holding the slot for 10 minu
 ### 9. Cron
 * `GET /api/cron/clear-expired` — releases lapsed checkout holds (daily).
 * `GET /api/cron/booking-reminders` — a morning reminder for each of today's bookings (daily).
-* `GET /api/cron/whatsapp-deliveries` — retries WhatsApp QR deliveries that were not sent, draining the queue in
-  batches until it is empty or its time budget is spent (daily).
 * All require `Authorization: Bearer $CRON_SECRET`, which Vercel Cron sends automatically. Every schedule runs at
   most once per day, because Vercel Hobby rejects more frequent cron expressions.
+* WhatsApp QR confirmations send immediately inside successful booking confirmation requests, not via cron.
+  The legacy authenticated `GET /api/cron/whatsapp-deliveries` endpoint is unscheduled and retained only for
+  explicit operator recovery; normal delivery needs no scheduler. See `WHATSAPP_DELIVERY.md`.
 
 ---
 

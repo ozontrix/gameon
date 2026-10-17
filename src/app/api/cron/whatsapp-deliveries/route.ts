@@ -2,17 +2,9 @@ import { NextResponse } from 'next/server';
 import { WhatsAppService } from '@/lib/services/whatsapp.service';
 
 /**
- * Durable recovery worker for WhatsApp QR deliveries.
- *
- * Vercel Hobby only allows cron jobs that run once per day, so this route no
- * longer relies on a five-minute schedule: a single run keeps draining in
- * batches until the queue is empty or the time budget is spent, inside the
- * 300 second function limit. Anything left over is picked up by the next run.
- *
- * The happy path still sends in the request tail (WhatsAppService.schedule);
- * this endpoint is the safety net for failures, retries and crashed workers.
- * For faster recovery than once a day, point an external scheduler at this same
- * authenticated URL every few minutes.
+ * Legacy, unscheduled operator recovery endpoint. Normal QR confirmations are
+ * sent directly in the successful booking request, not via this endpoint.
+ * Retained for explicit recovery only; do not attach a cron/external scheduler.
  */
 export const maxDuration = 300;
 const BATCH_SIZE = 25;

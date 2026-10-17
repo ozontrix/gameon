@@ -303,11 +303,11 @@ export class BookingService {
     const result = data as { outcome: PaidOrderOutcome; changed: boolean };
     if (result.outcome === 'confirmed') {
       BookingEmailService.schedule('booking', booking.id);
+      // Run even on an idempotent callback: the delivery lease prevents duplicates
+      // and a callback can recover a confirmation interrupted before messaging.
+      await WhatsAppService.sendBookingConfirmation(booking.id);
       if (result.changed) {
         await NotificationService.notifyBooking(booking.id, { type: 'confirmed' });
-        // The customer's WhatsApp confirmation. Recorded in the delivery log and
-        // idempotent, so a retried verify never sends a second message.
-        await WhatsAppService.sendBookingConfirmation(booking.id);
       }
       // Retry the atomic referral operation even on an idempotent confirmation.
       if (booking.user_id) await BookingService.maybeCreditReferralBonus(booking.user_id, booking.id);
@@ -328,10 +328,12 @@ export class BookingService {
     });
     BookingService.assertFinancialResult(error);
     const result = data as { outcome: PaidOrderOutcome; changed: boolean };
-    if (result.outcome === 'confirmed') BookingEmailService.schedule('booking', bookingId);
+    if (result.outcome === 'confirmed') {
+      BookingEmailService.schedule('booking', bookingId);
+      await WhatsAppService.sendBookingConfirmation(bookingId);
+    }
     if (result.changed) {
       await NotificationService.notifyBooking(bookingId, { type: 'confirmed' });
-      await WhatsAppService.sendBookingConfirmation(bookingId);
     }
     await BookingService.maybeCreditReferralBonus(userId, bookingId);
     return { bookingId };

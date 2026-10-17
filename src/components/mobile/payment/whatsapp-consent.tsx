@@ -48,12 +48,12 @@ export function WhatsAppConsent({
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: Spacing.xs }}>
           <Ion name="logoWhatsapp" size={14} color={Brand.success} />
           <span style={{ ...Typography.label, color: Brand.text }}>
-            Send me booking updates on WhatsApp
+            Send my booking confirmation and QR on WhatsApp
           </span>
         </span>
         <span style={{ ...Typography.caption, color: Brand.textMuted }}>
-          Your confirmation, reminders and the venue’s address on the number you booked with. It is
-          recorded against this booking, so it does not change your account preference.
+          Receive your booking details and personal check-in QR on the number you booked with
+          after confirmation. Optional; no marketing. Reply STOP to opt out.
         </span>
       </span>
     </label>

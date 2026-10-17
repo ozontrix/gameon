@@ -126,17 +126,20 @@ test('each category generates a distinct PNG with authoritative QR payload',asyn
 configured('confirmation uploads reservation QR, exact template body, and cannot resend',async()=>{
   const h=harness();const row=h.state.whatsapp_messages[0];assert.equal((await h.service.process(row.id)).ok,true);
   await h.service.process(row.id);await h.service.retryMessage(row.id);assert.equal(h.calls.sent.length,1);assert.equal(h.calls.images.length,1);
-  const p=h.calls.sent[0];assert.equal(p.to,'+918572005698');assert.equal(row.to_phone,p.to);assert.equal(row.payload.to,p.to);assert.equal(p.template.name,'booking_with_qr_new');
+  const p=h.calls.sent[0];assert.equal(p.to,'918572005698');assert.equal(row.to_phone,`+${p.to}`);assert.equal(row.payload.to,p.to);assert.equal(p.template.name,'booking_with_qr_new');
   assert.equal(p.template.components[0].parameters[0].image.id,'media-1');assert.equal(p.biz_opaque_callback_data,`${row.id}:${row.lock_token}`);
   assert.deepEqual(p.template.components[1].parameters.map(p=>p.parameter_name),['customer_name','booking_id','sport','booking_date','booking_time']);
   assert.equal(p.template.components[1].parameters[1].text,'#11111111');
+  assert.equal(p.template.language.code,'en');
+  assert.deepEqual(p.template.components[1].parameters.map(p=>p.text),['Player','#11111111','Pickleball','19 October 2026','7:00 PM - 8:00 PM']);
 });
-for(const phone of ['8572005698','+8572005698','918572005698','+918572005698','9123456789'])configured(`booking recipient includes +91 exactly once: ${phone}`,async()=>{
-  const expected=phone==='9123456789'?'+919123456789':'+918572005698';
+for(const phone of ['8572005698','+8572005698','918572005698','+918572005698','9123456789'])configured(`booking API recipient is digits only with country code exactly once: ${phone}`,async()=>{
+  const expected=phone==='9123456789'?'919123456789':'918572005698';
   const h=harness({bookings:[booking({contact_phone:phone})]});
   const row=h.state.whatsapp_messages[0];
   assert.equal((await h.service.process(row.id)).ok,true);
-  assert.equal(row.to_phone,expected);assert.equal(row.payload.to,expected);assert.equal(h.calls.sent[0].to,expected);
+  assert.equal(row.to_phone,`+${expected}`);assert.equal(row.payload.to,expected);assert.equal(h.calls.sent[0].to,expected);
+  assert.match(h.calls.sent[0].to,/^91\d{10}$/);
 });
 configured('preparation failures still log the full +91 recipient',async()=>{
   const h=harness({client:{upload:()=>({ok:false,code:'HTTP_429',message:'Rate limited',retryable:true})}});
@@ -153,7 +156,7 @@ for(const kind of ['event','tournament'])configured(`${kind} QR uses its own cat
   const activity={title:'Open Play',starts_on:'2026-10-19',ends_on:'2026-10-20',daily_start_time:'19:00:00',daily_end_time:'20:00:00',sports:{name:'Pickleball'},court_types:{sports:{name:'Pickleball'}}};
   const h=harness({rows:[message(kind)],tables:kind==='event'?{event_orders:[{id,status:'CONFIRMED',whatsapp_consent:true,contact_phone:'8572005698',attendee_name:'Player',events:activity}]}:{tournament_registrations:[{id,status:'CONFIRMED',whatsapp_consent:true,contact_phone:'8572005698',captain_name:'Player',tournaments:activity}]}});
   assert.equal((await h.service.process(h.state.whatsapp_messages[0].id)).ok,true);assert.equal(h.calls.images[0].filename,`${kind}-${id}.png`);
-  assert.equal(h.calls.sent[0].to,'+918572005698');assert.equal(h.state.whatsapp_messages[0].to_phone,'+918572005698');
+  assert.equal(h.calls.sent[0].to,'918572005698');assert.equal(h.state.whatsapp_messages[0].to_phone,'+918572005698');
   assert.equal(h.calls.sent[0].template.components[1].parameters[3].text,'19 October 2026 - 20 October 2026');
 });
 configured('concurrent worker and admin retries produce only one send',async()=>{
@@ -191,9 +194,30 @@ configured('sent can become failed, but failed receipts never downgrade delivere
   await h.service.applyStatusUpdate([{id:r.wa_message_id,status:'sent'}]);assert.equal(r.status,'failed');
   await h.service.applyStatusUpdate([{id:r.wa_message_id,status:'read'}]);await h.service.applyStatusUpdate([{id:r.wa_message_id,status:'failed'}]);assert.equal(r.status,'read');
 });
-configured('response-tail delivery scheduling does not block confirmations',async()=>{
-  const h=harness();await h.service.sendBookingConfirmation(id);assert.equal(h.calls.sent.length,0);
-  await Promise.all(h.calls.jobs.map(fn=>fn()));assert.equal(h.calls.sent.length,1);
+configured('confirmation sends immediately without a response-tail callback or cron',async()=>{
+  const h=harness();await h.service.sendBookingConfirmation(id);
+  assert.equal(h.calls.sent.length,1);assert.equal(h.calls.images.length,1);assert.equal(h.calls.jobs.length,0);
+  await h.service.sendBookingConfirmation(id);assert.equal(h.calls.sent.length,1);
+});
+configured('confirmation awaits upload and send before returning',async()=>{
+  let release;const gate=new Promise(resolve=>{release=resolve;});
+  const h=harness({client:{send:async()=>{await gate;return {ok:true,data:{messageId:'wamid.awaited'}};}}});
+  let completed=false;const pending=h.service.sendBookingConfirmation(id).then(()=>{completed=true;});
+  await new Promise(resolve=>setTimeout(resolve,30));assert.equal(completed,false);
+  release();await pending;assert.equal(h.state.whatsapp_messages[0].status,'sent');
+});
+configured('database failure during messaging cannot reject a confirmed booking',async()=>{
+  const h=harness();h.failDb();
+  await assert.doesNotReject(h.service.sendBookingConfirmation(id));assert.equal(h.calls.sent.length,0);
+});
+configured('Meta upload refusal is recorded without failing confirmation',async()=>{
+  const h=harness({client:{upload:()=>({ok:false,code:'HTTP_401_190',message:'Invalid token',retryable:false})}});
+  await assert.doesNotReject(h.service.sendBookingConfirmation(id));
+  assert.equal(h.state.whatsapp_messages[0].status,'failed');assert.equal(h.calls.sent.length,0);
+});
+configured('a checkout without a consented delivery does not send',async()=>{
+  const h=harness({rows:[]});await h.service.sendBookingConfirmation(id);
+  assert.equal(h.calls.sent.length,0);assert.equal(h.calls.images.length,0);
 });
 test('unconfigured integration leaves the durable queue untouched',async()=>{
   const restore=setEnv({WHATSAPP_ACCESS_TOKEN:''});try{const h=harness();await h.service.process(h.state.whatsapp_messages[0].id);assert.equal(h.state.whatsapp_messages[0].attempts,0);assert.equal(h.calls.sent.length,0);}finally{restore();}
@@ -225,22 +249,28 @@ test('Cloud API client posts multipart PNG to /media and exact template to /mess
     const {uploadMedia,sendTemplateMessage}=loader()('src/lib/whatsapp/client.ts');const config={token:'server-token',version:'v25.0',phoneNumberId:'12345'};
     assert.equal((await uploadMedia(config,{bytes:new Uint8Array([1,2]),type:'image/png',filename:'qr.png'})).data.mediaId,'media123');
     assert.equal(calls[0].url,'https://graph.facebook.com/v25.0/12345/media');assert.equal(calls[0].options.body.get('messaging_product'),'whatsapp');assert.equal(calls[0].options.body.get('file').type,'image/png');
+    assert.equal(calls[0].options.headers.Authorization,'Bearer server-token');
+    assert.equal(calls[0].options.body.get('type'),'image/png');
+    assert.equal(calls[0].options.headers['Content-Type'],undefined,'fetch must set the multipart boundary');
     assert.equal((await sendTemplateMessage(config,{type:'template'})).data.messageId,'wamid123');assert.equal(calls[1].url,'https://graph.facebook.com/v25.0/12345/messages');assert.equal(calls[1].options.headers.Authorization,'Bearer server-token');
+    assert.equal(calls[1].options.headers['Content-Type'],'application/json');
+    assert.deepEqual(JSON.parse(calls[1].options.body),{type:'template'});
   }finally{globalThis.fetch=original;}
 });
-test('integration guards require consent, durable triggers, private RLS and recovery worker',()=>{
+test('website integration retains consent, durable deduplication and immediate sending',()=>{
   const sql=readFileSync(resolve(root,'supabase/migrations/20261014150000_whatsapp_booking_qr.sql'),'utf8');
   assert.match(sql,/not new.whatsapp_consent/);assert.match(sql,/on conflict\(dedupe_key\) do nothing/);assert.match(sql,/for update skip locked/);
   for(const file of ['src/app/api/v1/user/bookings/route.ts','src/app/api/v1/user/events/[id]/tickets/route.ts','src/app/api/v1/user/tournaments/[id]/register/route.ts'])assert.match(readFileSync(resolve(root,file),'utf8'),/whatsappConsent/);
-  for(const file of ['book/payment.tsx','event/[id].tsx','tournament/[id].tsx']){
-    const text=readFileSync(resolve(root,'../gameon-multisports/src/app',file),'utf8');assert.match(text,/<WhatsAppConsent /);assert.match(text,/whatsappConsent,/);
+  for(const file of ['book/payment/page.tsx','event/[id]/page.tsx','tournament/[id]/page.tsx']){
+    const text=readFileSync(resolve(root,'src/app/app',file),'utf8');assert.match(text,/<WhatsAppConsent\s/);assert.match(text,/whatsappConsent,/);
   }
-  assert.match(readFileSync(resolve(root,'vercel.json'),'utf8'),/whatsapp-deliveries/);
+  assert.doesNotMatch(readFileSync(resolve(root,'vercel.json'),'utf8'),/whatsapp-deliveries/);
+  assert.doesNotMatch(readFileSync(resolve(root,'src/lib/services/whatsapp.service.ts'),'utf8'),/import.*after.*next\/server/);
 });
 test('every Vercel cron stays inside the Hobby once-per-day limit',()=>{
   const {crons}=JSON.parse(readFileSync(resolve(root,'vercel.json'),'utf8'));
   assert.equal(new Set(crons.map(cron=>cron.path)).size,crons.length,'Cron paths must not be scheduled twice');
-  for(const path of ['/api/cron/booking-emails','/api/cron/push-deliveries','/api/cron/whatsapp-deliveries','/api/cron/clear-expired','/api/cron/booking-reminders']){
+  for(const path of ['/api/cron/booking-emails','/api/cron/push-deliveries','/api/cron/clear-expired','/api/cron/booking-reminders']){
     assert.ok(crons.some(cron=>cron.path===path),`${path} must retain its recovery schedule`);
   }
   for(const {path,schedule} of crons){

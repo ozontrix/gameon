@@ -2,10 +2,13 @@
 import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 function value(key) { return (process.env[key] ?? '').trim().replace(/^(["'])(.*)\1$/, '$2'); }
-const required = ['WHATSAPP_ACCESS_TOKEN','WHATSAPP_PHONE_NUMBER_ID','WHATSAPP_APP_SECRET','WHATSAPP_VERIFY_TOKEN','CRON_SECRET'];
+const required = ['WHATSAPP_ACCESS_TOKEN','WHATSAPP_PHONE_NUMBER_ID'];
 let missing = false;
 for (const key of required) {
   const present = Boolean(value(key)); console.log(`${key}: ${present ? 'set' : 'MISSING'}`); if (!present) missing = true;
+}
+for (const key of ['WHATSAPP_APP_SECRET','WHATSAPP_VERIFY_TOKEN']) {
+  console.log(`${key}: ${value(key) ? 'set' : 'MISSING (required for delivery webhooks/opt-outs, not sending)'}`);
 }
 if (process.argv.includes('--meta')) {
   const token = value('WHATSAPP_ACCESS_TOKEN'), phone = value('WHATSAPP_PHONE_NUMBER_ID'), waba = value('WHATSAPP_WABA_ID');

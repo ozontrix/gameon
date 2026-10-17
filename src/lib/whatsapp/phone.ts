@@ -2,7 +2,7 @@
  * Canonical digits-only form for normalization and opt-out matching:
  * `+91 85720 05698` becomes `918572005698`. A local number is completed with
  * India's country code; anything ambiguous is refused rather than sent
- * to a wrong person. The sender adds '+' for the API and delivery log.
+ * to a wrong person. The API uses digits only; '+' is for display/logs only.
  */
 export function toWhatsAppNumber(phone: string | null | undefined): string | null {
   if (!phone) return null;

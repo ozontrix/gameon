@@ -35,8 +35,8 @@ function loader(mocks) {
   return load;
 }
 
-function harness(kind, { payment = {}, rpcError = null, row = {}, outcome = 'confirmed' } = {}) {
-  const calls = { writes: 0, rpc: [], notifications: 0 };
+function harness(kind, { payment = {}, rpcError = null, row = {}, outcome = 'confirmed', changed = true, send = async () => {} } = {}) {
+  const calls = { writes: 0, rpc: [], notifications: 0, whatsapp: [] };
   const saved = { id: 'purchase', user_id: 'user', status: 'PENDING', payment_status: 'UNPAID',
     amount_paid: 500, wallet_points_used: kind === 'booking' ? 100 : 0, razorpay_payment_id: null, ...row };
   const gateway = { id: 'pay_valid', order_id: 'order_valid', amount: kind === 'booking' ? 40000 : 50000,
@@ -51,13 +51,19 @@ function harness(kind, { payment = {}, rpcError = null, row = {}, outcome = 'con
     },
     async rpc(name, args) {
       calls.rpc.push({ name, args });
-      return { data: { outcome, changed: true }, error: name === 'credit_booking_referral' ? null : rpcError };
+      return { data: { outcome, changed }, error: name === 'credit_booking_referral' ? null : rpcError };
     },
   };
   const load = loader({
     '../db/supabase': { supabaseAdmin: db },
     '../razorpay': { getRazorpay: () => ({ payments: { fetch: async () => gateway } }) },
     './notification.service': { NotificationService: { notifyBooking: async () => { calls.notifications++; } } },
+    './whatsapp.service': { WhatsAppService: Object.fromEntries(
+      ['Booking', 'Event', 'Tournament'].map(category => [`send${category}Confirmation`, async id => {
+        calls.whatsapp.push({ category, id });
+        await send();
+      }])
+    ) },
     './slot.service': {},
   });
   const classes = { booking: 'BookingService', event: 'EventService', tournament: 'TournamentService' };
@@ -71,6 +77,8 @@ for (const kind of ['booking', 'event', 'tournament']) {
     const result = await h.service.confirmPaidOrder('order_valid', 'pay_valid');
     assert.equal(result.outcome, 'confirmed');
     assert.equal(kind === 'booking' ? h.calls.rpc[0].name : h.saved.status, kind === 'booking' ? 'booking_confirm_payment' : 'CONFIRMED');
+    assert.equal(h.calls.whatsapp.length, 1);
+    assert.equal(h.calls.whatsapp[0].id, 'purchase');
   });
   for (const [name, payment] of Object.entries({
     authorized: { status: 'authorized' }, amount: { amount: 1 }, currency: { currency: 'USD' },
@@ -81,6 +89,7 @@ for (const kind of ['booking', 'event', 'tournament']) {
       await assert.rejects(h.service.confirmPaidOrder('order_valid', 'pay_valid'), error => error.status === 409);
       assert.equal(h.calls.writes, 0);
       assert.equal(h.calls.rpc.length, 0);
+      assert.equal(h.calls.whatsapp.length, 0);
     });
   }
   test(`${kind}: rejects conflicting payment even when already confirmed`, async () => {
@@ -95,6 +104,7 @@ test('Booking: failed financial transaction never reports confirmation or sends 
   const h = harness('booking', { rpcError: { code: '23514', message: 'wallets_balance_check' } });
   await assert.rejects(h.service.confirmPaidOrder('order_valid', 'pay_valid'), error => error.status === 409);
   assert.equal(h.calls.notifications, 0);
+  assert.equal(h.calls.whatsapp.length, 0);
   assert.equal(h.calls.rpc.length, 1);
 });
 
@@ -103,6 +113,7 @@ test('Booking: insufficient Points outcome is not success', async () => {
   const result = await h.service.confirmPaidOrder('order_valid', 'pay_valid');
   assert.equal(result.outcome, 'wallet-insufficient');
   assert.equal(h.calls.notifications, 0);
+  assert.equal(h.calls.whatsapp.length, 0);
   assert.equal(h.calls.rpc.length, 1);
 });
 
@@ -113,6 +124,41 @@ test('Wallet-only confirmation uses atomic RPC, not separate wallet writes', asy
     p_booking_id: 'purchase', p_user_id: 'user', p_order_id: null, p_payment_id: null,
   } });
   assert.equal(h.calls.writes, 0);
+  assert.deepEqual(h.calls.whatsapp, [{ category: 'Booking', id: 'purchase' }]);
+});
+
+test('Booking: idempotent payment callback still reaches the deduplicated immediate sender', async () => {
+  const h = harness('booking', { changed: false, row: { status: 'CONFIRMED' } });
+  assert.equal((await h.service.confirmPaidOrder('order_valid', 'pay_valid')).outcome, 'confirmed');
+  assert.equal(h.calls.whatsapp.length, 1);
+  assert.equal(h.calls.notifications, 0);
+});
+
+test('Wallet: idempotent confirmation still reaches the deduplicated immediate sender', async () => {
+  const h = harness('booking', { changed: false });
+  await h.service.confirmWithWallet('user', 'purchase');
+  assert.equal(h.calls.whatsapp.length, 1);
+  assert.equal(h.calls.notifications, 0);
+});
+
+test('Booking: lost slot does not send a success WhatsApp message', async () => {
+  const h = harness('booking', { outcome: 'slot-lost' });
+  assert.equal((await h.service.confirmPaidOrder('order_valid', 'pay_valid')).outcome, 'slot-lost');
+  assert.equal(h.calls.whatsapp.length, 0);
+});
+
+test('Booking: successful payment confirmation waits for the immediate WhatsApp attempt', async () => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const h = harness('booking', { send: () => gate });
+  let complete = false;
+  const pending = h.service.confirmPaidOrder('order_valid', 'pay_valid').then(() => { complete = true; });
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal(h.calls.whatsapp.length, 1);
+  assert.equal(complete, false);
+  release();
+  await pending;
+  assert.equal(complete, true);
 });
 
 test('Wallet permission migration explicitly revokes public API roles', () => {

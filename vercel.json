@@ -19,10 +19,6 @@
       "schedule": "0 3 * * *"
     },
     {
-      "path": "/api/cron/whatsapp-deliveries",
-      "schedule": "30 0 * * *"
-    },
-    {
       "path": "/api/cron/clear-expired",
       "schedule": "0 0 * * *"
     },
