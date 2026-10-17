@@ -72,7 +72,7 @@ group name never appears in a URL.
 | Auth pieces and the OTP field | `src/components/mobile/auth/*` | `components/auth/*` (email sign-in and sign-up share one screen; the handset's two routes are kept as two URLs) |
 | The auth chrome | inside the auth screens | the handset's own: no app header, but a round washed-out back button, the brand mark and a `STEP n OF 2` label |
 
-### Four web-specific decisions
+### Five web-specific decisions
 
 1. **Glyphs are the same glyphs.** The handset app draws icons with
    `@expo/vector-icons` (Ionicons for chrome, MaterialCommunityIcons for subject
@@ -109,6 +109,14 @@ stylesheet cannot import them.
    `/app/email-login` and `/app/email-signup` are two routes over one component
    (`components/mobile/auth/email-screen.tsx`) — it is one form — because the
    handset has two addresses and a shared link has to land on the right one.
+
+5. **One box can receive the whole code.** The handset's OTP field is a single
+   hidden input, so the keyboard's "autofill from Messages" types all six digits
+   in one edit. Here the code is drawn across six inputs, and a `maxLength` of one
+   per box clipped that edit to its first digit — the other five never arrived and
+   the code could not be completed by autofill. Each box therefore accepts up to
+   `length` characters, and `settle` spreads whatever arrives across the boxes; a
+   write at least as long as the code replaces it outright.
 
 ## The booking flow
 

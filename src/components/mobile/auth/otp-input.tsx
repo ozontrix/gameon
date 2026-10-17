@@ -9,6 +9,11 @@
  * at once. The handset build gets the same behaviour from one hidden input; a
  * browser makes per-box inputs the simpler shape, because each box can take
  * focus on its own.
+ *
+ * One write can also carry the whole code: a keyboard's SMS autofill ("Autofill
+ * code from Messages") types the six digits into the box it owns in a single
+ * edit. Each box therefore accepts more than one character, and whatever arrives
+ * is spread across the boxes by `settle`.
  */
 
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -121,7 +126,11 @@ export function OtpInput({
             inputMode="numeric"
             autoComplete={index === 0 ? 'one-time-code' : 'off'}
             aria-label={`Digit ${index + 1} of ${length}`}
-            maxLength={1}
+            // Room for a whole code, not one digit. SMS autofill writes all six
+            // digits into this box in a single edit, and the DOM clips that edit to
+            // `maxLength` — at 1 only the first digit survived, leaving the rest of
+            // the code stranded. `settle` still spreads the result one digit per box.
+            maxLength={length}
             value={digit}
             autoFocus={autoFocus && index === 0}
             onChange={(event) => {
@@ -130,7 +139,17 @@ export function OtpInput({
                 settle(value.slice(0, index));
                 return;
               }
-              settle(`${value.slice(0, index)}${typed}`);
+              // A write at least as long as the code is the whole code, wherever the
+              // keyboard decided to put it, so it replaces what was there.
+              if (typed.length >= length) {
+                settle(typed);
+                return;
+              }
+              // Typing over a filled box leaves its digit in front of the new one, so
+              // keep only the character that was just added.
+              const overtype =
+                digit !== '' && typed.length === digit.length + 1 && typed.startsWith(digit);
+              settle(`${value.slice(0, index)}${overtype ? typed.slice(digit.length) : typed}`);
             }}
             onKeyDown={(event) => {
               if (event.key === 'Backspace') {
