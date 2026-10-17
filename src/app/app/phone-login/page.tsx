@@ -108,6 +108,10 @@ export default function PhoneLoginPage() {
       setSecondsLeft(RESEND_SECONDS);
     } catch (thrown) {
       setError(describe(thrown));
+    } finally {
+      // Step 2 renders its Verify button from this same flag, so it has to come back
+      // down when the code was sent too. Clearing it only on failure is what left the
+      // OTP step — and the resend line — spinning forever.
       setBusy(false);
     }
   };
@@ -129,6 +133,10 @@ export default function PhoneLoginPage() {
       router.replace('/app/home');
     } catch (thrown) {
       setError(describe(thrown));
+    } finally {
+      // A signed-in session swaps this screen for the waiting state before the route
+      // changes, so releasing the flag here cannot flash an enabled button — and it
+      // means no failure path can leave the Verify button spinning.
       setBusy(false);
     }
   };
