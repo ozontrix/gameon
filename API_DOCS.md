@@ -161,47 +161,42 @@ Creates a `PENDING` booking for the signed-in user, holding the slot for 10 minu
 ## 🛡️ Admin & Staff APIs (QR Scanner App)
 
 ### 10. Verify QR Code (Entry System)
-Used by venue staff scanning a user's digital QR code. Validates if the code is authentic, paid, for today, and hasn't been scanned already.
+Used by venue staff scanning a customer's digital QR code. Validates the database reservation, payment, venue-local date/entry window and prior check-in, then atomically records check-in and audit. The UUID is an opaque reference, **not** a signed or screenshot-resistant token.
 
 * **Endpoint:** `POST /api/v1/admin/bookings/verify-qr`
-* **Headers:** `Content-Type: application/json`, `Authorization: Bearer <token of an ADMIN or STAFF user>`
+* **Headers:** `Content-Type: application/json`, `Authorization: Bearer <token of an ADMIN or STAFF user>` (or same-origin admin panel session cookies)
 > *Roles are read from the user's Supabase `app_metadata.role` (`ADMIN` / `STAFF`). "Today" is judged in the venue's timezone.*
 
 **Request Body:**
 ```json
 {
-  "bookingId": "uuid-scanned-from-qr-code"
+  "qrData": "11111111-1111-4111-8111-111111111111",
+  "source": "hid"
 }
 ```
 
-**Success Response (200 OK) - Allow Entry:**
+`bookingId` remains accepted instead of `qrData` for existing clients; supply only one. Accepted payloads are full booking UUIDs, `gameon:event:<UUID>`, and `gameon:tournament:<UUID>`. Optional `venueId`/`facilityId` UUIDs enforce the expected reception location. Source is `hid`, `manual`, `camera`, or `api` (default). Request body limit: 2048 characters; payload limit: 128 characters.
+
+**Success Response (200 OK) - Allow Entry (excerpt):**
 ```json
 {
   "success": true,
-  "message": "Access Granted",
+  "status": "checked_in",
+  "message": "Booking verified",
   "facilityName": "Badminton Court 1",
   "userName": "Rahul Sharma",
-  "userPhone": "+919876543210"
+  "userPhone": null
 }
 ```
-> *Staff should verbally confirm the name/phone to prevent users from sharing screenshots of QR codes.*
+The full response also includes `booking` with reservation ID/category, customer, sport/court, venue, venue timezone, dates/times and check-in timestamp. Staff should confirm the displayed customer name; this is not cryptographic protection against pass sharing. Phone numbers are no longer returned.
 
 **Error Responses (400 Bad Request) - Deny Entry:**
 ```json
 {
   "success": false,
-  "error": "QR Code has already been used for entry!"
+  "status": "already_checked_in",
+  "message": "Already checked in",
+  "error": "Already checked in"
 }
 ```
-```json
-{
-  "success": false,
-  "error": "Invalid Date! This booking is for 2024-11-25."
-}
-```
-```json
-{
-  "success": false,
-  "error": "Booking is not confirmed. Current status: PENDING"
-}
-```
+Rejections include structured `status`/`message` plus legacy `error`. Other transport statuses: 401/403 unauthorized, 413 oversized, 415 unsupported content type, 429 rate limited, 503 unavailable. No client payload can override payment, schedule or staff identity. See `SCANNER_CHECK_IN.md` for setup, entry-window policy, deployment and test instructions.

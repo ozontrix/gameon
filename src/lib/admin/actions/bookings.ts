@@ -282,18 +282,19 @@ export async function checkInBooking(
   if (!bookingId) return { ok: false, message: 'No confirmed booking matches that code.' };
 
   try {
-    const result = await ReservationCheckInService.verify(bookingId);
-    await recordAudit(actor, 'booking.check_in', 'booking', result.bookingId, { category: result.category });
-    refreshBookingViews(result.bookingId);
+    const result = await ReservationCheckInService.verify(bookingId, { actorId: actor.id, source: 'admin' });
+    if (!result.success || !result.booking) return { ok: false, message: result.message };
+    const booking = result.booking;
+    refreshBookingViews(booking.bookingId);
     return {
       ok: true,
-      message: `Checked in ${result.userName}.`,
+      message: `Checked in ${booking.userName}.`,
       data: {
-        bookingId: result.bookingId,
-        shortId: shortBookingId(result.bookingId),
-        facilityName: result.facilityName,
-        userName: result.userName,
-        userPhone: result.userPhone,
+        bookingId: booking.bookingId,
+        shortId: shortBookingId(booking.bookingId),
+        facilityName: booking.facilityName,
+        userName: booking.userName,
+        userPhone: null,
       },
     };
   } catch (error) {

@@ -8,6 +8,7 @@ import { WalletService } from './wallet.service';
 import { assertCapturedPayment, PaymentValidationError } from './payment-validation';
 import { WhatsAppService } from './whatsapp.service';
 import { BookingEmailService } from './booking-email.service';
+import { performCheckIn, type CheckInContext } from './check-in-operation';
 
 /** How long a checkout holds a slot before someone else may take it. */
 const HOLD_MINUTES = 10;
@@ -366,63 +367,8 @@ export class BookingService {
   /**
    * Admin Function: Verifies a QR Code (Booking UUID) scanned at the venue
    */
-  static async verifyQRCode(bookingId: string) {
-    // 1. Fetch booking with facility details
-    const { data: booking, error } = await supabaseAdmin
-      .from('bookings')
-      .select(`
-        id, user_id, status, is_scanned, booking_date, contact_name, contact_phone,
-        facilities ( name, venues ( timezone ) )
-      `)
-      .eq('id', bookingId)
-      .single();
-
-    if (error || !booking) throw new BookingError('Invalid QR Code. Booking not found.', 400);
-
-    // 2. Validate Status
-    if (booking.status !== 'CONFIRMED') {
-      throw new BookingError(`Booking is not confirmed. Current status: ${booking.status}`, 400);
-    }
-
-    // 3. Validate if already scanned (Screenshot Prevention)
-    if (booking.is_scanned) {
-      throw new BookingError('QR Code has already been used for entry!', 400);
-    }
-
-    // 4. Validate Date (Must be today, on the venue's clock)
-    const today = wallClockIn(booking.facilities?.venues?.timezone || DEFAULT_TIMEZONE).date;
-    if (booking.booking_date !== today) {
-      throw new BookingError(`Invalid Date! This booking is for ${booking.booking_date}.`, 400);
-    }
-
-    // 5. Mark as scanned — only if no other scanner got there first
-    const { data: scanned, error: updateError } = await supabaseAdmin
-      .from('bookings')
-      .update({
-        is_scanned: true,
-        scanned_at: new Date().toISOString(),
-      })
-      .eq('id', bookingId)
-      .eq('status', 'CONFIRMED')
-      .or('is_scanned.is.null,is_scanned.eq.false')
-      .select('id')
-      .maybeSingle();
-
-    if (updateError) throw new Error('Failed to update scan status');
-    if (!scanned) throw new BookingError('QR Code has already been used for entry!', 400);
-
-    // 6. Return success with User Info for verbal check
-    const { data: profile } = booking.user_id
-      ? await supabaseAdmin.from('profiles').select('full_name, phone').eq('id', booking.user_id).maybeSingle()
-      : { data: null };
-
-    return {
-      success: true,
-      message: 'Access Granted',
-      facilityName: booking.facilities?.name ?? 'Unknown facility',
-      userName: booking.contact_name || profile?.full_name || 'Unknown',
-      userPhone: booking.contact_phone || profile?.phone || null,
-    };
+  static verifyQRCode(bookingId: string, context: CheckInContext) {
+    return performCheckIn(bookingId, context);
   }
 
   /** The player's confirmed bookings, newest first. */

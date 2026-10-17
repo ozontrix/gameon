@@ -282,19 +282,11 @@ test('every Vercel cron stays inside the Hobby once-per-day limit',()=>{
     assert.deepEqual(fields.slice(2),['*','*','*'],`${path} must run every day`);
   }
 });
-for(const kind of ['event','tournament'])test(`${kind} QR checks payment/date and atomically rejects duplicate admission`,async()=>{
-  const activity={status:'published',title:'Activity',starts_on:'2026-10-14',ends_on:'2026-10-14',daily_end_time:'22:00:00'};
-  const row={id,status:'CONFIRMED',payment_status:'PAID',scanned_at:null,attendee_name:'Player',captain_name:'Player',contact_phone:'8572005698',tickets:2,team_name:'Team',events:activity,tournaments:activity};
-  const h=harness({tables:{[kind==='event'?'event_orders':'tournament_registrations']:[row]}});
-  const load=loader({'../db/supabase':{supabaseAdmin:h.db},'./booking.service':{BookingError:class extends Error{},BookingService:{}},'../utils/date-helpers':{wallClockIn:()=>({date:'2026-10-14',time:'19:00:00'})}});
-  const service=load('src/lib/services/reservation-check-in.service.ts').ReservationCheckInService;
-  assert.equal((await service.verify(`gameon:${kind}:${id}`)).success,true);
-  await assert.rejects(service.verify(`gameon:${kind}:${id}`),/already checked in/);
-  row.scanned_at=null;row.payment_status='UNPAID';await assert.rejects(service.verify(`gameon:${kind}:${id}`),/No valid/);
-  row.payment_status='PAID';activity.starts_on='2026-10-15';await assert.rejects(service.verify(`gameon:${kind}:${id}`),/only valid/);
+for(const kind of ['booking','event','tournament'])test(`${kind} QR delegates unchanged payload and staff identity to atomic admission`,async()=>{
+  const code=checkInCode(kind);let received;
+  const load=loader({'./check-in-operation':{performCheckIn:async(...args)=>{received=args;return {success:true,status:'checked_in'};}}});
+  const context={actorId:id2,source:'hid'};
+  assert.equal((await load('src/lib/services/reservation-check-in.service.ts').ReservationCheckInService.verify(code,context)).success,true);
+  assert.deepEqual(received,[code,context]);
 });
-test('court QR delegates to existing court check-in service',async()=>{
-  let received;
-  const load=loader({'../db/supabase':{supabaseAdmin:{}},'./booking.service':{BookingService:{verifyQRCode:async code=>{received=code;return {success:true};}}}});
-  assert.equal((await load('src/lib/services/reservation-check-in.service.ts').ReservationCheckInService.verify(id)).success,true);assert.equal(received,id);
-});
+function checkInCode(kind){return kind==='booking'?id:`gameon:${kind}:${id}`;}

@@ -1720,6 +1720,7 @@ export type Database = {
       }
     }
     Functions: {
+      check_in_reservation: { Args: { p_code: string; p_actor_id: string; p_source?: string; p_venue_id?: string; p_facility_id?: string; p_early_minutes?: number }; Returns: Json }
       claim_booking_emails: { Args: { p_category?: string; p_reference_id?: string }; Returns: Database['public']['Tables']['booking_emails']['Row'][] }
       register_push_device: { Args: { p_installation_id: string; p_secret_hash: string; p_token: string | null; p_platform: string; p_user_id: string | null; p_enabled: boolean }; Returns: undefined }
       claim_push_deliveries: { Args: { p_limit?: number; p_notification_id?: string }; Returns: Database['public']['Tables']['push_deliveries']['Row'][] }

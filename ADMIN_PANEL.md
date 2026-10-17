@@ -49,9 +49,11 @@ role can write. Removing the role takes effect on the next page load.
   days), a 14-day paid-revenue chart, and items needing attention.
 - **Schedule** — every active court against every slot of a day. Click a free
   slot to book it, a booked slot to open the booking.
-- **Check-in** — scans the QR in the customer's app with the device camera
-  (Chrome on Android / desktop Chromium), or takes the 8-character booking ID.
-  A booking is valid only on its date and only once.
+- **Check-in** — `/admin/check-in` automatically captures USB/2.4 GHz HID keyboard
+  scans without focusing an input. Validates payment/date/slot and records entry
+  and audit atomically, once only. Camera and full-payload manual test are secondary
+  options; the booking-detail action retains short-reference support. See
+  `SCANNER_CHECK_IN.md` for reception setup, timing, security and test instructions.
 - **Bookings** — filters by date, status, payment, source, venue and court;
   search by booking ID, name or phone; CSV export of the current filter.
   Abandoned app checkouts are hidden unless *Awaiting payment* is selected.
