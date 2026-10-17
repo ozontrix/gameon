@@ -6,6 +6,7 @@
  *
  * The photo is the sport's own, the badges are the backend's, and the price is
  * `from ₹X / 1 Hour` because a card can sell more than one slot length.
+ * Listing cards omit the address and Non-AC labels; AC stays visible where offered.
  */
 
 import Link from 'next/link';
@@ -16,8 +17,14 @@ import type { Venue } from '@/lib/mobile/constants/sports';
 import { Brand, Radius, Spacing, Typography } from '@/lib/mobile/theme';
 import { Badge, Ion, RemoteImage, SportPill } from '../ui';
 
+function showCardDetail(detail: string): boolean {
+  return Boolean(detail) && !/^non[\s-]*ac$/i.test(detail.trim());
+}
+
 export function VenueCard({ venue }: { venue: Venue }) {
   const shortest = venue.slotOptions[0]?.durationMinutes ?? 60;
+  const badges = venue.badges.filter(showCardDetail);
+  const type = venue.type.split(/[•·]/).map((detail) => detail.trim()).filter(showCardDetail).join(' • ');
 
   return (
     <Link
@@ -36,16 +43,18 @@ export function VenueCard({ venue }: { venue: Venue }) {
         <div style={{ padding: Spacing.md, display: 'flex', flexDirection: 'column', gap: Spacing.sm }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' }}>
             <SportPill sport={venue.sport} />
-            {venue.badges.map((badge) => (
+            {badges.map((badge) => (
               <Badge key={badge} label={badge} tone="neutral" solid={false} />
             ))}
           </div>
 
           <span style={{ ...Typography.cardTitle, color: Brand.text }}>{venue.title}</span>
 
-          <span style={{ ...Typography.bodySmall, color: Brand.textSecondary }}>
-            {venue.type} · {venue.location}
-          </span>
+          {type ? (
+            <span style={{ ...Typography.bodySmall, color: Brand.textSecondary }}>
+              {type}
+            </span>
+          ) : null}
 
           <span style={{ ...Typography.caption, color: Brand.textMuted }}>
             {venue.courtsAvailable} {venue.courtsAvailable === 1 ? 'court' : 'courts'} available
