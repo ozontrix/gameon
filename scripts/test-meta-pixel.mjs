@@ -242,6 +242,74 @@ test("Server markup offers equal consent choices without a script or noscript re
   assert.equal(renderToStaticMarkup(React.createElement(adminLoad("src/components/MetaPixel.tsx").MetaPixel, { enabled: true })), "");
 });
 
+test("Accepting or rejecting removes all cookie overlays, including after navigation and restoring consent", () => {
+  for (const choice of ["granted", "denied"]) {
+    const b = browser();
+    try {
+      const meta = analytics();
+      const buttons = [];
+      let pathname = "/";
+      const runtime = require("react/jsx-runtime");
+      const capture = kind => (tag, props, key) => {
+        if (tag === "button") buttons.push(props);
+        return runtime[kind](tag, props, key);
+      };
+      const load = loader({
+        react: { ...React, useEffect: () => {}, useSyncExternalStore: () => meta.getMarketingConsent() },
+        "react/jsx-runtime": { ...runtime, jsx: capture("jsx"), jsxs: capture("jsxs") },
+        "next/navigation": { usePathname: () => pathname },
+        "next/link": { __esModule: true, default: props => React.createElement("a", props) },
+        "next/script": { __esModule: true, default: () => null },
+        "@/lib/analytics/meta-pixel": meta,
+      });
+      const { MetaPixel } = load("src/components/MetaPixel.tsx");
+      const render = () => { buttons.length = 0; return renderToStaticMarkup(React.createElement(MetaPixel, { enabled: true })); };
+      assert.match(render(), /Marketing cookie preferences/);
+      buttons.find(button => button.children === (choice === "granted" ? "Accept marketing" : "Reject marketing")).onClick();
+      assert.equal(meta.getMarketingConsent(), choice);
+      assert.equal(b.storage.get(meta.MARKETING_CONSENT_KEY), choice);
+      assert.equal(render(), "", "No banner or floating settings remains after choosing");
+      for (pathname of ["/privacy", "/gameon-multisports-league", "/open-play-registrations"]) {
+        assert.equal(render(), "", "Navigating does not restore a cookie overlay");
+      }
+      meta.refreshMarketingConsent();
+      assert.equal(render(), "", "Saved consent does not restore a cookie overlay");
+    } finally { b.restore(); }
+  }
+});
+
+test("Privacy page cookie preferences remain inline, allow changes and respect browser privacy signals", () => {
+  for (const gpc of [false, true]) {
+    const b = browser(new Map(), { gpc });
+    try {
+      const meta = analytics();
+      meta.refreshMarketingConsent();
+      const buttons = [];
+      const runtime = require("react/jsx-runtime");
+      const capture = kind => (tag, props, key) => {
+        if (tag === "button") buttons.push(props);
+        return runtime[kind](tag, props, key);
+      };
+      const load = loader({
+        react: { ...React, useSyncExternalStore: () => meta.getMarketingConsent() },
+        "react/jsx-runtime": { ...runtime, jsx: capture("jsx"), jsxs: capture("jsxs") },
+        "@/lib/analytics/meta-pixel": meta,
+      });
+      const { CookiePreferences } = load("src/components/CookiePreferences.tsx");
+      const render = () => { buttons.length = 0; return renderToStaticMarkup(React.createElement(CookiePreferences)); };
+      assert.doesNotMatch(render(), /\bfixed\b|\bsticky\b/);
+      assert.equal(buttons.find(button => button.children === "Accept marketing").disabled, gpc);
+      if (!gpc) {
+        buttons.find(button => button.children === "Accept marketing").onClick();
+        assert.match(render(), /currently accepted/);
+      }
+      buttons.find(button => button.children === "Reject marketing").onClick();
+      assert.equal(meta.getMarketingConsent(), "denied");
+      assert.match(render(), gpc ? /privacy signal/ : /currently rejected/);
+    } finally { b.restore(); }
+  }
+});
+
 test("InitiateCheckout waits for consent and a restored cart, then fires once per mount", () => {
   const effects = [];
   const tracked = { current: false };

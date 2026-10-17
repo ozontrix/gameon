@@ -10,8 +10,10 @@ this browser-only integration.
 ## Consent and privacy
 
 - Meta's SDK loads only after the visitor accepts marketing cookies.
-- Accept and reject controls are available in the consent prompt; Cookie settings
-  allows changing the choice later. Bookings and payments work without tracking.
+- Accept and reject controls are available in the initial consent prompt. After
+  either choice, no floating cookie settings control remains. Inline cookie
+  settings on the Privacy Policy page allow changing the choice later without
+  covering content. Bookings and payments work without tracking.
 - A browser Global Privacy Control signal prevents tracking.
 - Admin, API, email confirmation, and account-deletion routes are excluded.
 - Custom event parameters do not include names, emails, phone numbers, city,

@@ -1,6 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
 import type { ReactNode } from "react";
 import { LegalPageShell } from "@/components/LegalPageShell";
+import { CookiePreferences } from "@/components/CookiePreferences";
 
 export const metadata = pageMetadata({
   title: 'Privacy Policy', path: '/privacy',
@@ -117,10 +118,11 @@ export default function PrivacyPage() {
         </P>
         <P>
           You can accept or reject marketing cookies using the website prompt, and change your choice
-          using Cookie settings. Rejecting or withdrawing marketing consent does not affect bookings
+          using the cookie settings below. Rejecting or withdrawing marketing consent does not affect bookings
           or payments. We also respect your browser&apos;s Global Privacy Control signal. Necessary
           storage for bookings and cookie preferences remains available independently of marketing.
         </P>
+        <CookiePreferences />
         <P>
           The Website uses cookies and similar technologies to collect information about your browsing
           activity and to remember your preferences. Cookies are small text files stored on your device

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import Script from "next/script";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,7 +15,6 @@ import {
 export function MetaPixel({ enabled }: { enabled: boolean }) {
   const pathname = usePathname();
   const consent = useSyncExternalStore(subscribeMarketingConsent, getMarketingConsent, getServerMarketingConsent);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const publicPage = isPublicTrackingPath(pathname);
 
   useEffect(() => {
@@ -47,13 +46,13 @@ export function MetaPixel({ enabled }: { enabled: boolean }) {
   }, [enabled, publicPage, consent, pathname]);
 
   if (!enabled || !publicPage) return null;
-  const choose = (choice: "granted" | "denied") => { setMarketingConsent(choice); setSettingsOpen(false); };
+  const choose = (choice: "granted" | "denied") => { setMarketingConsent(choice); };
   const privacySignal = consent !== "unknown" && browserPrivacySignal();
   const buttonClass = "min-h-11 cursor-pointer rounded-xl border border-white/30 px-4 py-2 text-sm font-semibold transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-brand";
   return (
     <>
       {consent === "granted" ? <Script id="gameon-meta-pixel" src="https://connect.facebook.net/en_US/fbevents.js" strategy="afterInteractive" /> : null}
-      {consent === "unknown" || settingsOpen ? (
+      {consent === "unknown" ? (
         <section aria-label="Marketing cookie preferences" className="fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[110] mx-auto max-w-lg rounded-2xl border border-white/20 bg-go-black p-5 text-go-white shadow-2xl sm:left-auto sm:right-5 sm:mx-0">
           <h2 className="text-base font-semibold">Marketing cookies</h2>
           <p className="mt-2 text-sm leading-relaxed text-go-off">With your permission, we use Meta Pixel to measure visits and registrations and improve our Facebook and Instagram ads. Registration and booking work without it.</p>
@@ -65,7 +64,6 @@ export function MetaPixel({ enabled }: { enabled: boolean }) {
           </div>
         </section>
       ) : null}
-      {consent !== "unknown" && !settingsOpen ? <button type="button" onClick={() => setSettingsOpen(true)} className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-[100] min-h-11 cursor-pointer rounded-xl border border-white/25 bg-go-black px-3 text-xs text-go-white shadow-lg hover:bg-go-black/90 focus-visible:outline-2 focus-visible:outline-go-brand">Cookie settings</button> : null}
     </>
   );
 }
