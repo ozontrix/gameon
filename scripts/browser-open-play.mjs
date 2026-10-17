@@ -46,11 +46,11 @@ async function screenshot(name) {
   writeFileSync(resolve(artifacts, name), Buffer.from(data, 'base64'));
 }
 async function navigate() {
-  await command('Page.navigate', { url: `${origin}/open-play-registrations?utm_source=instagram&utm_campaign=open_play_oct18&utm_content=cricket` });
-  await until(`document.querySelector('[data-sport="cricket"]') && document.querySelector('button[type="submit"]')`, 'form render');
+  await command('Page.navigate', { url: `${origin}/open-play-registrations?utm_source=instagram&utm_campaign=open_play_oct18&utm_content=pickleball` });
+  await until(`document.querySelector('[data-sport="pickleball"]') && document.querySelector('button[type="submit"]')`, 'form render');
   await evaluate('document.fonts.ready'); await sleep(500);
 }
-async function fillForm(sport = 'cricket') {
+async function fillForm(sport = 'pickleball') {
   await evaluate(`(() => { document.querySelector('[data-sport="${sport}"]').click();
     const change = (name, value) => { const input = document.querySelector('[name="' + name + '"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); };
     change('fullName', 'Browser Test Player'); change('phone', '9811000000'); change('email', 'browser-test@example.com'); change('city', 'Gurugram');
@@ -101,9 +101,12 @@ try {
     console.log(`PASS ${width}px responsive layout, input sizes and CTA visibility`);
   }
   await evaluate(`document.querySelector('form').requestSubmit();`);
-  await until(`document.querySelector('#op-sport-error')`, 'sport validation'); assert.equal(submissions.length, 0);
-  await evaluate(`document.querySelectorAll('.op-sport-card')[1].click()`); await sleep(150);
-  assert.equal(await evaluate(`document.querySelector('[data-sport="football"]').getAttribute('aria-pressed')`), 'true');
+  await until(`document.querySelector('#op-fullName-error')`, 'required details validation'); assert.equal(submissions.length, 0);
+  assert.equal(await evaluate(`document.querySelectorAll('[data-sport]').length`), 1);
+  assert.equal(await evaluate(`document.querySelectorAll('.op-sport-card').length`), 1);
+  assert.equal(await evaluate(`document.querySelector('[data-sport="cricket"], [data-sport="football"], [data-sport="badminton"]') === null`), true);
+  await evaluate(`document.querySelector('.op-sport-card').click()`); await sleep(150);
+  assert.equal(await evaluate(`document.querySelector('[data-sport="pickleball"]').getAttribute('aria-pressed')`), 'true');
   await fillForm('pickleball');
   await evaluate(`document.querySelector('[name="email"]').value = ''; document.querySelector('[name="city"]').value = ''; document.querySelector('form').requestSubmit();`);
   await until(`document.querySelector('#op-email-error') && document.querySelector('#op-city-error')`, 'required email and city validation');

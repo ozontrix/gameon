@@ -8,12 +8,19 @@ export const OPEN_PLAY_MAP_URL = 'https://maps.google.com/?q=28.394516,77.012638
 export const OPEN_PLAY_PHONE = '+91 74948 25740';
 export const OPEN_PLAY_SPORT_IDS = ['cricket', 'football', 'badminton', 'pickleball'] as const;
 export type OpenPlaySport = typeof OPEN_PLAY_SPORT_IDS[number];
+// Keep historical sports available to admin reports and existing confirmations.
+// Only these sports may appear in public registration or be submitted now.
+export const OPEN_PLAY_REGISTRATION_SPORT_IDS = ['pickleball'] as const;
 export const OPEN_PLAY_SPORTS: { id: OpenPlaySport; name: string; line: string; detail: string; color: string }[] = [
   { id: 'cricket', name: 'Cricket', line: 'Bring your best shot.', detail: 'Big hits. New teammates. Box cricket on the turf.', color: '#F38F2F' },
   { id: 'football', name: 'Football', line: 'Find your Sunday squad.', detail: 'Trade the group chat for a game on the turf.', color: '#A8D5A2' },
   { id: 'badminton', name: 'Badminton', line: 'Make a little racket.', detail: 'A friendly rally or a big smash. Your call.', color: '#C3B1EF' },
   { id: 'pickleball', name: 'Pickleball', line: 'Meet your new favourite.', detail: 'Curious about pickleball? This is your invitation.', color: '#F0CE78' },
 ];
+
+export const OPEN_PLAY_REGISTRATION_SPORTS = OPEN_PLAY_SPORTS.filter(sport =>
+  OPEN_PLAY_REGISTRATION_SPORT_IDS.some(id => id === sport.id)
+);
 
 export function openPlayIsClosed(now = Date.now()): boolean {
   return now >= Date.parse(OPEN_PLAY_REGISTRATION_CLOSE);

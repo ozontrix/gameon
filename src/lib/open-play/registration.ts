@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OPEN_PLAY_SPORT_IDS } from './constants';
+import { OPEN_PLAY_REGISTRATION_SPORT_IDS } from './constants';
 
 /** Accept common Indian mobile formats but store one canonical 10-digit value. */
 export function normalizeOpenPlayPhone(value: string): string {
@@ -11,7 +11,7 @@ export function normalizeOpenPlayPhone(value: string): string {
 
 const campaign = z.string().trim().max(120).regex(/^[\p{L}\p{N} ._:/-]*$/u).optional().default('');
 export const OpenPlayRegistrationSchema = z.object({
-  sport: z.enum(OPEN_PLAY_SPORT_IDS, { error: 'Choose your preferred sport.' }),
+  sport: z.enum(OPEN_PLAY_REGISTRATION_SPORT_IDS, { error: 'Only Pickleball open play registrations are available.' }),
   fullName: z.string().trim().min(2, 'Please enter your name.').max(80, 'Please use 80 characters or fewer.')
     .regex(/^[\p{L}\p{M} .'-]+$/u, 'Please enter a name using letters.'),
   phone: z.string().max(24).transform(normalizeOpenPlayPhone).pipe(z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number.')),

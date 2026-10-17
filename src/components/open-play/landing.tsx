@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, ArrowRight, CalendarDays, Check, Coffee, Heart, MapPin, Music2, Navigation, Pizza, Sparkles, Users, Zap } from 'lucide-react';
-import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_PHONE, OPEN_PLAY_SPORTS, PAID_PLAY_DATE_LABEL, type OpenPlaySport } from '@/lib/open-play/constants';
+import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_PHONE, OPEN_PLAY_REGISTRATION_SPORTS as OPEN_PLAY_SPORTS, PAID_PLAY_DATE_LABEL, type OpenPlaySport } from '@/lib/open-play/constants';
 import { OpenPlayRegistrationForm } from './registration-form';
 import { SportArt } from './sport-art';
 
 const faqs = [
-  ['Is open play really free?', 'Yes. Cricket, football, badminton and pickleball open play on 18 October 2026 is free. There is no registration fee and no payment step. Regular paid court bookings start from 19 October 2026.'],
-  ['Can I come alone or bring my friends?', 'Both! Come solo, with a friend or with your usual crew. Each participant should register their own preferred sport so the team can plan the day.'],
-  ['Do I need to be an experienced player?', 'Not at all. Open play welcomes beginners and regular players. Pick the sport you would love to try, or the one you already love.'],
+  ['Is open play really free?', 'Yes. Pickleball open play on 18 October 2026 is free. There is no registration fee and no payment step. Regular paid court bookings start from 19 October 2026.'],
+  ['Can I come alone or bring my friends?', 'Both! Come solo, with a friend or with your usual crew. Each participant should register for Pickleball so the team can plan the day.'],
+  ['Do I need to be an experienced player?', 'Not at all. Pickleball open play welcomes beginners and regular players, whether this is your first rally or your favourite game.'],
   ['What time should I arrive?', 'The team will share exact open play timings and evening event details on your registered mobile number. The DJ party is in the evening.'],
   ['Does registration reserve a court?', 'No. This is an open play registration, not a private court booking or a fixed timed slot. Playing turns will be coordinated by the team at the venue.'],
   ['What about the evening parties?', 'A DJ party, pizza party and coffee party are planned, with a little dandiya too. Only sports open play is advertised as free; food and beverage arrangements will be shared by the team.'],
@@ -20,7 +20,7 @@ const faqs = [
 ];
 
 export function OpenPlayLanding({ closed }: { closed: boolean }) {
-  const [sport, setSport] = useState<OpenPlaySport | ''>('');
+  const [sport, setSport] = useState<OpenPlaySport | ''>('pickleball');
   const reduceMotion = useReducedMotion();
   const reveal = { initial: false as const, whileInView: { y: reduceMotion ? 0 : [12, 0] }, viewport: { once: true }, transition: { duration: reduceMotion ? 0 : 0.4 } };
   return <div className="op-page">
@@ -37,8 +37,8 @@ export function OpenPlayLanding({ closed }: { closed: boolean }) {
           <motion.div initial={false} animate={{ y: [6, 0] }} transition={{ duration: reduceMotion ? 0 : 0.5 }}>
             <p className="op-date-pill"><CalendarDays className="size-4" />{OPEN_PLAY_DATE_LABEL}<span className="op-pill-separator" />FREE OPEN PLAY</p>
             <h1 id="op-hero-title" className="op-title">YOUR SUNDAY.<br /><span>ON US.</span><Sparkles className="op-title-spark" aria-hidden="true" /></h1>
-            <p className="op-hero-sub">Four sports. Zero playing fees.<br className="sm:hidden" /> A whole lot of GameOn.</p>
-            <p className="op-body mt-4 max-w-lg">Put the plans on pause. Pick up a racket, find your squad, or try something new. On October 18, everyone’s invited to play for free.</p>
+            <p className="op-hero-sub">Pickleball. Zero playing fees.<br className="sm:hidden" /> A whole lot of GameOn.</p>
+            <p className="op-body mt-4 max-w-lg">Put the plans on pause. Pick up a paddle, find your playing partner, or try something new. On October 18, everyone’s invited to play Pickleball for free.</p>
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm text-go-off/85">{['All skill levels', 'Come solo or with friends', 'No payment needed'].map(text => <span key={text} className="flex items-center gap-2"><Check className="size-4 text-go-brand" />{text}</span>)}</div>
             <div className="mt-7 flex items-center gap-4"><a href="#register" className="op-cta">{closed ? 'Explore what’s next' : 'I’m in. Let’s play.'}<ArrowRight className="size-5" /></a><span className="max-w-28 text-xs leading-relaxed text-go-off/70">A quick form. An email confirmation.</span></div>
           </motion.div>
@@ -51,11 +51,11 @@ export function OpenPlayLanding({ closed }: { closed: boolean }) {
         <div id="register" className="op-register"><OpenPlayRegistrationForm closed={closed} sport={sport} onSportChange={setSport} /></div>
       </section>
 
-      <div className="op-ribbon" aria-label="Free play, good company and evening celebrations"><div className="op-container flex flex-wrap items-center justify-center gap-x-8 gap-y-3 py-4 font-mono text-xs uppercase tracking-widest"><span>Play for ₹0</span><Zap className="size-4" aria-hidden="true" /><span>Find your people</span><Zap className="hidden size-4 sm:block" aria-hidden="true" /><span>Stay for the vibe</span><a href="#sports" className="inline-flex items-center gap-2 underline underline-offset-4">Meet the sports<ArrowDown className="size-3" /></a></div></div>
+      <div className="op-ribbon" aria-label="Free play, good company and evening celebrations"><div className="op-container flex flex-wrap items-center justify-center gap-x-8 gap-y-3 py-4 font-mono text-xs uppercase tracking-widest"><span>Play for ₹0</span><Zap className="size-4" aria-hidden="true" /><span>Find your people</span><Zap className="hidden size-4 sm:block" aria-hidden="true" /><span>Stay for the vibe</span><a href="#sports" className="inline-flex items-center gap-2 underline underline-offset-4">Meet Pickleball<ArrowDown className="size-3" /></a></div></div>
 
       <section id="sports" className="op-container op-section" aria-labelledby="op-sports-title">
-        <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="op-eyebrow">One address. Four ways to play.</p><h2 id="op-sports-title" className="op-heading mt-3">WHAT’S YOUR <span className="text-go-brand">GAME?</span></h2></div><p className="op-body max-w-sm">Your regular sport. Your first-ever rally.<br />There’s a place for both here.</p></div>
-        <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">{OPEN_PLAY_SPORTS.map((sport, index) => <motion.a key={sport.id} href="#register" onClick={() => setSport(sport.id)} {...reveal} className="op-sport-card" style={{ '--sport-color': sport.color } as React.CSSProperties}>
+        <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="op-eyebrow">Pickleball open play</p><h2 id="op-sports-title" className="op-heading mt-3">LET’S PLAY <span className="text-go-brand">PICKLEBALL.</span></h2></div><p className="op-body max-w-sm">Your regular game. Your first-ever rally.<br />There’s a place for both here.</p></div>
+        <div className="mt-8 grid max-w-xl grid-cols-1 gap-3">{OPEN_PLAY_SPORTS.map((sport, index) => <motion.a key={sport.id} href="#register" onClick={() => setSport(sport.id)} {...reveal} className="op-sport-card" style={{ '--sport-color': sport.color } as React.CSSProperties}>
           <div className="flex items-center justify-between"><span className="font-mono text-[10px] text-go-off/60">0{index + 1} / OPEN PLAY</span><ArrowRight className="size-4 text-go-off/65" /></div>
           <SportArt sport={sport.id} className="op-card-art" />
           <h3 className="font-display text-2xl uppercase sm:text-3xl">{sport.name}</h3><p className="mt-2 text-sm font-medium" style={{ color: sport.color }}>{sport.line}</p><p className="mt-3 hidden text-sm leading-relaxed text-go-off/75 sm:block">{sport.detail}</p>
@@ -80,7 +80,7 @@ export function OpenPlayLanding({ closed }: { closed: boolean }) {
 
       <section className="op-container op-section" aria-labelledby="op-how-title">
         <div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr]"><div><p className="op-eyebrow">Less scrolling. More playing.</p><h2 id="op-how-title" className="op-heading mt-3">THREE STEPS.<br />ONE GOOD SUNDAY.</h2><a href="#register" className="mt-5 inline-flex min-h-11 items-center gap-3 text-sm font-semibold text-go-brand hover:underline">Join the open play list<ArrowRight className="size-4" /></a></div><div className="grid gap-4">{[
-          { icon: Heart, title: 'Pick the sport you love.', copy: 'Or the one you’ve always wanted to try. Choose your preferred sport in the form.' },
+          { icon: Heart, title: 'Get ready for Pickleball.', copy: 'Your favourite game or your first-ever rally. Pickleball is selected in the form.' },
           { icon: Users, title: 'Tell us who’s joining.', copy: 'Add your name, mobile, email and city. We’ll email your joining confirmation. No account or checkout needed.' },
           { icon: MapPin, title: 'Show up. Get your game on.', copy: 'We’ll share timings on your mobile. Come to Sector 70 on October 18 ready to play.' },
         ].map(({ icon: Icon, title, copy }, index) => <div key={title} className="op-step"><span className="op-step-number">0{index + 1}</span><div><h3 className="flex items-center gap-2 text-lg font-semibold"><Icon className="size-4 shrink-0 text-go-brand" />{title}</h3><p className="op-body mt-2 text-sm">{copy}</p></div></div>)}</div></div>
@@ -90,7 +90,7 @@ export function OpenPlayLanding({ closed }: { closed: boolean }) {
 
       <section className="op-container op-section" aria-labelledby="op-faq-title"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr]"><div><p className="op-eyebrow">Good to know</p><h2 id="op-faq-title" className="op-heading mt-3">A FEW QUICK<br />ANSWERS.</h2><p className="op-body mt-4">Something else on your mind?</p><a href="tel:+917494825740" className="mt-2 inline-flex min-h-11 items-center text-go-brand hover:underline">{OPEN_PLAY_PHONE}</a></div><div className="divide-y divide-white/10">{faqs.map(([question, answer]) => <details key={question} className="op-faq"><summary>{question}<span aria-hidden="true">+</span></summary><p className="pb-5 pr-7 text-sm leading-relaxed text-go-off/80">{answer}</p></details>)}</div></div></section>
 
-      {!closed ? <section className="op-container pb-16"><div className="op-final"><p className="op-eyebrow">Make room for a better Sunday</p><h2 className="op-heading mt-3">THE ONLY THING MISSING?<br /><span className="text-go-brand">YOU.</span></h2><p className="op-body mx-auto mt-4 max-w-md">October 18. Four sports. Free open play.<br />Let’s turn “we should play sometime” into a plan.</p><a href="#register" className="op-cta mt-6">Put me on the list<ArrowRight className="size-5" /></a></div></section> : null}
+      {!closed ? <section className="op-container pb-16"><div className="op-final"><p className="op-eyebrow">Make room for a better Sunday</p><h2 className="op-heading mt-3">THE ONLY THING MISSING?<br /><span className="text-go-brand">YOU.</span></h2><p className="op-body mx-auto mt-4 max-w-md">October 18. Pickleball. Free open play.<br />Let’s turn “we should play sometime” into a plan.</p><a href="#register" className="op-cta mt-6">Put me on the list<ArrowRight className="size-5" /></a></div></section> : null}
     </main>
     <footer className="op-container flex flex-col gap-4 border-t border-white/10 py-7 text-xs text-go-off/65 sm:flex-row sm:items-center sm:justify-between"><p>© {new Date().getFullYear()} GameOn Multisports. More play. More people.</p><div className="flex gap-5"><Link href="/privacy" className="py-2 hover:text-go-white">Privacy</Link><Link href="/terms" className="py-2 hover:text-go-white">Terms</Link><a href="tel:+917494825740" className="py-2 hover:text-go-white">Contact us</a></div></footer>
     {!closed ? <div className="op-mobile-cta"><div><p className="text-sm font-semibold">18 October · Free open play</p><p className="text-xs text-go-off/70">Your Sunday. On us.</p></div><a href="#register" className="op-cta px-5 py-3 text-sm">Join free<ArrowRight className="size-4" /></a></div> : null}

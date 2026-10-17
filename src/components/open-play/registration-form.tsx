@@ -3,7 +3,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { ArrowRight, CalendarPlus, Check, CheckCircle2, LoaderCircle, MapPin, ShieldCheck, Share2 } from 'lucide-react';
 import Link from 'next/link';
-import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_SPORTS, type OpenPlaySport } from '@/lib/open-play/constants';
+import { OPEN_PLAY_DATE_LABEL, OPEN_PLAY_MAP_URL, OPEN_PLAY_REGISTRATION_SPORTS as OPEN_PLAY_SPORTS, type OpenPlaySport } from '@/lib/open-play/constants';
 import { OpenPlayRegistrationSchema, openPlayAttribution } from '@/lib/open-play/registration';
 import { trackOpenPlayLead } from '@/lib/analytics/open-play';
 import { SportArt } from './sport-art';
@@ -77,10 +77,10 @@ export function OpenPlayRegistrationForm({ closed, sport, onSportChange: setSpor
   const fieldError = (key: string) => errors[key] ? <p id={`op-${key}-error`} className="mt-1.5 text-sm text-red-300">{errors[key]}</p> : null;
   return <form onSubmit={submit} noValidate className="op-form-card p-5 sm:p-7" aria-labelledby="op-form-title">
     <div className="flex items-start justify-between gap-3"><div><p className="op-eyebrow">Your Sunday starts here</p><h2 id="op-form-title" className="mt-2 font-display text-3xl uppercase sm:text-4xl">Count me in.</h2></div><span className="rounded-full border border-go-brand/30 bg-go-brand/10 px-3 py-1.5 font-mono text-sm text-go-brand">₹0 to play</span></div>
-    <p className="mt-2 text-sm text-go-off/75">Pick a sport. Add your details. You’re ready.</p>
+    <p className="mt-2 text-sm text-go-off/75">Join Pickleball open play. Add your details. You’re ready.</p>
     <fieldset disabled={busy} className="mt-6">
-      <legend className="mb-3 text-sm font-semibold">01 / Choose your preferred sport <span className="text-go-brand">*</span></legend>
-      <div className="grid grid-cols-2 gap-2.5">{OPEN_PLAY_SPORTS.map(item => <button key={item.id} type="button" data-sport={item.id} onClick={() => { setSport(item.id); setErrors(current => ({ ...current, sport: '' })); }} aria-pressed={sport === item.id} aria-describedby={errors.sport ? 'op-sport-error' : undefined} className={`op-sport-choice ${sport === item.id ? 'op-sport-choice-selected' : ''}`}>
+      <legend className="mb-3 text-sm font-semibold">01 / Pickleball open play <span className="text-go-brand">*</span></legend>
+      <div className="grid grid-cols-1 gap-2.5">{OPEN_PLAY_SPORTS.map(item => <button key={item.id} type="button" data-sport={item.id} onClick={() => { setSport(item.id); setErrors(current => ({ ...current, sport: '' })); }} aria-pressed={sport === item.id} aria-describedby={errors.sport ? 'op-sport-error' : undefined} className={`op-sport-choice ${sport === item.id ? 'op-sport-choice-selected' : ''}`}>
         <SportArt sport={item.id} className="h-16 w-20 shrink-0" /><span className="font-semibold">{item.name}</span><span className={`absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full border ${sport === item.id ? 'border-go-brand bg-go-brand text-go-black' : 'border-white/25'}`}>{sport === item.id ? <Check className="size-3.5" /> : null}</span>
       </button>)}</div>{fieldError('sport')}
     </fieldset>

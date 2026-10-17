@@ -9,11 +9,11 @@
 
 ## Registration
 
-Choose one of cricket, football, badminton or pickleball. Name, Indian mobile number, email and city are required and always visible. Email is normalized to lowercase, and city must contain at least two characters. Event contact consent is required; future marketing consent is separate, optional and unchecked.
+New public registrations are **Pickleball only**, preselected in the form. Cricket, football and badminton are removed from public choices and rejected by server validation. Historical registrations for all sports remain available in admin counts, filters, CSV exports and confirmation retries. Name, Indian mobile number, email and city are required and always visible. Email is normalized to lowercase, and city must contain at least two characters. Event contact consent is required; future marketing consent is separate, optional and unchecked.
 
 Server validation, same-origin checks, a honeypot, bounded requests and the existing in-memory rate limiter protect the public form. Rate limits are per running instance, not distributed across Vercel instances; configure platform-level abuse protection before high-volume campaigns if necessary.
 
-Phone formats normalize to ten digits. A unique `(event_date, phone, sport)` database constraint makes retries safe. A duplicate submission does not overwrite contact data or reveal an existing registration ID. A person can register for multiple sports, separately. Shared family phone numbers in the same sport count as a single registration; contact the team for additional family attendees.
+Phone formats normalize to ten digits. A unique `(event_date, phone, sport)` database constraint makes retries safe. A duplicate submission does not overwrite contact data or reveal an existing registration ID. New registrations accept only Pickleball; previously saved registrations for other sports are not deleted. Shared family phone numbers in the same sport count as a single registration; contact the team for additional family attendees.
 
 Registrations are expressions of interest, not court reservations or guaranteed playing times. No payment or login is needed. Exact timings, equipment, pizza and coffee arrangements are not invented. Dandiya is the interpretation of “Dania night” and is a subtle mention.
 
@@ -31,7 +31,7 @@ The admin screen provides per-sport counts, search, filtering, pagination, conse
 
 Use the landing page URL with non-sensitive campaign labels, for example:
 
-`/open-play-registrations?utm_source=instagram&utm_medium=paid_social&utm_campaign=open_play_oct18&utm_content=cricket`
+`/open-play-registrations?utm_source=instagram&utm_medium=paid_social&utm_campaign=open_play_oct18&utm_content=pickleball`
 
 Five bounded UTM labels are saved for campaign reporting. Do not put personal details in UTM labels. Full URLs, referrers and `fbclid` are not stored.
 

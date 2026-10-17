@@ -38,16 +38,29 @@ function loader(mocks = {}) {
 const load = loader();
 const { OpenPlayRegistrationSchema, normalizeOpenPlayPhone, openPlayAttribution } = load('src/lib/open-play/registration.ts');
 const constants = load('src/lib/open-play/constants.ts');
-const valid = { fullName: 'Test Player', phone: '9811000000', sport: 'cricket', email: 'test@example.com', city: 'Gurugram', contactConsent: true };
+const valid = { fullName: 'Test Player', phone: '9811000000', sport: 'pickleball', email: 'test@example.com', city: 'Gurugram', contactConsent: true };
 
-test('All four sports accept minimal details; contacts normalize and marketing is opt-in', () => {
-  for (const sport of constants.OPEN_PLAY_SPORT_IDS) {
+test('Only Pickleball accepts new registrations; contacts normalize and marketing is opt-in', () => {
+  assert.deepEqual(constants.OPEN_PLAY_REGISTRATION_SPORT_IDS, ['pickleball']);
+  assert.deepEqual(constants.OPEN_PLAY_REGISTRATION_SPORTS.map(sport => sport.id), ['pickleball']);
+  for (const sport of constants.OPEN_PLAY_REGISTRATION_SPORT_IDS) {
     const input = OpenPlayRegistrationSchema.parse({ ...valid, sport });
     assert.equal(input.email, valid.email); assert.equal(input.city, valid.city); assert.equal(input.marketingConsent, false);
   }
   for (const phone of ['9811000000', '+91 98110 00000', '91-9811000000', '(09811000000)']) assert.equal(normalizeOpenPlayPhone(phone), valid.phone);
   assert.equal(OpenPlayRegistrationSchema.parse({ ...valid, fullName: '  Test Player  ', email: ' Test@Example.com ' }).email, 'test@example.com');
 });
+for (const sport of ['cricket', 'football', 'badminton']) {
+  test(`${sport} registrations are rejected server-side before any persistence`, async () => {
+    const h = routeHarness();
+    const response = await h.api.POST(request({ ...valid, sport }));
+    assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.equal(body.success, false);
+    assert.match(body.fields.sport, /Only Pickleball/);
+    assert.equal(h.writes.length, 0);
+  });
+}
 test('Validation rejects unsupported sports, bad contacts, missing consent, bot submissions and oversized attribution', () => {
   for (const patch of [{ sport: 'tennis' }, { sport: '' }, { fullName: ' ' }, { fullName: '<script>' }, { phone: '123' }, { phone: 'abc9811000000' }, { phone: '5811000000' }, { email: 'bad' }, { contactConsent: false }, { website: 'spam' }, { city: 'a'.repeat(81) }, { attribution: { utm_source: 'a'.repeat(121) } }]) {
     assert.equal(OpenPlayRegistrationSchema.safeParse({ ...valid, ...patch }).success, false, JSON.stringify(patch));
@@ -153,16 +166,26 @@ test('CSV denies unauthenticated/staff access and paginates all registrations sa
   assert.equal(response.headers.get('cache-control'), 'no-store'); assert.deepEqual(pages, [1, 2, 3]);
   assert.match(csv, /"'=DANGEROUS\(\)"/); assert.equal(csv.trim().split('\r\n').length, 1002);
 });
-test('Landing renders original graphics, four sport choices, accessible fields and honest event copy', () => {
+test('Landing renders only preselected Pickleball, accessible fields and honest event copy', () => {
   const { OpenPlayLanding } = load('src/components/open-play/landing.tsx');
   const html = renderToStaticMarkup(createElement(OpenPlayLanding, { closed: false }));
   for (const text of ['YOUR SUNDAY.', 'ON US.', '18 October 2026', '19 October 2026', 'DJ party', 'Pizza party', 'Coffee party', 'dandiya', 'court-scene.svg', 'op-mobile-cta', 'id="register"', 'name="contactConsent"']) assert.ok(html.includes(text), text);
-  assert.equal((html.match(/data-sport=/g) ?? []).length, 4); assert.match(html, /name="fullName"/); assert.match(html, /name="phone"/);
+  assert.equal((html.match(/data-sport=/g) ?? []).length, 1); assert.match(html, /name="fullName"/); assert.match(html, /name="phone"/);
+  assert.match(html, /data-sport="pickleball"[^>]*aria-pressed="true"/);
+  assert.equal((html.match(/class="op-sport-card"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /cricket|football|badminton|four sports|four ways/i);
   for (const field of ['email', 'city']) assert.match(html, new RegExp(`<input(?=[^>]*name="${field}")(?=[^>]*required)[^>]*>`));
   assert.doesNotMatch(html, /class="op-extra"|Add email &amp; city/);
   assert.doesNotMatch(html, /<input[^>]+name="marketingConsent"[^>]+checked/);
   const closed = renderToStaticMarkup(createElement(OpenPlayLanding, { closed: true }));
   assert.match(closed, /Registrations for October 18 are now closed/); assert.doesNotMatch(closed, /<form/);
+});
+test('Public metadata and social preview advertise only Pickleball', () => {
+  for (const file of ['src/app/open-play-registrations/page.tsx', 'src/app/open-play-registrations/social-preview/route.tsx']) {
+    const source = readFileSync(resolve(root, file), 'utf8');
+    assert.match(source, /Pickleball/);
+    assert.doesNotMatch(source, /cricket|football|badminton|four sports/i);
+  }
 });
 test('Lead tracking is consent-aware, PII-free and deduplicated only after successful tracking', () => {
   const previous = globalThis.window; const events = []; let allowed = false;

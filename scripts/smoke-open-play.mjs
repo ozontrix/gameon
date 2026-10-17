@@ -15,7 +15,8 @@ try {
   assert.ok(ready, output);
   const response = await get('/open-play-registrations'); assert.equal(response.status, 200);
   const html = (await response.text()).replace(/<!--[^]*?-->/g, '');
-  for (const text of ['YOUR SUNDAY.', '18 October 2026', '19 October 2026', 'data-sport="cricket"', 'data-sport="football"', 'data-sport="badminton"', 'data-sport="pickleball"', 'DJ party', 'Pizza party', 'Coffee party']) assert.ok(html.includes(text), text);
+  for (const text of ['YOUR SUNDAY.', '18 October 2026', '19 October 2026', 'data-sport="pickleball"', 'DJ party', 'Pizza party', 'Coffee party']) assert.ok(html.includes(text), text);
+  assert.doesNotMatch(html, /data-sport="(?:cricket|football|badminton)"|Four sports|Four ways/);
   assert.match(html, /<link rel="canonical"[^>]+open-play-registrations/);
   assert.doesNotMatch(html, /<script[^>]+src="https:\/\/connect\.facebook\.net/);
   const image = await get('/open-play-registrations/social-preview'); assert.equal(image.status, 200); assert.match(image.headers.get('content-type'), /image\/png/); assert.ok((await image.arrayBuffer()).byteLength > 1000);
