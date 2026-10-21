@@ -1,5 +1,3 @@
-import { OPEN_PLAY_DATE_LABEL } from "@/lib/open-play/constants";
-
 export interface HomeHighlight {
   id: string;
   label: string;
@@ -20,21 +18,6 @@ export interface HomeHighlight {
 // Use imageFit: "contain" for posters so dates and text are never cropped.
 // Add another entry here to add a slide; the controls update automatically.
 export const homeHighlights: HomeHighlight[] = [
-  {
-    id: "open-play",
-    label: "Open play",
-    eyebrow: "Meet. Play. Belong.",
-    title: "YOUR NEXT GAME.",
-    accent: "YOUR NEW SQUAD.",
-    description: "Four sports. Fresh faces. One great day out. Join us for open play and find your people on the court.",
-    detail: OPEN_PLAY_DATE_LABEL,
-    image: "/outdoor.jpeg",
-    imageAlt: "Game On's outdoor courts and sports turf in Gurugram",
-    imagePosition: "center",
-    imageFit: "cover",
-    href: "/open-play-registrations",
-    cta: "Register for open play",
-  },
   {
     id: "multisports-league",
     label: "Multi Sports League",

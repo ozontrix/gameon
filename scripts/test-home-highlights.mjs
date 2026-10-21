@@ -20,10 +20,10 @@ function load(path, mocks = {}) {
   new Function('require', 'module', 'exports', compiled.outputText)(id => mocks[id] ?? require(id), compiledModule, compiledModule.exports);
   return compiledModule.exports;
 }
-const constants = load('src/lib/open-play/constants.ts', { '@/lib/utils/booking-dates': { PUBLIC_PAID_BOOKING_START: '2026-10-19' } });
-const { homeHighlights } = load('src/lib/home-highlights.ts', { '@/lib/open-play/constants': constants });
+const { homeHighlights } = load('src/lib/home-highlights.ts');
+const carouselFixtures = [homeHighlights[0], { ...homeHighlights[0], id: 'another-highlight', label: 'Another highlight' }];
 
-function renderCarousel({ selected = 0, paused = false, reduced = false, hovered = false, inView = true } = {}) {
+function renderCarousel({ selected = 0, paused = false, reduced = false, hovered = false, inView = true, slides = carouselFixtures } = {}) {
   const states = [selected, paused, hovered, inView];
   let stateIndex = 0;
   const updates = [];
@@ -56,7 +56,7 @@ function renderCarousel({ selected = 0, paused = false, reduced = false, hovered
     }] },
     'next/link': { __esModule: true, default: props => { links.push(props); return createElement('a', props); } },
     'next/image': { __esModule: true, default: ({ fill, preload, ...props }) => { void fill; void preload; return createElement('img', props); } },
-    '@/lib/home-highlights': { homeHighlights },
+    '@/lib/home-highlights': { homeHighlights: slides },
     '@/lib/useEmblaAutoplay': { useEmblaAutoplay: (api, delay, enabled) => { autoplay = { delay, enabled }; } },
   };
   const { HomeHighlights } = load('src/components/HomeHighlights.tsx', mocks);
@@ -66,12 +66,29 @@ function renderCarousel({ selected = 0, paused = false, reduced = false, hovered
 
 test('Highlights use real local images, unique IDs, and the correct public destinations', () => {
   assert.equal(new Set(homeHighlights.map(slide => slide.id)).size, homeHighlights.length);
-  assert.deepEqual(homeHighlights.map(slide => slide.href), ['/open-play-registrations', '/gameon-multisports-league']);
-  assert.equal(homeHighlights[0].detail, constants.OPEN_PLAY_DATE_LABEL);
+  assert.deepEqual(homeHighlights.map(slide => slide.href), ['/gameon-multisports-league']);
   for (const slide of homeHighlights) {
     assert.ok(existsSync(resolve(root, 'public', slide.image.slice(1))));
     assert.ok(slide.imageAlt && slide.title && slide.cta);
   }
+});
+
+test('Home shows only the league, with autoplay off and navigation disabled', () => {
+  const { html, groups, links, buttons, autoplay } = renderCarousel({ slides: homeHighlights });
+  assert.equal(groups.length, 1);
+  assert.equal(links[0].href, '/gameon-multisports-league');
+  assert.equal(links[0].tabIndex, 0);
+  assert.equal(autoplay.enabled, false);
+  assert.doesNotMatch(html, /open.play|open-play-registrations/i);
+  for (const label of ['Previous highlight', 'Next highlight']) assert.equal(buttons.find(button => button['aria-label'] === label).disabled, true);
+  assert.ok(!buttons.some(button => button['data-rotation-control'] !== undefined));
+});
+
+test('Main league page is identical to the updated page and keeps the same layout', () => {
+  for (const file of ['page.tsx', 'layout.tsx']) {
+    assert.equal(read(`src/app/gameon-multisports-league/${file}`), read(`src/app/gameon-multisports-league-updated/${file}`));
+  }
+  assert.doesNotMatch(read('src/app/gameon-multisports-league/page.tsx'), /open.play|sportsx-dandia/i);
 });
 
 test('Existing hero stays below the carousel, with unique home and discovery anchors', () => {
@@ -96,7 +113,7 @@ test('Arrows and dots navigate and stop autoplay; keyboard navigation works with
   const { buttons, scrolls, updates, section } = renderCarousel({ reduced: true });
   buttons.find(button => button['aria-label'] === 'Next highlight').onClick();
   buttons.find(button => button['aria-label'] === 'Previous highlight').onClick();
-  buttons.find(button => button['aria-label'] === 'Show Multi Sports League').onClick();
+  buttons.find(button => button['aria-label'] === 'Show Another highlight').onClick();
   let prevented = false;
   section.onKeyDown({ key: 'ArrowRight', preventDefault: () => { prevented = true; } });
   assert.equal(prevented, true);
