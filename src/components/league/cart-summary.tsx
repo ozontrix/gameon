@@ -3,10 +3,11 @@
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { useLeagueBooking } from "./booking-context";
 import { CategorySchedule } from "./category-schedule";
+import type { CartCategory } from "./cart";
 import { formatINR, type SportId } from "./data";
 import { Button, Kicker, Panel, StepFooter } from "./ui";
 
-export function LeagueCartSummary({ footer = false }: { footer?: boolean }) {
+export function LeagueCartSummary({ footer = false, displayCategories }: { footer?: boolean; displayCategories?: CartCategory[] }) {
   const { ready, categories, sports, pricing, removeSelection, clearCart } = useLeagueBooking();
   if (!ready || !categories.length) return null;
   return (
@@ -24,7 +25,7 @@ export function LeagueCartSummary({ footer = false }: { footer?: boolean }) {
             Clear cart
           </button>
         </div>
-        <CategorySchedule categories={categories} onRemove={(sportId, categoryId) => removeSelection({ sportId: sportId as SportId, categoryId })} />
+        <CategorySchedule categories={displayCategories ?? categories} onRemove={(sportId, categoryId) => removeSelection({ sportId: sportId as SportId, categoryId })} />
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-go-off/75">Entry fees <strong className="ml-2 text-go-white">{formatINR(pricing.entryFee)}</strong></p>
           <Button href="/gameon-multisports-league/book/details">Checkout <ArrowRight className="h-4 w-4" /></Button>

@@ -182,6 +182,57 @@ test("Landing, sport details and review show the rescheduled weekend", () => {
   assert.doesNotMatch(review, /1[78] (?:Oct|October)/);
 });
 
+test("Badminton page swaps the two displayed tournament groups without changing booking dates", () => {
+  const h = uiHarness();
+  const original = JSON.stringify(SPORTS);
+  const html = h.sport("badminton");
+  const expected = {
+    "2026-10-24": ["mens-singles", "womens-singles", "mens-doubles"],
+    "2026-10-25": ["u13-boys-singles", "u13-girls-singles", "u17-boys-singles", "mixed-doubles"],
+  };
+  for (const [date, ids] of Object.entries(expected)) {
+    const section = html.match(new RegExp(`<section[^>]*aria-labelledby="match-day-${date}"[^>]*>([\\s\\S]*?)</section>`))?.[1];
+    assert.ok(section, date);
+    assert.equal((section.match(/aria-pressed=/g) ?? []).length, ids.length);
+    assert.ok(section.includes(`${ids.length} categories`));
+    for (const category of findSport("badminton").categories) {
+      assert.equal(section.includes(`>${category.name}</span>`), ids.includes(category.id), category.name);
+      if (!ids.includes(category.id)) continue;
+      const card = h.buttons.find(button => button["aria-label"]?.startsWith(`${category.name},`));
+      const label = date.endsWith("24") ? /Sat, 24 Oct,? 2026/ : /Sun, 25 Oct,? 2026/;
+      assert.match(card["aria-label"], label);
+      assert.match(renderToStaticMarkup(createElement("span", null, card.children)), label);
+    }
+  }
+  h.buttons.find(button => button["aria-label"]?.startsWith("Open Singles Men,")).onClick();
+  const selected = h.sport("badminton");
+  const summary = selected.slice(selected.indexOf("Your selected match days"), selected.indexOf("Add another sport"));
+  assert.match(summary, /24 Oct,? 2026/);
+  assert.doesNotMatch(summary, /25 Oct,? 2026/);
+  const cartSummary = selected.slice(selected.lastIndexOf("Your cart"));
+  assert.match(cartSummary, /24 Oct,? 2026/);
+  assert.doesNotMatch(cartSummary, /25 Oct,? 2026/);
+  assert.equal(h.booking().categories[0].date, "2026-10-25");
+  assert.equal(h.booking().draft.date, "2026-10-25");
+  assert.equal(h.booking().pricing.total, 1000);
+  assert.deepEqual(h.selectionsClicked, [["badminton", "mens-singles"]]);
+  assert.match(h.review(), /25 Oct,? 2026/);
+  assert.equal(JSON.stringify(SPORTS), original);
+});
+
+test("Other sport pages retain their category dates and original cart dates", () => {
+  const h = uiHarness();
+  h.booking().toggleSelection("badminton", "mens-singles");
+  for (const sport of SPORTS.filter(sport => sport.id !== "badminton")) {
+    const html = h.sport(sport.id);
+    for (const category of sport.categories) {
+      const card = h.buttons.find(button => button["aria-label"]?.startsWith(`${category.name},`));
+      assert.match(card["aria-label"], category.date.endsWith("24") ? /24 Oct,? 2026/ : /25 Oct,? 2026/);
+    }
+    assert.match(html.slice(html.lastIndexOf("Your cart")), /25 Oct,? 2026/);
+  }
+});
+
 test("Saved drafts with old dates recalculate match dates without losing selections or contact details", () => {
   for (const [sportId, categoryId, oldDate, newDate] of [
     ["football", "team", "2026-10-17", "2026-10-24"],

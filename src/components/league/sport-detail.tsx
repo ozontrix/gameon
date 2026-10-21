@@ -46,7 +46,19 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
 
   if (!sport) return null;
 
-  const chosen = findCategories(sport, selected);
+  // Presentation-only swap on this page; the shared catalog and saved bookings
+  // retain their original dates, category ids, fees and checkout behavior.
+  const displayDate = (date: string) => {
+    if (sportId !== "badminton") return date;
+    if (date === "2026-10-24") return "2026-10-25";
+    if (date === "2026-10-25") return "2026-10-24";
+    return date;
+  };
+  const displayCategories = sport.categories.map(item => ({ ...item, date: displayDate(item.date) }));
+  const chosen = findCategories({ ...sport, categories: displayCategories }, selected);
+  const displayCartCategories = categories.map(item =>
+    item.sportId === "badminton" ? { ...item, date: displayDate(item.date) } : item
+  );
 
   const toggle = (id: string) => {
     const category = sport.categories.find(item => item.id === id);
@@ -75,7 +87,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         <p className="relative text-[13.5px] leading-relaxed text-go-off/75">{sport.description}</p>
         <div className="relative mt-4 flex flex-wrap gap-2">
           <Chip icon={CalendarDays} className="justify-start">
-            {scheduleLabel(sport.categories)}
+            {scheduleLabel(displayCategories)}
           </Chip>
           <Chip icon={Trophy} tone="brand" className="justify-start">
             {LEAGUE_PRIZE_POOL} overall prize pool
@@ -100,16 +112,16 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        {categoryDates(sport.categories).map((date) => (
+        {categoryDates(displayCategories).map((date) => (
           <section key={date} aria-labelledby={`match-day-${date}`} className="space-y-2.5">
             <h3 id={`match-day-${date}`} className="flex flex-wrap items-center gap-2 text-sm font-semibold text-go-white">
               <CalendarDays className="h-4 w-4 text-go-brand" aria-hidden />
               {formatDayLabel(date)}
               <span className="text-[11px] font-normal text-go-off/70">
-                {sport.categories.filter((item) => item.date === date).length} {sport.categories.filter((item) => item.date === date).length === 1 ? "category" : "categories"}
+                {displayCategories.filter((item) => item.date === date).length} {displayCategories.filter((item) => item.date === date).length === 1 ? "category" : "categories"}
               </span>
             </h3>
-        {sport.categories.filter((item) => item.date === date).map((item) => {
+        {displayCategories.filter((item) => item.date === date).map((item) => {
           const active = selected.includes(item.id);
           return (
             <button
@@ -195,7 +207,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
       <div className="mt-4">
         <Button href={BASE} size="lg">Add another sport</Button>
       </div>
-      <LeagueCartSummary />
+      <LeagueCartSummary displayCategories={displayCartCategories} />
       <StepFooter>
         <div className="flex items-center gap-3 lg:justify-between">
           <div className="min-w-0 flex-1 lg:flex-none">
