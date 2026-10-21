@@ -4,6 +4,7 @@ import { sportKeyFor } from '../utils/sport-key';
 
 export type HomeBanner = {
   id: string;
+  showText: boolean;
   title: string;
   titleAccent: string | null;
   subtitle: string | null;
@@ -103,7 +104,7 @@ export class HomeService {
       bookableCourts(),
       supabaseAdmin
         .from('home_banners')
-        .select('id, placement, title, title_accent, subtitle, badge, image_url, link, starts_at, ends_at')
+        .select('id, placement, title, title_accent, subtitle, badge, image_url, link, starts_at, ends_at, show_text')
         .eq('is_active', true)
         .order('sort_order')
         .order('created_at'),
@@ -134,9 +135,11 @@ export class HomeService {
     );
     const toBanner = (banner: (typeof live)[number]): HomeBanner => ({
       id: banner.id,
-      title: banner.title,
-      titleAccent: banner.title_accent,
-      subtitle: banner.subtitle,
+      showText: banner.placement !== 'HERO' || banner.show_text,
+      // Suppress hidden copy in the public payload too, including older clients.
+      title: banner.placement === 'HERO' && !banner.show_text ? '' : banner.title,
+      titleAccent: banner.placement === 'HERO' && !banner.show_text ? null : banner.title_accent,
+      subtitle: banner.placement === 'HERO' && !banner.show_text ? null : banner.subtitle,
       badge: banner.badge,
       imageUrl: banner.image_url,
       link: banner.link,

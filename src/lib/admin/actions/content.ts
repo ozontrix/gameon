@@ -41,7 +41,8 @@ const bannerSchema = z
   .object({
     id: z.string().uuid().optional(),
     placement: z.enum(['HERO', 'PROMO'], { error: 'Choose where the banner appears.' }),
-    title: z.string({ error: 'Enter a headline.' }).min(1, 'Enter a headline.').max(60, 'Keep the headline under 60 characters.'),
+    title: z.string().max(60, 'Keep the headline under 60 characters.').optional().default(''),
+    show_text: checkbox,
     title_accent: z.string().max(60).optional(),
     subtitle: z.string().max(160).optional(),
     badge: z.string().max(20).optional(),
@@ -51,6 +52,10 @@ const bannerSchema = z
     remove_image: checkbox,
     starts_at: localDateTime,
     ends_at: localDateTime,
+  })
+  .refine((v) => v.placement === 'HERO' || Boolean(v.title.trim()), {
+    path: ['title'],
+    message: 'Enter a headline for the promo card.',
   })
   .refine((v) => !v.starts_at || !v.ends_at || v.ends_at > v.starts_at, {
     path: ['ends_at'],

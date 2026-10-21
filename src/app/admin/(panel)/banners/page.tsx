@@ -22,6 +22,7 @@ type Banner = {
   link: string | null;
   sort_order: number;
   is_active: boolean;
+  show_text: boolean;
   starts_at: string | null;
   ends_at: string | null;
 };
@@ -51,9 +52,10 @@ function BannerList({ banners, now }: { banners: Banner[]; now: string }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Link href={`/admin/banners/${banner.id}`} className="font-medium text-zinc-950 hover:underline">
-                  {banner.title} {banner.placement === 'HERO' ? banner.title_accent : null}
+                  {banner.title.trim() || banner.title_accent?.trim() || 'Image-only slide'}
                 </Link>
                 <Badge tone={state.tone}>{state.label}</Badge>
+                {banner.placement === 'HERO' ? <Badge tone="neutral">{banner.show_text && [banner.title, banner.title_accent, banner.subtitle].some(text => text?.trim()) ? 'Text on' : 'Image only'}</Badge> : null}
                 {banner.badge ? <Badge tone="amber">{banner.badge}</Badge> : null}
               </div>
               <p className="truncate text-sm text-zinc-500">{banner.subtitle}</p>
@@ -90,7 +92,7 @@ export default async function BannersPage({ searchParams }: { searchParams: Prom
 
   const { data, error } = await supabaseAdmin
     .from('home_banners')
-    .select('id, placement, title, title_accent, subtitle, badge, image_url, link, sort_order, is_active, starts_at, ends_at')
+    .select('id, placement, title, title_accent, subtitle, badge, image_url, link, sort_order, is_active, starts_at, ends_at, show_text')
     .order('placement')
     .order('sort_order')
     .order('created_at');

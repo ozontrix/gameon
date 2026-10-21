@@ -25,7 +25,7 @@ export default async function EditBannerPage({ params }: { params: Promise<{ id:
 
   const { data: banner } = await supabaseAdmin
     .from('home_banners')
-    .select('id, placement, title, title_accent, subtitle, badge, image_url, link, sort_order, is_active, starts_at, ends_at')
+    .select('id, placement, title, title_accent, subtitle, badge, image_url, link, sort_order, is_active, starts_at, ends_at, show_text')
     .eq('id', id)
     .maybeSingle();
   if (!banner) notFound();

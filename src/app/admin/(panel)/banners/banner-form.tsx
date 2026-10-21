@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ActionForm, FieldError, FormMessage, SubmitButton } from '@/components/admin/action-form';
 import { checkboxClass, inputClass, textareaClass } from '@/components/admin/ui';
 import { saveBanner } from '@/lib/admin/actions/content';
+import { hasBannerText } from '@/lib/utils/banner-text';
 
 export type BannerFormValues = {
   id: string;
@@ -17,6 +18,7 @@ export type BannerFormValues = {
   link: string | null;
   sort_order: number;
   is_active: boolean;
+  show_text: boolean;
   /** `YYYY-MM-DDTHH:MM` on the venue's clock */
   starts_at: string;
   ends_at: string;
@@ -52,7 +54,9 @@ export function BannerForm({ banner }: { banner?: BannerFormValues }) {
   const [accent, setAccent] = useState(banner?.title_accent ?? '');
   const [subtitle, setSubtitle] = useState(banner?.subtitle ?? '');
   const [badge, setBadge] = useState(banner?.badge ?? '');
+  const [showText, setShowText] = useState(banner?.show_text ?? false);
   const hero = placement === 'HERO';
+  const displayText = hasBannerText({ showText, title, titleAccent: accent, subtitle });
 
   // Release the object URL of a picked file when it is replaced.
   useEffect(() => {
@@ -81,6 +85,16 @@ export function BannerForm({ banner }: { banner?: BannerFormValues }) {
           </div>
         </fieldset>
 
+        {hero ? (
+          <div className="rounded-lg border border-zinc-200 p-3">
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-zinc-800">
+              <input type="checkbox" name="show_text" checked={showText} onChange={(event) => setShowText(event.target.checked)} className={checkboxClass} aria-describedby="show-text-help" />
+              Show text on this slide
+            </label>
+            <p id="show-text-help" className="text-xs text-zinc-600">Off shows only the image, without text or a dark overlay, on web, Android and iOS. Saved text is kept so you can turn it back on. Empty text never adds an overlay.</p>
+          </div>
+        ) : null}
+
         {!hero ? (
           <div className="space-y-1.5">
             <Label htmlFor="title_accent">Label above the headline</Label>
@@ -90,8 +104,8 @@ export function BannerForm({ banner }: { banner?: BannerFormValues }) {
         ) : null}
 
         <div className="space-y-1.5">
-          <Label htmlFor="title" required>
-            Headline
+          <Label htmlFor="title" required={!hero}>
+            {hero ? 'Headline (optional)' : 'Headline'}
           </Label>
           <input id="title" name="title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} placeholder={hero ? 'Play More.' : 'Book now & save more'} className={inputClass} />
           <FieldError name="title" />
@@ -205,12 +219,16 @@ export function BannerForm({ banner }: { banner?: BannerFormValues }) {
               // eslint-disable-next-line @next/next/no-img-element -- local blob or any uploaded/remote URL
               <img src={preview} alt="" className="absolute inset-0 size-full object-cover" />
             ) : null}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-black/10" />
-            <div className="absolute inset-y-0 left-0 flex max-w-[70%] flex-col justify-center gap-1 p-4">
-              <p className="truncate text-xl font-bold text-white">{title || 'Headline'}</p>
-              <p className="truncate text-xl font-bold text-go-brand">{accent}</p>
-              <p className="line-clamp-2 text-xs text-zinc-200">{subtitle}</p>
-            </div>
+            {displayText ? (
+              <>
+                <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-black/10" />
+                <div className="absolute inset-y-0 left-0 flex max-w-[70%] flex-col justify-center gap-1 p-4">
+                  {title.trim() ? <p className="truncate text-xl font-bold text-white">{title}</p> : null}
+                  {accent.trim() ? <p className="truncate text-xl font-bold text-go-brand">{accent}</p> : null}
+                  {subtitle.trim() ? <p className="line-clamp-2 text-xs text-zinc-200">{subtitle}</p> : null}
+                </div>
+              </>
+            ) : null}
           </div>
         ) : (
           <div className="relative overflow-hidden rounded-xl bg-zinc-900 p-4">

@@ -25,6 +25,7 @@ import { useReadRecovery } from '@/lib/mobile/use-read-recovery';
 /** A hero slide or promo card, written in the admin panel. */
 export type HomeBanner = {
   id: string;
+  showText?: boolean;
   title: string;
   titleAccent: string | null;
   subtitle: string | null;

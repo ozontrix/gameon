@@ -719,6 +719,7 @@ export type Database = {
       }
       home_banners: {
         Row: {
+          show_text: boolean
           badge: string | null
           created_at: string
           created_by: string | null
@@ -736,6 +737,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          show_text?: boolean
           badge?: string | null
           created_at?: string
           created_by?: string | null
@@ -748,11 +750,12 @@ export type Database = {
           sort_order?: number
           starts_at?: string | null
           subtitle?: string | null
-          title: string
+          title?: string
           title_accent?: string | null
           updated_at?: string
         }
         Update: {
+          show_text?: boolean
           badge?: string | null
           created_at?: string
           created_by?: string | null

@@ -21,6 +21,7 @@ import { HERO_AUTOPLAY_MS } from '@/lib/mobile/constants/motion';
 import { Brand, Layout, Radius, Spacing, Typography } from '@/lib/mobile/theme';
 import { useHomeContent } from '../home-content-provider';
 import { RemoteImage } from '../ui';
+import { hasBannerText } from '@/lib/utils/banner-text';
 
 /** Aspect ratio of the hero, so the photo is never squeezed. */
 const ASPECT = 2.05;
@@ -86,7 +87,8 @@ export function HeroBanner() {
           scrollSnapType: 'x mandatory',
         }}>
         {slides.map((slide) => {
-          const label = [slide.title, slide.titleAccent, slide.subtitle].filter(Boolean).join('. ');
+          const showText = hasBannerText(slide);
+          const label = (showText ? [slide.title, slide.titleAccent, slide.subtitle].filter(text => text?.trim()).join('. ') : '') || 'Home banner';
           const slideStyle = {
             position: 'relative' as const,
             flex: '0 0 100%',
@@ -99,12 +101,13 @@ export function HeroBanner() {
               {slide.imageUrl ? (
                 <RemoteImage
                   uri={slide.imageUrl}
-                  accessibilityLabel={slide.title}
+                  accessibilityLabel={label}
                   style={{ position: 'absolute', inset: 0 }}
                 />
               ) : null}
 
-              {/* Scrim gradient, so the headline stays legible over any photo. */}
+              {showText ? <>
+              {/* Scrim gradient, only when there is visible copy to protect. */}
               <span
                 aria-hidden="true"
                 style={{
@@ -127,15 +130,15 @@ export function HeroBanner() {
                   justifyContent: 'center',
                   gap: Spacing.xxs,
                 }}>
-                <span style={{ ...Typography.display, color: Brand.text, lineHeight: 1.05 }}>
+                {slide.title.trim() ? <span style={{ ...Typography.display, color: Brand.text, lineHeight: 1.05 }}>
                   {slide.title}
-                </span>
-                {slide.titleAccent ? (
+                </span> : null}
+                {slide.titleAccent?.trim() ? (
                   <span style={{ ...Typography.display, color: Brand.accent, lineHeight: 1.05 }}>
                     {slide.titleAccent}
                   </span>
                 ) : null}
-                {slide.subtitle ? (
+                {slide.subtitle?.trim() ? (
                   <span
                     style={{
                       ...Typography.bodySmall,
@@ -146,6 +149,7 @@ export function HeroBanner() {
                   </span>
                 ) : null}
               </span>
+              </> : null}
             </>
           );
 
