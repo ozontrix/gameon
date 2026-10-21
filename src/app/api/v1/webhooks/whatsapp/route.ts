@@ -6,6 +6,7 @@ import { whatsAppEnv } from '@/lib/whatsapp/config';
 import { WhatsAppService } from '@/lib/services/whatsapp.service';
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { toWhatsAppNumber } from '@/lib/whatsapp/phone';
+import { storeInboundMessage } from '@/lib/whatsapp/inbox';
 
 /**
  * WhatsApp Cloud API webhook.
@@ -57,7 +58,8 @@ const payloadSchema = z.object({
           biz_opaque_callback_data: z.string().optional(),
           errors: z.array(z.object({ code: z.union([z.number(), z.string()]).optional(), title: z.string().optional(), message: z.string().optional() })).optional(),
         })).optional(),
-        messages: z.array(z.object({ from: z.string(), type: z.string(), text: z.object({ body: z.string() }).optional() })).optional(),
+        contacts: z.array(z.object({ wa_id: z.string(), profile: z.object({ name: z.string() }).optional() })).optional(),
+        messages: z.array(z.object({ id: z.string().optional(), timestamp: z.string().optional(), from: z.string(), type: z.string(), text: z.object({ body: z.string() }).optional() }).passthrough()).optional(),
       }),
     })),
   })),
@@ -97,11 +99,24 @@ export async function POST(request: Request) {
   }));
 
   try {
-    for (const message of values.flatMap(value => value.messages ?? [])) {
-      if (message.type !== 'text' || !/^(STOP|UNSUBSCRIBE|CANCEL|END|QUIT)$/i.test(message.text?.body.trim() ?? '')) continue;
-      const phone = toWhatsAppNumber(message.from);
-      if (!phone) continue;
-      const { error } = await supabaseAdmin.from('whatsapp_opt_outs').upsert({ phone }, { onConflict: 'phone' });
+    for (const value of values) {
+      for (const message of value.messages ?? []) {
+        if (message.type === 'text' && /^(STOP|UNSUBSCRIBE|CANCEL|END|QUIT)$/i.test(message.text?.body.trim() ?? '')) {
+          const phone = toWhatsAppNumber(message.from);
+          if (phone) {
+            const { error } = await supabaseAdmin.from('whatsapp_opt_outs').upsert({ phone }, { onConflict: 'phone' });
+            if (error) throw error;
+          }
+        }
+        await storeInboundMessage(message, value.contacts?.find(contact => contact.wa_id === message.from)?.profile?.name);
+      }
+    }
+    for (const status of statuses) {
+      if (!['sent', 'delivered', 'read', 'failed'].includes(status.status)) continue;
+      const { error } = await supabaseAdmin.rpc('whatsapp_chat_receipt', {
+        p_message_id: status.id, p_status: status.status, p_correlation: status.correlation ?? null,
+        p_error: status.error?.message || status.error?.title || null,
+      });
       if (error) throw error;
     }
     const applied = await WhatsAppService.applyStatusUpdate(statuses);

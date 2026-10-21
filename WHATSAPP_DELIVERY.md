@@ -1,5 +1,7 @@
 # Booking QR delivery on WhatsApp
 
+The dedicated **WhatsApp** admin workspace now lives at `/admin/whatsapp` (see `WHATSAPP_INBOX.md`). Automatic confirmation logs/recovery moved to `/admin/whatsapp/deliveries`. This document describes the unchanged booking-QR sender.
+
 ## Implemented
 
 - Confirmed court bookings, event orders and tournament registrations enqueue a delivery inside the database transaction when the customer opted in. Pending/unpaid checkout holds do not send a confirmation.

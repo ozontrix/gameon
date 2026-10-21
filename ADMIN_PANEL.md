@@ -88,6 +88,10 @@ role can write. Removing the role takes effect on the next page load.
 
 ## Security model
 
+### WhatsApp workspace
+
+**WhatsApp** in the sidebar opens `/admin/whatsapp` for admins only: captured conversation history, custom replies in the service window, approved utility/marketing templates, consent evidence and bulk messaging of selected paid/part-paid League entries. Existing automatic QR delivery logs are retained at `/admin/whatsapp/deliveries`. See `WHATSAPP_INBOX.md` for setup, validation and current Meta account blockers.
+
 ### Website Multisports League bookings
 
 Open **Events & tournaments → Multisports League** at `/admin/multisports-league`.

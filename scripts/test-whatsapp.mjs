@@ -65,6 +65,7 @@ function harness({rows=[message()],bookings=[booking()],client={},tables={}}={})
       return q;
     },
     async rpc(name,args){
+      if(name==='whatsapp_chat_receipt')return {data:null,error:dbFailure?new Error('offline'):null};
       calls.rpc.push({name,args});if(dbFailure)return {data:null,error:new Error('DB offline')};
       if(name==='whatsapp_recover_stale'){
         rows.filter(r=>r.status==='sending'&&r.locked_until<new Date().toISOString()).forEach(r=>Object.assign(r,{status:'unknown',retryable:false}));

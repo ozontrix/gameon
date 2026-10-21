@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      whatsapp_contacts: {
+        Row: { phone: string; name: string; last_message_at: string; last_inbound_at: string | null; utility_consent_at: string | null; marketing_consent_at: string | null; consent_evidence: string | null; consent_recorded_by: string | null }
+        Insert: { phone: string; name?: string; last_message_at?: string; last_inbound_at?: string | null; utility_consent_at?: string | null; marketing_consent_at?: string | null; consent_evidence?: string | null; consent_recorded_by?: string | null }
+        Update: Partial<Database['public']['Tables']['whatsapp_contacts']['Insert']>
+        Relationships: []
+      }
+      whatsapp_chat_messages: {
+        Row: { id: string; phone: string; direction: string; body: string; message_type: string; payload: Json; wa_message_id: string | null; request_key: string | null; actor_id: string | null; status: string; error_message: string | null; created_at: string }
+        Insert: { id?: string; phone: string; direction: string; body: string; message_type?: string; payload?: Json; wa_message_id?: string | null; request_key?: string | null; actor_id?: string | null; status?: string; error_message?: string | null; created_at?: string }
+        Update: Partial<Database['public']['Tables']['whatsapp_chat_messages']['Insert']>
+        Relationships: []
+      }
       booking_emails: {
         Row: { id: string; category: string; reference_id: string; recipient: string | null; status: string; attempts: number; available_at: string; lease_id: string | null; locked_until: string | null; error_code: string | null; sent_at: string | null; created_at: string }
         Insert: { id?: string; category: string; reference_id: string; recipient?: string | null; status?: string; attempts?: number; available_at?: string; lease_id?: string | null; locked_until?: string | null; error_code?: string | null; sent_at?: string | null; created_at?: string }
@@ -1723,6 +1735,7 @@ export type Database = {
       }
     }
     Functions: {
+      whatsapp_chat_receipt: { Args: { p_message_id: string; p_status: string; p_correlation?: string | null; p_error?: string | null }; Returns: undefined }
       check_in_reservation: { Args: { p_code: string; p_actor_id: string; p_source?: string; p_venue_id?: string; p_facility_id?: string; p_early_minutes?: number }; Returns: Json }
       claim_booking_emails: { Args: { p_category?: string; p_reference_id?: string }; Returns: Database['public']['Tables']['booking_emails']['Row'][] }
       register_push_device: { Args: { p_installation_id: string; p_secret_hash: string; p_token: string | null; p_platform: string; p_user_id: string | null; p_enabled: boolean }; Returns: undefined }

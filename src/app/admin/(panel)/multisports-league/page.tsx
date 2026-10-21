@@ -8,6 +8,7 @@ import { formatDateTime, formatMoney } from '@/lib/admin/format';
 import { leagueDetails, leagueParam, listLeagueBookings, readLeagueFilters, type LeagueSearchParams } from '@/lib/admin/queries/league';
 import { requireAdmin } from '@/lib/admin/session';
 import { confirmationBrackets, confirmationSchedule } from '@/lib/league/confirmation';
+import { leagueWhatsAppNumber } from '@/lib/whatsapp/inbox-shared';
 
 export const metadata: Metadata = { title: 'Multisports League bookings' };
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ export default async function LeagueBookingsPage({ searchParams }: { searchParam
   const exportQuery = new URLSearchParams(Object.entries(filters).filter((pair): pair is [string, string] => Boolean(pair[1]))).toString();
   return <>
     <PageHeader title="GameOn Multisports League" description="Website entries, captured payments and confirmation email delivery. Pending entries are unpaid checkouts, not confirmed bookings." actions={<><Link href="/admin/multisports-league/coupons" className={buttonClass('secondary')}>Manage coupons</Link><Link href="/gameon-multisports-league" className={buttonClass('secondary')}>View website</Link><a href={`/admin/multisports-league/export?${exportQuery}`} className={buttonClass('primary')}>Export CSV</a></>} />
+    <div className="mb-4"><Link href="/admin/whatsapp?tab=bulk" className={buttonClass('secondary')}>WhatsApp · message paid / partially paid entries</Link></div>
     <form method="get" className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Field label="Search bookings" htmlFor="league-search"><input id="league-search" name="q" defaultValue={filters.q} maxLength={100} placeholder="Name, email, phone or payment ID" className={inputClass} /></Field>
       <Field label="Sport" htmlFor="league-sport"><select id="league-sport" name="sport" defaultValue={filters.sport ?? ''} className={inputClass}><option value="">All sports</option>{SPORTS.map(sport => <option value={sport.id} key={sport.id}>{sport.name}</option>)}</select></Field>
@@ -38,7 +40,7 @@ export default async function LeagueBookingsPage({ searchParams }: { searchParam
           <Td><p>Total: {formatMoney(quote.total)}</p><p>{booking.status === 'CONFIRMED' ? 'Paid' : 'Order'}: {formatMoney(booking.amount_paise / 100)}</p><p>Balance: {formatMoney(balance)}</p><p className="text-xs text-zinc-500">{entry.squadSize} player tickets</p></Td>
           <Td><Badge tone={booking.status === 'CONFIRMED' && balance === 0 ? 'green' : 'amber'}>{booking.status === 'CONFIRMED' ? balance > 0 ? 'Advance paid / reserved' : 'Paid / confirmed' : 'Pending / unpaid'}</Badge></Td>
           <Td><Badge tone={booking.email_status === 'SENT' ? 'green' : booking.email_status === 'FAILED' ? 'red' : 'neutral'}>{booking.email_status}</Badge></Td>
-          <Td><Link href={`/admin/multisports-league/${booking.id}`} className={buttonClass('secondary', 'sm')}>View entry</Link></Td>
+          <Td><div className="flex flex-wrap gap-2"><Link href={`/admin/multisports-league/${booking.id}`} className={buttonClass('secondary', 'sm')}>View entry</Link>{booking.status === 'CONFIRMED' && leagueWhatsAppNumber(booking.phone) ? <Link href={`/admin/whatsapp?phone=${leagueWhatsAppNumber(booking.phone)}`} className={buttonClass('secondary', 'sm')}>WhatsApp</Link> : null}</div></Td>
         </tr>;
       })}</tbody></Table>
       <Pagination basePath="/admin/multisports-league" params={filters} page={page} pageSize={PAGE_SIZE} total={total} />

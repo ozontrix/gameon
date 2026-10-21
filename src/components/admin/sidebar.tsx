@@ -86,7 +86,7 @@ function navGroups(refundsPending: number): NavGroup[] {
         { href: '/admin/blogs', label: 'GameOn Blogs', icon: BookOpen, adminOnly: true },
         { href: '/admin/banners', label: 'Home banners', icon: Images, adminOnly: true },
         { href: '/admin/notifications', label: 'Notifications', icon: Megaphone, adminOnly: true },
-        { href: '/admin/whatsapp', label: 'WhatsApp deliveries', icon: MessageCircle, adminOnly: true },
+        { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true },
       ],
     },
     {

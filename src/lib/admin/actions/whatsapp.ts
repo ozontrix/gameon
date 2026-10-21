@@ -12,6 +12,7 @@ const idSchema = z.object({ id: z.string().uuid('Pick a delivery to resend.') })
 
 function refreshPanel() {
   revalidatePath('/admin/whatsapp');
+  revalidatePath('/admin/whatsapp/deliveries');
 }
 
 /** Resends one delivery a team member chose from the log. */
