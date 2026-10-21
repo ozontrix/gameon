@@ -46,18 +46,18 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
 
   if (!sport) return null;
 
-  // Presentation-only swap on this page; the shared catalog and saved bookings
-  // retain their original dates, category ids, fees and checkout behavior.
-  const displayDate = (date: string) => {
-    if (sportId !== "badminton") return date;
+  // Keep the existing page-only date swap for other badminton categories.
+  // Open Mixed Doubles uses its catalog date of October 24 throughout the flow.
+  const displayDate = (date: string, categoryId: string) => {
+    if (sportId !== "badminton" || categoryId === "mixed-doubles") return date;
     if (date === "2026-10-24") return "2026-10-25";
     if (date === "2026-10-25") return "2026-10-24";
     return date;
   };
-  const displayCategories = sport.categories.map(item => ({ ...item, date: displayDate(item.date) }));
+  const displayCategories = sport.categories.map(item => ({ ...item, date: displayDate(item.date, item.id) }));
   const chosen = findCategories({ ...sport, categories: displayCategories }, selected);
   const displayCartCategories = categories.map(item =>
-    item.sportId === "badminton" ? { ...item, date: displayDate(item.date) } : item
+    item.sportId === "badminton" ? { ...item, date: displayDate(item.date, item.id) } : item
   );
 
   const toggle = (id: string) => {
