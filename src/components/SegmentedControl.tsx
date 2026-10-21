@@ -8,7 +8,7 @@ interface SegmentedControlProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
-}
+} 
 
 const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
 
