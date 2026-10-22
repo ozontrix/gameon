@@ -95,14 +95,14 @@ test("Older draft extras are excluded from the details total and cleared before 
 });
 
 test("Booking details show October 24–25 for selected categories", () => {
-  for (const [sportId, day] of [["badminton", 24], ["pickleball", 24], ["football", 24], ["cricket", 25]]) {
+  for (const [sportId, day] of [["badminton", 25], ["pickleball", 24], ["football", 24], ["cricket", 25]]) {
     const { html } = details(sportId);
     assert.match(html, new RegExp(`${day} Oct,? 2026`), sportId);
     assert.doesNotMatch(html, /1[78] (?:Oct|October)/);
   }
   const { html } = details("badminton", { selections: [
     { sportId: "badminton", categoryId: "mixed-doubles" },
-    { sportId: "badminton", categoryId: "mens-doubles" },
+    { sportId: "badminton", categoryId: "u13-boys-singles" },
   ] });
   assert.match(html, /24 Oct,? 2026/);
   assert.match(html, /25 Oct,? 2026/);
@@ -112,6 +112,17 @@ test("Required contact validation still disables review", () => {
   const { html, buttons } = details("cricket", { teamName: "", email: "" });
   assert.match(html, /Add team name, email to continue/);
   assert.equal(buttons.find(({ children }) => children[0] === "Review").disabled, true);
+});
+
+test("Every badminton category shows its corrected date on booking details", () => {
+  for (const [categoryId, day] of [
+    ["u13-boys-singles", 25], ["u13-girls-singles", 25], ["u17-boys-singles", 25],
+    ["mixed-doubles", 24], ["mens-singles", 24], ["womens-singles", 24], ["mens-doubles", 24],
+  ]) {
+    const { html } = details("badminton", { selections: [{ sportId: "badminton", categoryId }] });
+    assert.match(html, new RegExp(`${day} Oct,? 2026`), categoryId);
+    assert.doesNotMatch(html, new RegExp(`${day === 24 ? 25 : 24} Oct,? 2026`), categoryId);
+  }
 });
 
 test("Details without a category still direct the player to browse sports", () => {

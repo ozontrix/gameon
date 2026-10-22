@@ -182,7 +182,7 @@ test("Landing, sport details and review show the rescheduled weekend", () => {
   assert.doesNotMatch(review, /1[78] (?:Oct|October)/);
 });
 
-test("Badminton page preserves the other displayed dates while keeping mixed doubles on October 24", () => {
+test("Badminton page and checkout share the corrected category dates", () => {
   const h = uiHarness();
   const original = JSON.stringify(SPORTS);
   const html = h.sport("badminton");
@@ -212,11 +212,12 @@ test("Badminton page preserves the other displayed dates while keeping mixed dou
   const cartSummary = selected.slice(selected.lastIndexOf("Your cart"));
   assert.match(cartSummary, /24 Oct,? 2026/);
   assert.doesNotMatch(cartSummary, /25 Oct,? 2026/);
-  assert.equal(h.booking().categories[0].date, "2026-10-25");
-  assert.equal(h.booking().draft.date, "2026-10-25");
+  assert.equal(h.booking().categories[0].date, "2026-10-24");
+  assert.equal(h.booking().draft.date, "2026-10-24");
   assert.equal(h.booking().pricing.total, 1000);
   assert.deepEqual(h.selectionsClicked, [["badminton", "mens-singles"]]);
-  assert.match(h.review(), /25 Oct,? 2026/);
+  assert.match(h.review(), /24 Oct,? 2026/);
+  assert.doesNotMatch(h.review(), /25 Oct,? 2026/);
   assert.equal(JSON.stringify(SPORTS), original);
 });
 
@@ -239,6 +240,22 @@ test("Badminton mixed doubles shows October 24 in its card, selection summary, c
   assert.deepEqual(h.selectionsClicked, [["badminton", "mixed-doubles"]]);
 });
 
+test("Every badminton category uses the same date on its sport page, landing cart and review", () => {
+  for (const [categoryId, day] of [
+    ["u13-boys-singles", 25], ["u13-girls-singles", 25], ["u17-boys-singles", 25],
+    ["mixed-doubles", 24], ["mens-singles", 24], ["womens-singles", 24], ["mens-doubles", 24],
+  ]) {
+    const h = uiHarness();
+    h.booking().toggleSelection("badminton", categoryId);
+    const sport = h.sport("badminton");
+    const landing = h.landing();
+    for (const html of [sport.slice(sport.lastIndexOf("Your cart")), landing.slice(landing.lastIndexOf("Your cart")), h.review()]) {
+      assert.match(html, new RegExp(`${day} Oct,? 2026`), categoryId);
+      assert.doesNotMatch(html, new RegExp(`${day === 24 ? 25 : 24} Oct,? 2026`), categoryId);
+    }
+  }
+});
+
 test("Other sport pages retain their category dates and original cart dates", () => {
   const h = uiHarness();
   h.booking().toggleSelection("badminton", "mens-singles");
@@ -248,12 +265,19 @@ test("Other sport pages retain their category dates and original cart dates", ()
       const card = h.buttons.find(button => button["aria-label"]?.startsWith(`${category.name},`));
       assert.match(card["aria-label"], category.date.endsWith("24") ? /24 Oct,? 2026/ : /25 Oct,? 2026/);
     }
-    assert.match(html.slice(html.lastIndexOf("Your cart")), /25 Oct,? 2026/);
+    assert.match(html.slice(html.lastIndexOf("Your cart")), /24 Oct,? 2026/);
   }
 });
 
 test("Saved drafts with old dates recalculate match dates without losing selections or contact details", () => {
   for (const [sportId, categoryId, oldDate, newDate] of [
+    ["badminton", "u13-boys-singles", "2026-10-24", "2026-10-25"],
+    ["badminton", "u13-girls-singles", "2026-10-24", "2026-10-25"],
+    ["badminton", "u17-boys-singles", "2026-10-24", "2026-10-25"],
+    ["badminton", "mens-singles", "2026-10-25", "2026-10-24"],
+    ["badminton", "womens-singles", "2026-10-25", "2026-10-24"],
+    ["badminton", "mens-doubles", "2026-10-25", "2026-10-24"],
+    ["badminton", "mixed-doubles", "2026-10-25", "2026-10-24"],
     ["football", "team", "2026-10-17", "2026-10-24"],
     ["cricket", "team", "2026-10-18", "2026-10-25"],
   ]) {

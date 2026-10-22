@@ -39,7 +39,7 @@ const { SPORTS } = load('src/components/league/data.ts');
 const { parseLeagueEntry } = load('src/lib/league/entry.ts');
 const { leaguePaymentSchedule, formatLeaguePayment } = load('src/lib/league/payment-plan.ts');
 const { confirmationBalance } = load('src/lib/league/confirmation.ts');
-const input = { sport: 'badminton', categoryIds: [SPORTS[0].categories[0].id], date: '2026-10-24', captainName: 'Test Player', teamName: 'Test Team', email: 'player@example.com', phone: '9811000000', notes: 'Saved checkout notes', city: 'Gurugram', addons: {} };
+const input = { sport: 'badminton', categoryIds: [SPORTS[0].categories[0].id], date: '2026-10-25', captainName: 'Test Player', teamName: 'Test Team', email: 'player@example.com', phone: '9811000000', notes: 'Saved checkout notes', city: 'Gurugram', addons: {} };
 const parsed = parseLeagueEntry(input);
 assert.equal(parsed.ok, true);
 const id = '12345678-1234-4234-8234-123456789abc';
@@ -109,6 +109,41 @@ test('Captured payment is durable before email, and duplicate confirmations retu
   assert.equal(h.calls.emails, 1); assert.equal(h.calls.fetches, 1);
 });
 
+test('Every badminton category keeps its corrected date through saved checkout, payment, success and both email formats', async () => {
+  const expected = [
+    ['u13-boys-singles', '2026-10-25'], ['u13-girls-singles', '2026-10-25'],
+    ['u17-boys-singles', '2026-10-25'], ['mixed-doubles', '2026-10-24'],
+    ['mens-singles', '2026-10-24'], ['womens-singles', '2026-10-24'], ['mens-doubles', '2026-10-24'],
+  ];
+  for (const [categoryId, date] of expected) {
+    for (const paymentPlan of ['FULL', 'DEPOSIT_20']) {
+      const entryResult = parseLeagueEntry({ ...input, selections: [{ sportId: 'badminton', categoryId }], date, paymentPlan });
+      assert.equal(entryResult.ok, true, categoryId);
+      const h = harness({ entryResult });
+      await h.seed();
+      assert.equal(h.rows[0].entry.categories[0].date, date);
+      assert.equal(h.rows[0].entry.date, date);
+      assert.deepEqual(h.rows[0].entry.dates, [date]);
+      const receipt = await h.confirmLeaguePayment('order_valid', 'pay_valid');
+      assert.equal(receipt.entry.categories[0].date, date);
+      const screen = loader({
+        react: { ...require('react'), useSyncExternalStore: () => JSON.stringify(receipt) },
+      })('src/components/league/confirmation-screen.tsx').LeagueConfirmationScreen;
+      const html = renderToStaticMarkup(createElement(screen));
+      const day = date.endsWith('24') ? '24' : '25';
+      const otherDay = day === '24' ? '25' : '24';
+      assert.match(html, new RegExp(`${day} Oct,? 2026`));
+      assert.doesNotMatch(html, new RegExp(`${otherDay} Oct,? 2026`));
+      const email = load('src/lib/league/email.ts').renderLeagueConfirmationEmail(receipt);
+      const weekday = day === '24' ? 'Saturday' : 'Sunday';
+      for (const content of [email.text, email.html]) {
+        assert.match(content, new RegExp(`${weekday}, ${day} October,? 2026`));
+        assert.doesNotMatch(content, new RegExp(`${otherDay} Oct(?:ober)?,? 2026`));
+      }
+    }
+  }
+});
+
 test('Multi-sport checkout persists every qualified category under one captured payment', async () => {
   const selections = [
     { sportId: 'badminton', categoryId: 'mixed-doubles' },
@@ -116,7 +151,7 @@ test('Multi-sport checkout persists every qualified category under one captured 
     { sportId: 'cricket', categoryId: 'team' },
     { sportId: 'football', categoryId: 'team' },
   ];
-  const entryResult = parseLeagueEntry({ ...input, selections });
+  const entryResult = parseLeagueEntry({ ...input, selections, date: '2026-10-24' });
   assert.equal(entryResult.ok, true);
   const h = harness({ entryResult }); await h.seed();
   assert.equal(h.rows.length, 1);
@@ -274,7 +309,7 @@ test('CSV export paginates past the default database cap and includes saved deta
   const csv = await response.text();
   assert.deepEqual(pages, [1, 2, 3]);
   assert.equal(csv.trim().split('\r\n').length, 1002);
-  for (const value of [input.email, input.captainName, input.notes, 'pay_valid', 'U-13 Singles Boys', '2026-10-24']) assert.ok(csv.includes(value), value);
+  for (const value of [input.email, input.captainName, input.notes, 'pay_valid', 'U-13 Singles Boys', '2026-10-25']) assert.ok(csv.includes(value), value);
 });
 
 test('Admin detail renders frozen checkout, price breakdown and email failure; guard runs before database', async () => {
@@ -325,7 +360,8 @@ test('20% advance persists and verifies separately from the complete price for e
 
 test('Mixed-sport advance confirms one order with all categories and exposes outstanding amount on success', async () => {
   const selections = SPORTS.map(s => ({ sportId: s.id, categoryId: s.categories[0].id }));
-  const entryResult = parseLeagueEntry({ ...input, selections, paymentPlan: 'DEPOSIT_20' });
+  const entryResult = parseLeagueEntry({ ...input, selections, date: '2026-10-24', paymentPlan: 'DEPOSIT_20' });
+  assert.equal(entryResult.ok, true);
   const h = harness({ entryResult }); await h.seed();
   const receipt = await h.confirmLeaguePayment('order_valid', 'pay_valid');
   assert.equal(receipt.entry.sports.length, 4);

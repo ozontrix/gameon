@@ -52,13 +52,13 @@ const payload = (sport, categoryIds, date) => ({
 test("Badminton has exactly the seven requested categories, dates and fees", () => {
   const badminton = findSport("badminton");
   assert.deepEqual(badminton.categories.map(({ name, date, fee, squadSize }) => [name, date, fee, squadSize]), [
-    ["U-13 Singles Boys", "2026-10-24", 1000, 1],
-    ["U-13 Singles Girls", "2026-10-24", 1000, 1],
-    ["U-17 Singles Boys", "2026-10-24", 1000, 1],
+    ["U-13 Singles Boys", "2026-10-25", 1000, 1],
+    ["U-13 Singles Girls", "2026-10-25", 1000, 1],
+    ["U-17 Singles Boys", "2026-10-25", 1000, 1],
     ["Open Mixed Doubles", "2026-10-24", 2000, 2],
-    ["Open Singles Men", "2026-10-25", 1000, 1],
-    ["Open Singles Women", "2026-10-25", 1000, 1],
-    ["Doubles Men", "2026-10-25", 2000, 2],
+    ["Open Singles Men", "2026-10-24", 1000, 1],
+    ["Open Singles Women", "2026-10-24", 1000, 1],
+    ["Doubles Men", "2026-10-24", 2000, 2],
   ]);
 });
 
@@ -131,10 +131,10 @@ test("Every category can be validated individually with correct squad and fee un
 });
 
 test("Multi-day entries derive sorted dates regardless of selection order", () => {
-  const categories = findCategories(findSport("badminton"), ["mens-doubles", "mixed-doubles"]);
+  const categories = findCategories(findSport("badminton"), ["mens-doubles", "u13-boys-singles", "mixed-doubles"]);
   assert.deepEqual(categoryDates(categories), ["2026-10-24", "2026-10-25"]);
-  assert.equal(entryFees(categories), 4000);
-  assert.equal(entryTickets(categories), 4);
+  assert.equal(entryFees(categories), 5000);
+  assert.equal(entryTickets(categories), 5);
   assert.match(scheduleLabel(categories), /24 Oct,? 2026.*25 Oct,? 2026/);
   const result = parseLeagueEntry(payload("badminton", categories.map(({ id }) => id), "2026-10-24"));
   assert.equal(result.ok, true);
@@ -152,7 +152,8 @@ test("All seven badminton categories are supported by payment validation", () =>
 test("Wrong dates, removed categories, and unknown categories are rejected", () => {
   for (const input of [
     payload("cricket", ["team"], "2026-10-24"),
-    payload("badminton", ["mens-singles"], "2026-10-24"),
+    payload("badminton", ["mens-singles"], "2026-10-25"),
+    payload("badminton", ["u13-boys-singles"], "2026-10-24"),
     payload("football", ["team"], "2026-10-25"),
     payload("badminton", ["womens-doubles"], "2026-10-25"),
     payload("pickleball", ["mens-singles"], "2026-10-25"),
@@ -162,7 +163,7 @@ test("Wrong dates, removed categories, and unknown categories are rejected", () 
 });
 
 test("Repeated category IDs do not cause duplicate fees", () => {
-  const result = parseLeagueEntry(payload("badminton", ["mens-doubles", "mens-doubles"], "2026-10-25"));
+  const result = parseLeagueEntry(payload("badminton", ["mens-doubles", "mens-doubles"], "2026-10-24"));
   assert.equal(result.ok, true);
   assert.equal(result.quote.total, 2000);
   assert.equal(findCategories(findSport("badminton"), ["mens-doubles", "mens-doubles"]).length, 1);
@@ -179,20 +180,21 @@ test("Add-ons and coupon totals use the updated fees", () => {
 });
 
 test("Confirmation and email include category-specific dates for both days", () => {
-  const result = parseLeagueEntry(payload("badminton", ["mixed-doubles", "mens-doubles"], "2026-10-24"));
+  const result = parseLeagueEntry(payload("badminton", ["mixed-doubles", "mens-doubles", "u13-boys-singles"], "2026-10-24"));
   assert.equal(result.ok, true);
   const confirmation = {
-    reference: "GOL-TEST01", orderId: "order_test", paymentId: "pay_test", amount: 4000,
+    reference: "GOL-TEST01", orderId: "order_test", paymentId: "pay_test", amount: 5000,
     currency: "INR", paidAt: "2026-10-02T12:00:00Z", emailSent: false,
     entry: { ...result.entry, sport: "badminton", sportName: "Badminton" }, quote: result.quote,
   };
   assert.match(confirmationSchedule(confirmation.entry), /24 Oct,? 2026.*25 Oct,? 2026/);
   const email = renderLeagueConfirmationEmail(confirmation);
   assert.match(email.text, /Open Mixed Doubles: Saturday, 24 October,? 2026/);
-  assert.match(email.text, /Doubles Men: Sunday, 25 October,? 2026/);
+  assert.match(email.text, /Doubles Men: Saturday, 24 October,? 2026/);
+  assert.match(email.text, /U-13 Singles Boys: Sunday, 25 October,? 2026/);
   assert.match(email.html, /Saturday, 24 October,? 2026/);
   assert.match(email.html, /Sunday, 25 October,? 2026/);
-  assert.match(email.text, /₹4,000/);
+  assert.match(email.text, /₹5,000/);
 });
 
 test("Older confirmation receipts retain their original stored date", () => {
@@ -202,10 +204,10 @@ test("Older confirmation receipts retain their original stored date", () => {
 
 test("Shared schedule UI renders every selected category, day and fee", () => {
   const { CategorySchedule } = load("src/components/league/category-schedule.tsx");
-  const categories = findCategories(findSport("badminton"), ["mixed-doubles", "mens-singles"]);
+  const categories = findCategories(findSport("badminton"), ["mixed-doubles", "u13-boys-singles"]);
   const html = renderToStaticMarkup(createElement(CategorySchedule, { categories }));
   assert.match(html, /Open Mixed Doubles/);
-  assert.match(html, /Open Singles Men/);
+  assert.match(html, /U-13 Singles Boys/);
   assert.match(html, /24 Oct,? 2026/);
   assert.match(html, /25 Oct,? 2026/);
   assert.match(html, /₹2,000/);
