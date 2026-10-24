@@ -62,7 +62,12 @@ try {
         payload = { success: true, orderId: 'order_browser', amount, currency: 'INR', keyId: 'mock_key' };
       } else if (request.url.includes('/coupons')) payload = { coupons: [] };
       else { command('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' }).catch(error => errors.push(String(error))); return; }
-      command('Fetch.fulfillRequest', { requestId, responseCode: 201, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify(payload)).toString('base64') }).catch(error => errors.push(String(error)));
+      command('Fetch.fulfillRequest', { requestId, responseCode: 201, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify(payload)).toString('base64') }).catch(error => {
+        // Navigation can cancel a background coupon fetch before CDP fulfills it.
+        // Never suppress order interception failures or actual runtime errors.
+        if (request.url.includes('/coupons') && error.message === 'Invalid InterceptionId.') return;
+        errors.push(String(error));
+      });
     }
   });
   await command('Page.enable'); await command('Runtime.enable');
@@ -71,11 +76,27 @@ try {
   await command('Page.navigate', { url: `${origin}/gameon-multisports-league/book/review` });
   await until(`document.querySelector('h1')`);
   const selections = [
-    ['badminton', 'u13-boys-singles', 1000], ['pickleball', 'open-singles', 1200],
+    ['badminton', 'u13-boys-singles', 1000], ['pickleball', 'mens-beginner-singles', 999],
     ['cricket', 'team', 2000], ['football', 'team', 2000],
   ];
   for (const width of [375, 768, 1024, 1440]) {
     await command('Emulation.setDeviceMetricsOverride', { width, height: 950, deviceScaleFactor: 1, mobile: width < 640 });
+    await evaluate(`sessionStorage.removeItem('go-league-draft')`);
+    await command('Page.navigate', { url: `${origin}/gameon-multisports-league/sports/pickleball` });
+    await until(`document.querySelectorAll('button[aria-pressed]').length === 11 && !document.querySelector('button[aria-pressed]').disabled`);
+    assert.equal(await evaluate(`document.querySelector('h1').textContent`), 'Pickleball Showdown');
+    assert.equal(await evaluate(`document.body.innerText.includes('31 October & 1 November 2026')`), true);
+    assert.equal(await evaluate(`Array.from(document.querySelectorAll('button[aria-pressed]')).every(b => !/₹|October|November|Oct,|Nov,/.test(b.textContent + b.getAttribute('aria-label')))`), true);
+    assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, `pickleball category overflow at ${width}`);
+    await evaluate(`document.querySelector('button[aria-pressed]').click()`);
+    await until(`document.querySelector('button[aria-pressed="true"]')`);
+    assert.equal(await evaluate(`/₹999|₹1,299|₹1,899|₹2,299|₹2,799/.test(document.body.innerText)`), false);
+    await command('Page.navigate', { url: `${origin}/gameon-multisports-league` });
+    await until(`Array.from(document.querySelectorAll('h2')).some(h => h.textContent === 'Pickleball Showdown')`);
+    assert.equal(await evaluate(`(() => { const card = Array.from(document.querySelectorAll('h2')).find(h => h.textContent === 'Pickleball Showdown').closest('.glass-subtle'); return card && card.innerText.includes('11 categories') && card.innerText.includes('31 October & 1 November 2026') && !card.innerText.toLowerCase().includes('starts from'); })()`), true);
+    assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, `league overflow at ${width}`);
+    await command('Page.navigate', { url: `${origin}/gameon-multisports-league/book/review` });
+    await until(`document.querySelector('h1')`);
     for (const [sportId, categoryId, amount] of selections) {
       total = amount;
       await evaluate(`sessionStorage.setItem('go-league-draft', JSON.stringify({ selections: [{sportId:'${sportId}',categoryId:'${categoryId}'}], captainName:'Browser Test Player', teamName:'Browser Team', email:'browser-test@example.com', phone:'9811000000', city:'Gurugram' }));`);

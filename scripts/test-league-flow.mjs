@@ -62,43 +62,41 @@ test("Badminton has exactly the seven requested categories, dates and fees", () 
   ]);
 });
 
-test("Pickleball has five requested categories with category-specific fees", () => {
-  assert.deepEqual(findSport("pickleball").categories.map(({ name, date, fee }) => [name, date, fee]), [
-    ["Under 14 Singles", "2026-10-24", 1000],
-    ["Under 14 Doubles", "2026-10-24", 1600],
-    ["Open Mixed Doubles", "2026-10-24", 2400],
-    ["Open Singles", "2026-10-25", 1200],
-    ["Open Doubles", "2026-10-25", 2400],
+test("Pickleball has all eleven screenshot categories and fees without invented bracket dates or prizes", () => {
+  const sport = findSport("pickleball");
+  assert.deepEqual(sport.categories.map(({ name, fee }) => [name, fee]), [
+    ["Men's Beginner Singles", 999], ["Men's Intermediate Singles", 1299],
+    ["Advanced Singles Category", 1899], ["Parent and Child", 1999],
+    ["Men's Intermediate Doubles", 2299], ["Mixed Intermediate Doubles", 2299],
+    ["Beginner Men's Doubles", 2299], ["Beginner Mixed Doubles", 2299],
+    ["Split Category Doubles 35+", 2399], ["Men's Open Doubles", 2799], ["Mixed Open Doubles", 2799],
   ]);
+  assert.ok(sport.categories.every(c => c.date === "2026-10-31" && c.endDate === "2026-11-01" && !c.prizes));
+  assert.equal(sport.categories[0].format, "Below 3 DUPR or GRIP");
+  assert.equal(scheduleLabel(sport.categories), "31 October & 1 November 2026");
 });
 
 test("Pickleball checkout totals use the new singles and doubles fees", () => {
   const ids = findSport("pickleball").categories.map(({ id }) => id);
-  const result = parseLeagueEntry(payload("pickleball", ids, "2026-10-24"));
+  const result = parseLeagueEntry(payload("pickleball", ids, "2026-10-31"));
   assert.equal(result.ok, true);
-  assert.equal(result.quote.entryFee, 8600);
-  assert.equal(result.quote.total, 8600);
-  assert.equal(result.entry.squadSize, 8);
-  assert.deepEqual(result.entry.dates, ["2026-10-24", "2026-10-25"]);
+  assert.equal(result.quote.entryFee, 23389);
+  assert.equal(result.quote.total, 23389);
+  assert.equal(result.entry.squadSize, 19);
+  assert.deepEqual(result.entry.dates, ["2026-10-31", "2026-11-01"]);
 });
 
-test("Updated Pickleball fees match rendered prices and individual checkout totals", () => {
+test("Pickleball category summaries hide prices and bracket dates while checkout uses screenshot fees", () => {
   const { CategorySchedule } = load("src/components/league/category-schedule.tsx");
   const sport = findSport("pickleball");
-  for (const [id, fee, price, unit] of [
-    ["u14-doubles", 1600, "₹1,600", "team"],
-    ["open-singles", 1200, "₹1,200", "person"],
-    ["open-doubles", 2400, "₹2,400", "team"],
-    ["mixed-doubles", 2400, "₹2,400", "team"],
-  ]) {
+  for (const { id, fee } of sport.categories) {
     const categories = findCategories(sport, [id]);
     const result = parseLeagueEntry(payload("pickleball", [id], categories[0].date));
     assert.equal(result.ok, true, id);
     assert.equal(result.quote.entryFee, fee, id);
     assert.equal(result.quote.total, fee, id);
     const html = renderToStaticMarkup(createElement(CategorySchedule, { categories }));
-    assert.ok(html.includes(price), id);
-    assert.ok(html.includes(`per ${unit}`), id);
+    assert.doesNotMatch(html, /₹|Oct|Nov|per team|per person/);
   }
 });
 
@@ -202,6 +200,26 @@ test("Older confirmation receipts retain their original stored date", () => {
   assert.match(confirmationSchedule(oldEntry), /18 Oct,? 2026/);
 });
 
+test("Pickleball confirmations retain tournament-wide dates without repeating dates against categories", () => {
+  const result = parseLeagueEntry(payload("pickleball", ["mens-beginner-singles", "mixed-open-doubles"], "2026-10-31"));
+  assert.equal(result.ok, true);
+  const confirmation = {
+    reference: "GOL-PICKLE", orderId: "order_test", paymentId: "pay_test", amount: result.quote.total,
+    currency: "INR", paidAt: "2026-10-24T12:00:00Z", emailSent: false,
+    entry: { ...result.entry, sport: "pickleball", sportName: "Pickleball" }, quote: result.quote,
+  };
+  assert.equal(confirmationSchedule(confirmation.entry), "31 October & 1 November 2026");
+  const email = renderLeagueConfirmationEmail(confirmation);
+  assert.match(email.text, /31 October & 1 November 2026/);
+  assert.doesNotMatch(email.text, /Singles: Saturday|Doubles: Saturday/);
+  assert.match(email.text, /₹3,798/);
+  const historicEntry = { categories: [{ id: "open-singles", name: "Open Singles", date: "2026-10-25" }], date: "2026-10-25" };
+  assert.match(confirmationSchedule(historicEntry), /25 Oct,? 2026/);
+  for (const date of ["2026-10-24", "2026-10-25", "2026-11-01"]) {
+    assert.equal(parseLeagueEntry(payload("pickleball", ["mens-beginner-singles"], date)).ok, false);
+  }
+});
+
 test("Shared schedule UI renders every selected category, day and fee", () => {
   const { CategorySchedule } = load("src/components/league/category-schedule.tsx");
   const categories = findCategories(findSport("badminton"), ["mixed-doubles", "u13-boys-singles"]);
@@ -217,12 +235,14 @@ test("Shared schedule UI renders every selected category, day and fee", () => {
   assert.equal((html.match(/<li /g) ?? []).length, 2);
 });
 
-test("Shared match days use October 24–25 and reject the superseded dates for new bookings", () => {
+test("Shared match days include the separate pickleball weekend and reject superseded dates", () => {
   assert.deepEqual(LEAGUE_MATCH_DAYS, [
     { iso: "2026-10-24", label: "Day 1" },
     { iso: "2026-10-25", label: "Day 2" },
+    { iso: "2026-10-31", label: "Pickleball Day 1" },
+    { iso: "2026-11-01", label: "Pickleball Day 2" },
   ]);
-  assert.equal(LEAGUE_TAGLINE, "Season 1 · 24 & 25 October 2026");
+  assert.match(LEAGUE_TAGLINE, /Pickleball: 31 October & 1 November 2026/);
   assert.match(matchDayLabel("2026-10-24"), /Saturday, 24 October,? 2026/);
   assert.match(matchDayLabel("2026-10-25"), /Sunday, 25 October,? 2026/);
   for (const sport of SPORTS) {

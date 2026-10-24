@@ -87,17 +87,17 @@ test("Details pages retain player/team fields and omit all optional extras", () 
 test("Older draft extras are excluded from the details total and cleared before review", () => {
   const { html, updates, pushed, buttons, booking } = details("pickleball", { addons: { jersey: 2, recording: 1 } });
   assert.equal(booking.pricing.addOnsTotal, 1999);
-  assert.ok(html.includes("₹1,000"));
+  assert.ok(html.includes("₹999"));
   assert.ok(!html.includes("₹2,999"));
   buttons.find(({ children }) => children[0] === "Review").onClick();
   assert.deepEqual(updates, [{ squadSize: 1, addons: {} }]);
   assert.deepEqual(pushed, ["/gameon-multisports-league/book/review"]);
 });
 
-test("Booking details show October 24–25 for selected categories", () => {
-  for (const [sportId, day] of [["badminton", 25], ["pickleball", 24], ["football", 24], ["cricket", 25]]) {
+test("Booking details show each sport's tournament dates", () => {
+  for (const [sportId, day] of [["badminton", 25], ["pickleball", 31], ["football", 24], ["cricket", 25]]) {
     const { html } = details(sportId);
-    assert.match(html, new RegExp(`${day} Oct,? 2026`), sportId);
+    assert.match(html, sportId === "pickleball" ? /31 October &amp; 1 November 2026/ : new RegExp(`${day} Oct,? 2026`), sportId);
     assert.doesNotMatch(html, /1[78] (?:Oct|October)/);
   }
   const { html } = details("badminton", { selections: [
@@ -134,12 +134,12 @@ test("Details without a category still direct the player to browse sports", () =
 test("Mixed sports use one contact form and require a team name for any team sport", () => {
   const selections = [
     { sportId: "badminton", categoryId: "u13-boys-singles" },
-    { sportId: "pickleball", categoryId: "open-doubles" },
+    { sportId: "pickleball", categoryId: "mens-open-doubles" },
     { sportId: "cricket", categoryId: "team" },
     { sportId: "football", categoryId: "team" },
   ];
   const { html, buttons } = details(null, { selections, teamName: "" });
-  for (const text of ["Your details", "4 categories selected across 4 sports", "Badminton", "Pickleball", "Box Cricket 7v7", "Football 6v6", "₹7,400"]) assert.ok(html.includes(text), text);
+  for (const text of ["Your details", "4 categories selected across 4 sports", "Badminton", "Pickleball", "Box Cricket 7v7", "Football 6v6", "₹7,799"]) assert.ok(html.includes(text), text);
   assert.equal((html.match(/placeholder="Full name"/g) ?? []).length, 1);
   assert.equal((html.match(/type="email"/g) ?? []).length, 1);
   assert.equal((html.match(/inputMode="tel"/g) ?? []).length, 1);

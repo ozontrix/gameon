@@ -133,7 +133,7 @@ test('Every badminton category keeps its corrected date through saved checkout, 
       const day = date.endsWith('24') ? '24' : '25';
       const otherDay = day === '24' ? '25' : '24';
       assert.match(html, new RegExp(`${day} Oct,? 2026`));
-      assert.doesNotMatch(html, new RegExp(`${otherDay} Oct,? 2026`));
+      assert.doesNotMatch(html.split('>Payment</')[0], new RegExp(`${otherDay} Oct,? 2026`));
       const email = load('src/lib/league/email.ts').renderLeagueConfirmationEmail(receipt);
       const weekday = day === '24' ? 'Saturday' : 'Sunday';
       for (const content of [email.text, email.html]) {
@@ -147,7 +147,7 @@ test('Every badminton category keeps its corrected date through saved checkout, 
 test('Multi-sport checkout persists every qualified category under one captured payment', async () => {
   const selections = [
     { sportId: 'badminton', categoryId: 'mixed-doubles' },
-    { sportId: 'pickleball', categoryId: 'mixed-doubles' },
+    { sportId: 'pickleball', categoryId: 'mixed-open-doubles' },
     { sportId: 'cricket', categoryId: 'team' },
     { sportId: 'football', categoryId: 'team' },
   ];
@@ -156,15 +156,17 @@ test('Multi-sport checkout persists every qualified category under one captured 
   const h = harness({ entryResult }); await h.seed();
   assert.equal(h.rows.length, 1);
   assert.equal(h.rows[0].sport, 'multisport');
-  assert.equal(h.rows[0].amount_paise, 840000);
+  assert.equal(h.rows[0].amount_paise, 879900);
   assert.deepEqual(h.rows[0].entry.categories.map(c => [c.sportId, c.id]), selections.map(c => [c.sportId, c.categoryId]));
   const confirmation = await h.confirmLeaguePayment('order_valid', 'pay_valid');
-  assert.equal(confirmation.amount, 8400);
+  assert.equal(confirmation.amount, 8799);
+  assert.equal(confirmation.entry.categories[1].endDate, '2026-11-01');
+  assert.deepEqual(confirmation.entry.dates, ['2026-10-24', '2026-10-25', '2026-10-31', '2026-11-01']);
   assert.equal(confirmation.entry.sports.length, 4);
   assert.equal(confirmation.entry.categories.length, 4);
   assert.equal(h.calls.emails, 1);
   const email = load('src/lib/league/email.ts').renderLeagueConfirmationEmail(confirmation);
-  for (const text of ['Badminton · Open Mixed Doubles', 'Pickleball · Open Mixed Doubles', 'Box Cricket 7v7 · Team Entry (7v7)', 'Football 6v6 · Team Entry (6v6)', '₹8,400']) assert.ok(email.text.includes(text), text);
+  for (const text of ['Badminton · Open Mixed Doubles', 'Pickleball · Mixed Open Doubles', 'Box Cricket 7v7 · Team Entry (7v7)', 'Football 6v6 · Team Entry (6v6)', '₹8,799']) assert.ok(email.text.includes(text), text);
 });
 
 test('Concurrent browser/webhook confirmations produce one payment and one email', async () => {

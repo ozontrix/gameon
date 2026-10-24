@@ -35,8 +35,8 @@ try {
       const text = html.replace(/<!--[^]*?-->/g, '').replace(/&amp;/g, '&');
       assert.doesNotMatch(text, /2026-10-1[78]|1[78] (?:Oct|October)|17 & 18/, path);
       if (path.includes('/sports/')) {
-        assert.match(text, path.endsWith('/cricket') ? /25 Oct,? 2026/ : /24 Oct,? 2026/, path);
-        if (path.endsWith('/badminton') || path.endsWith('/pickleball')) assert.match(text, /25 Oct,? 2026/, path);
+        assert.match(text, path.endsWith('/pickleball') ? /31 October & 1 November 2026/ : path.endsWith('/cricket') ? /25 Oct,? 2026/ : /24 Oct,? 2026/, path);
+        if (path.endsWith('/badminton')) assert.match(text, /25 Oct,? 2026/, path);
       } else {
         assert.match(text, /24 & 25 October 2026/, path);
       }
@@ -45,7 +45,7 @@ try {
   const payment = await get('/gameon-multisports-league/book/payment');
   assert.equal(payment.status, 307);
   assert.equal(payment.headers.get('location'), '/gameon-multisports-league/book/review');
-  console.log('PASS league landing, all sport pages and booking routes use October 24–25, 2026 with no superseded dates.');
+  console.log('PASS league routes show the separate October 31–November 1 pickleball weekend and October 24–25 dates for other sports.');
   console.log('PASS public website and league routes render consent controls without a pre-consent Pixel script or image.');
   for (const path of ['/admin/multisports-league', '/admin/multisports-league/coupons', '/admin/multisports-league/12345678-1234-4234-8234-123456789abc', '/admin/multisports-league/export']) {
     const response = await get(path);

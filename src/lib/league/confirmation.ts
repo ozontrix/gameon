@@ -35,7 +35,7 @@ export interface LeagueConfirmation {
     sportName: string;
     sports?: { id: string; name: string }[];
     /** Every bracket the entry holds — one entry can cover several. */
-    categories: { id: string; name: string; sportId?: string; sportName?: string; date?: string; fee?: number; squadSize?: number }[];
+    categories: { id: string; name: string; sportId?: string; sportName?: string; date?: string; endDate?: string; fee?: number; squadSize?: number }[];
     date: string;
     /** Optional for receipts saved before per-category scheduling was introduced. */
     dates?: string[];
@@ -65,5 +65,5 @@ export function confirmationBrackets(entry: LeagueConfirmation["entry"]): string
 }
 
 export function confirmationSchedule(entry: LeagueConfirmation["entry"]): string {
-  return scheduleLabel(entry.categories.map((category) => ({ date: category.date ?? entry.date })));
+  return scheduleLabel(entry.categories.map((category) => ({ date: category.date ?? entry.date, endDate: category.endDate })));
 }

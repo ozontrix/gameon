@@ -21,6 +21,29 @@ just 20%**. The selection survives refresh/back navigation.
   a coupon order can hit the contact usage limit; resume the original plan/order
   or contact the desk. Do not release a still-payable order's coupon allocation.
 
+## Pickleball Showdown catalog update
+
+Pickleball alone runs on **31 October and 1 November 2026**. Its eleven ticket
+categories replace the old Under-14/open catalog. Fees are retained from the
+provided ticket screenshots for server quotes; entry prices are hidden on the
+sport browsing page and league card. Checkout still discloses the payable total
+before payment. No category-specific prize amounts were supplied for the new
+categories, so the old category prize allocations are not reused.
+
+Each new pickleball category stores `date: 2026-10-31` and
+`endDate: 2026-11-01`: these represent the tournament window, **not** an assigned
+bracket day. Shared summaries and receipts retain both dates, and omit repeated
+per-category date/fee rows. Frozen historical receipts keep their original dates,
+names and amounts. Obsolete category IDs are removed from saved browser drafts,
+not silently mapped into a different eligibility bracket. Other sports retain
+their October 24–25 dates and pricing. No database migration is required.
+
+Validation for this update: 92 targeted league/analytics tests, TypeScript,
+league lint, production build and HTTP smoke checks passed. Chrome checks cover
+the eleven category options, hidden browse prices, league card dates, selection
+persistence and 32 intercepted full/advance checkouts at 375/768/1024/1440px.
+No live orders, payments or emails are created by these tests.
+
 ## Remaining collection
 
 There is **no automatic second charge, balance-payment link or balance-settlement

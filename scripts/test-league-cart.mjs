@@ -43,14 +43,14 @@ const contact = { captainName: "Test Player", phone: "9811000000", email: "playe
 const example = [
   { sportId: "badminton", categoryId: "u13-boys-singles" },
   { sportId: "badminton", categoryId: "mixed-doubles" },
-  { sportId: "pickleball", categoryId: "open-singles" },
+  { sportId: "pickleball", categoryId: "mens-beginner-singles" },
 ];
 
 test("Two badminton categories and one pickleball category survive back navigation and refresh", () => {
   let draft = { ...cart.EMPTY_DRAFT, ...contact };
   for (const selection of example) draft = cart.withSelections(draft, cart.toggleCartSelection(draft.selections, selection));
   assert.equal(draft.selections.length, 3);
-  assert.equal(entryFees(cart.cartCategories(draft.selections)), 4200);
+  assert.equal(entryFees(cart.cartCategories(draft.selections)), 3999);
   const restored = cart.restoreDraft(JSON.parse(JSON.stringify(draft)));
   assert.deepEqual(restored.selections, example);
   assert.equal(restored.captainName, contact.captainName);
@@ -61,7 +61,7 @@ test("Two badminton categories and one pickleball category survive back navigati
   assert.equal(result.ok, true);
   assert.equal(result.entry.categories.length, 3);
   assert.equal(result.entry.sports.length, 2);
-  assert.equal(result.quote.total, 4200);
+  assert.equal(result.quote.total, 3999);
 });
 
 test("Editing or removing one sport leaves all other sport selections intact", () => {
@@ -71,26 +71,26 @@ test("Editing or removing one sport leaves all other sport selections intact", (
   assert.deepEqual(removed, [{ sportId: "badminton", categoryId: "mens-doubles" }]);
 });
 
-test("Category ids shared between sports stay separate; duplicate pairs never double-charge", () => {
+test("Categories from different sports stay separate; duplicate pairs never double-charge", () => {
   const selections = [
     { sportId: "badminton", categoryId: "mixed-doubles" },
-    { sportId: "pickleball", categoryId: "mixed-doubles" },
+    { sportId: "pickleball", categoryId: "mixed-open-doubles" },
   ];
   const result = parseLeagueEntry({ ...contact, selections: [...selections, selections[0]], date: "2026-10-24" });
   assert.equal(result.ok, true);
   assert.equal(result.entry.categories.length, 2);
-  assert.equal(result.quote.total, 4400);
+  assert.equal(result.quote.total, 4799);
 });
 
-test("All fourteen categories fit one checkout with server-derived totals and dates", () => {
+test("All twenty categories fit one checkout with server-derived totals and dates", () => {
   const selections = SPORTS.flatMap(sport => sport.categories.map(category => ({ sportId: sport.id, categoryId: category.id })));
   const result = parseLeagueEntry({ ...contact, selections, date: "2026-10-24", squadSize: 1, addons: { jersey: 30 } });
   assert.equal(result.ok, true);
-  assert.equal(result.entry.categories.length, 14);
+  assert.equal(result.entry.categories.length, 20);
   assert.equal(result.entry.sports.length, 4);
-  assert.equal(result.entry.squadSize, 30);
-  assert.deepEqual(result.entry.dates, ["2026-10-24", "2026-10-25"]);
-  assert.equal(result.quote.total, 21600);
+  assert.equal(result.entry.squadSize, 41);
+  assert.deepEqual(result.entry.dates, ["2026-10-24", "2026-10-25", "2026-10-31", "2026-11-01"]);
+  assert.equal(result.quote.total, 36389);
   assert.equal(result.quote.addOnsTotal, 0);
   assert.deepEqual(result.entry.addons, []);
 });
@@ -106,10 +106,11 @@ test("Invalid categories, missing selections, wrong dates, and missing team name
 });
 
 test("Legacy drafts migrate; corrupt selections and hidden add-ons are discarded", () => {
-  const migrated = cart.restoreDraft({ ...contact, sport: "pickleball", categoryIds: ["open-singles", "open-doubles"], addons: { jersey: 2 } });
+  const migrated = cart.restoreDraft({ ...contact, sport: "pickleball", categoryIds: ["mens-beginner-singles", "mens-open-doubles"], addons: { jersey: 2 } });
   assert.equal(migrated.selections.length, 2);
   assert.deepEqual(migrated.addons, {});
-  assert.equal(migrated.date, "2026-10-25");
+  assert.equal(migrated.date, "2026-10-31");
+  assert.deepEqual(cart.restoreDraft({ selections: [{ sportId: "pickleball", categoryId: "u14-singles" }] }).selections, []);
   assert.equal(cart.restoreDraft(null).selections.length, 0);
   assert.equal(cart.restoreDraft({ selections: [{ sportId: "football", categoryId: "bad" }, null] }).selections.length, 0);
 });
@@ -170,7 +171,7 @@ test("Landing, sport details and review show the rescheduled weekend", () => {
   assert.doesNotMatch(landing, /1[78] (?:Oct|October)/);
   for (const sport of SPORTS) {
     const html = h.sport(sport.id);
-    assert.match(html, sport.id === "cricket" ? /25 Oct,? 2026/ : /24 Oct,? 2026/);
+    assert.match(html, sport.id === "pickleball" ? /31 October &amp; 1 November 2026/ : sport.id === "cricket" ? /25 Oct,? 2026/ : /24 Oct,? 2026/);
     assert.doesNotMatch(html, /1[78] (?:Oct|October)/);
   }
   h.booking().toggleSelection("badminton", "u13-boys-singles");
@@ -259,7 +260,7 @@ test("Every badminton category uses the same date on its sport page, landing car
 test("Other sport pages retain their category dates and original cart dates", () => {
   const h = uiHarness();
   h.booking().toggleSelection("badminton", "mens-singles");
-  for (const sport of SPORTS.filter(sport => sport.id !== "badminton")) {
+  for (const sport of SPORTS.filter(sport => sport.id !== "badminton" && sport.id !== "pickleball")) {
     const html = h.sport(sport.id);
     for (const category of sport.categories) {
       const card = h.buttons.find(button => button["aria-label"]?.startsWith(`${category.name},`));
@@ -326,20 +327,13 @@ test("Each badminton card shows both prizes accessibly and keeps its original bo
   assert.equal((selected.match(/Runner-up/g) ?? []).length, 7);
 });
 
-test("Pickleball category prizes match the confirmed amounts and total the tournament prize pool", () => {
+test("Pickleball replacement categories retain screenshot fees without obsolete category prizes", () => {
   const sport = findSport("pickleball");
-  assert.deepEqual(sport.categories.map(({ id, prizes }) => [id, prizes.winner, prizes.runnerUp]), [
-    ["u14-singles", 3500, 2500],
-    ["u14-doubles", 7000, 5000],
-    ["mixed-doubles", 10000, 6000],
-    ["open-singles", 10000, 6000],
-    ["open-doubles", 15000, 10000],
-  ]);
-  assert.equal(sport.categories.reduce((sum, { prizes }) => sum + prizes.winner + prizes.runnerUp, 0), sport.prizePool);
-  assert.deepEqual(sport.categories.map(({ fee }) => fee), [1000, 1600, 2400, 1200, 2400]);
+  assert.ok(sport.categories.every(category => !category.prizes));
+  assert.deepEqual(sport.categories.map(({ fee }) => fee), [999, 1299, 1899, 1999, 2299, 2299, 2299, 2299, 2399, 2799, 2799]);
 });
 
-test("Each pickleball card shows both prizes accessibly and keeps its original booking fee", () => {
+test("Pickleball cards hide dates and prices accessibly, and selecting all eleven preserves checkout totals", () => {
   const h = uiHarness();
   h.sport("pickleball");
   const cards = h.buttons.filter(button => button["aria-pressed"] !== undefined);
@@ -348,20 +342,19 @@ test("Each pickleball card shows both prizes accessibly and keeps its original b
   sport.categories.forEach(category => {
     const card = cards.find(button => button["aria-label"].startsWith(`${category.name},`));
     const markup = renderToStaticMarkup(createElement("span", null, card.children));
-    for (const text of [category.name, "Winner", "Runner-up", formatINR(category.prizes.winner), formatINR(category.prizes.runnerUp), formatINR(category.fee)]) {
-      assert.ok(markup.includes(text), `${category.name}: ${text}`);
-    }
-    assert.ok(card["aria-label"].includes(`winner prize ${formatINR(category.prizes.winner)}, runner-up prize ${formatINR(category.prizes.runnerUp)}`));
+    assert.ok(markup.includes(category.name.replaceAll("'", "&#x27;")), category.name);
+    assert.doesNotMatch(markup + card["aria-label"], /₹|Oct|Nov|Winner|Runner-up/);
     card.onClick();
   });
-  assert.equal(h.booking().pricing.total, 8600);
-  assert.equal(h.booking().categories.length, 5);
+  assert.equal(h.booking().pricing.total, 23389);
+  assert.equal(h.booking().categories.length, 11);
   const selected = h.sport("pickleball");
-  assert.equal((selected.match(/aria-pressed="true"/g) ?? []).length, 5);
-  assert.equal((selected.match(/Runner-up/g) ?? []).length, 5);
-  h.buttons.find(button => button["aria-label"]?.startsWith("Under 14 Singles,")).onClick();
-  assert.equal(h.booking().pricing.total, 7600);
-  assert.equal(h.booking().categories.length, 4);
+  assert.equal((selected.match(/aria-pressed="true"/g) ?? []).length, 11);
+  assert.doesNotMatch(selected, /₹23,389|₹999|Runner-up|match-day-2026/);
+  assert.match(selected, /31 October &amp; 1 November 2026/);
+  h.buttons.find(button => button["aria-label"]?.startsWith("Men's Beginner Singles,")).onClick();
+  assert.equal(h.booking().pricing.total, 22390);
+  assert.equal(h.booking().categories.length, 10);
 });
 
 test("Cricket and football prizes match the confirmed amounts and total each tournament prize pool", () => {
@@ -415,7 +408,12 @@ test("Landing cards highlight the correct tournament prizes and retain entry fee
     assert.ok(cards[index].includes(sport.name), sport.name);
     assert.ok(cards[index].includes("Overall Tournament Prize"), sport.name);
     assert.ok(cards[index].includes(expectedPrizes[index]), sport.name);
-    assert.ok(cards[index].includes(expectedFees[index]), sport.name);
+    if (sport.id === "pickleball") {
+      assert.ok(!cards[index].includes("Starts from"));
+      assert.ok(!cards[index].includes(expectedFees[index]));
+      assert.ok(cards[index].includes("31 October &amp; 1 November 2026"));
+      assert.ok(cards[index].includes("11 categories"));
+    } else assert.ok(cards[index].includes(expectedFees[index]), sport.name);
     assert.ok(cards[index].includes(`href="/gameon-multisports-league/sports/${sport.id}"`), sport.name);
   });
 });
@@ -428,22 +426,22 @@ test("Sport clicks persist immediately; returning to another sport keeps the com
   h.buttons.find(button => button["aria-label"]?.startsWith("Open Mixed Doubles,")).onClick();
   assert.ok(h.landing().includes("2 categories"));
   h.sport("pickleball");
-  h.buttons.find(button => button["aria-label"]?.startsWith("Open Singles,")).onClick();
+  h.buttons.find(button => button["aria-label"]?.startsWith("Men's Beginner Singles,")).onClick();
   assert.equal(h.booking().categories.length, 3);
-  assert.equal(h.booking().pricing.total, 4200);
+  assert.equal(h.booking().pricing.total, 3999);
   const back = h.sport("badminton");
   assert.match(back, /aria-pressed="true"/);
   assert.ok(back.includes("3 categories in cart"));
-  assert.ok(h.landing().includes("₹4,200"));
+  assert.ok(!h.landing().includes("₹3,999"));
   const review = h.review();
-  for (const text of ["3 categories", "2 sports", "Badminton", "Pickleball", "₹4,200", "Test Player", "player@example.com", "Gurugram"]) assert.ok(review.includes(text), text);
+  for (const text of ["3 categories", "2 sports", "Badminton", "Pickleball", "₹3,999", "Test Player", "player@example.com", "Gurugram"]) assert.ok(review.includes(text), text);
 });
 
 test("Cart remove controls remove only the selected sport/category pair", () => {
   const h = uiHarness();
   h.booking().toggleSelection("badminton", "mixed-doubles");
-  h.booking().toggleSelection("pickleball", "mixed-doubles");
+  h.booking().toggleSelection("pickleball", "mixed-open-doubles");
   h.landing();
   h.buttons.find(button => button["aria-label"] === "Remove Badminton Open Mixed Doubles").onClick();
-  assert.deepEqual(h.booking().draft.selections, [{ sportId: "pickleball", categoryId: "mixed-doubles" }]);
+  assert.deepEqual(h.booking().draft.selections, [{ sportId: "pickleball", categoryId: "mixed-open-doubles" }]);
 });

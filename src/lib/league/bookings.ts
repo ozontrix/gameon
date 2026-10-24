@@ -20,7 +20,7 @@ export function entrySnapshot(entry: LeagueEntry): LeagueConfirmation['entry'] {
     sport: entry.sports.length > 1 ? 'multisport' : entry.sport.id,
     sportName: entry.sports.map(sport => sport.name).join(' + '),
     sports: entry.sports.map(({ id, name }) => ({ id, name })),
-    categories: entry.categories.map(({ id, name, date, fee, squadSize, sportId, sportName }) => ({ id, name, date, fee, squadSize, sportId, sportName })),
+    categories: entry.categories.map(({ id, name, date, endDate, fee, squadSize, sportId, sportName }) => ({ id, name, date, ...(endDate ? { endDate } : {}), fee, squadSize, sportId, sportName })),
     date: entry.date, dates: entry.dates, squadSize: entry.squadSize,
     teamName: entry.teamName, captainName: entry.captainName,
     email: entry.email, phone: entry.phone, city: entry.city, notes: entry.notes,

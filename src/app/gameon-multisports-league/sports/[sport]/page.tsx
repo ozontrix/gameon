@@ -19,8 +19,10 @@ export async function generateMetadata({
   const data = findSport(sport);
   if (!data) notFound();
   return pageMetadata({
-    title: `${data.name} — Multisports League`, path: `/gameon-multisports-league/sports/${data.id}`,
-    description: `${data.description} ${scheduleLabel(data.categories)}. See all ${data.categories.length} categories, fixed match dates and entry fees for Game On Multisports League.`,
+    title: `${data.id === "pickleball" ? "Pickleball Showdown" : data.name} — Multisports League`, path: `/gameon-multisports-league/sports/${data.id}`,
+    description: data.id === "pickleball"
+      ? `Pickleball Showdown · ${scheduleLabel(data.categories)}. Explore all 11 categories: beginner, intermediate and advanced singles; beginner, intermediate and open doubles; Parent and Child; and Split Category Doubles 35+.`
+      : `${data.description} ${scheduleLabel(data.categories)}. See all ${data.categories.length} categories, fixed match dates and entry fees for Game On Multisports League.`,
   });
 }
 

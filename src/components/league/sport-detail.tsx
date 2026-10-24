@@ -4,8 +4,8 @@
  * Game On Multisports League — category page.
  *
  * Opens from a sport card on the league landing and hands the chosen category
- * straight to details. Categories are grouped by their fixed tournament day,
- * with explicit dates and per-person/per-team pricing on every option.
+ * straight to details. Pickleball uses a tournament-wide schedule and hides
+ * browse-stage prices; other sports retain their dated, priced options.
  */
 
 import { useRouter } from "next/navigation";
@@ -47,6 +47,10 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
   if (!sport) return null;
 
   const chosen = findCategories(sport, selected);
+  const isPickleball = sport.id === "pickleball";
+  const groups = isPickleball
+    ? [{ id: "pickleball-categories", items: sport.categories }]
+    : categoryDates(sport.categories).map((date) => ({ id: date, items: sport.categories.filter((item) => item.date === date) }));
 
   const toggle = (id: string) => {
     const category = sport.categories.find(item => item.id === id);
@@ -64,8 +68,8 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
   return (
     <div>
       <ScreenHeader
-        title={sport.name}
-        subtitle={sport.tagline}
+        title={isPickleball ? "Pickleball Showdown" : sport.name}
+        subtitle={isPickleball ? "11 categories · Singles & doubles" : sport.tagline}
         backHref={BASE}
         right={<IconTile emoji={sport.emoji} accent={sport.accent} size="lg" />}
       />
@@ -82,9 +86,8 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
           </Chip>
         </div>
         <p className="relative mt-3 text-[12px] leading-relaxed text-go-off/75">
-          Dates are fixed for each category. Exact match timings will be shared by the organisers.
+          {isPickleball ? "All categories are part of this two-day tournament. Category-wise schedules and exact match timings will be shared by the organisers." : "Dates are fixed for each category. Exact match timings will be shared by the organisers."}
           {sport.id === "badminton" ? " Singles: ₹1,000/person. Doubles and mixed doubles: ₹2,000/team." : ""}
-          {sport.id === "pickleball" ? " Entry fees vary by category; see each option below." : ""}
         </p>
       </Panel>
 
@@ -94,22 +97,21 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         </h2>
         <p className="mt-1 text-xs text-go-off/70">Tap to add or remove a category. Your cart is saved immediately, even when you go back.</p>
         <p className="mt-0.5 text-[12px] text-go-off/70">
-          {sport.categories.length} {sport.categories.length === 1 ? "category" : "categories"} · fee
-          covers one person for singles or one team for doubles/team sports · select multiple categories if eligible
+          {sport.categories.length} {sport.categories.length === 1 ? "category" : "categories"} · {isPickleball ? "select multiple categories if eligible" : "fee covers one person for singles or one team for doubles/team sports · select multiple categories if eligible"}
         </p>
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        {categoryDates(sport.categories).map((date) => (
-          <section key={date} aria-labelledby={`match-day-${date}`} className="space-y-2.5">
-            <h3 id={`match-day-${date}`} className="flex flex-wrap items-center gap-2 text-sm font-semibold text-go-white">
+        {groups.map(({ id, items }) => (
+          <section key={id} aria-label={isPickleball ? "Pickleball categories" : undefined} aria-labelledby={isPickleball ? undefined : `match-day-${id}`} className={cn("space-y-2.5", isPickleball && "grid gap-2.5 space-y-0 lg:col-span-2 lg:grid-cols-2")}>
+            {!isPickleball ? <h3 id={`match-day-${id}`} className="flex flex-wrap items-center gap-2 text-sm font-semibold text-go-white">
               <CalendarDays className="h-4 w-4 text-go-brand" aria-hidden />
-              {formatDayLabel(date)}
+              {formatDayLabel(id)}
               <span className="text-[11px] font-normal text-go-off/70">
-                {sport.categories.filter((item) => item.date === date).length} {sport.categories.filter((item) => item.date === date).length === 1 ? "category" : "categories"}
+                {items.length} {items.length === 1 ? "category" : "categories"}
               </span>
-            </h3>
-        {sport.categories.filter((item) => item.date === date).map((item) => {
+            </h3> : null}
+        {items.map((item) => {
           const active = selected.includes(item.id);
           return (
             <button
@@ -117,7 +119,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
               type="button"
               onClick={() => toggle(item.id)}
               aria-pressed={active}
-              aria-label={`${item.name}, ${formatINR(item.fee)} per ${categoryFeeUnit(item)}, ${formatDayLabel(item.date)}${item.prizes ? `, winner prize ${formatINR(item.prizes.winner)}, runner-up prize ${formatINR(item.prizes.runnerUp)}` : ""}`}
+              aria-label={isPickleball ? `${item.name}, ${item.format}, ${item.squadSize} ${item.squadSize === 1 ? "player" : "players"}` : `${item.name}, ${formatINR(item.fee)} per ${categoryFeeUnit(item)}, ${formatDayLabel(item.date)}${item.prizes ? `, winner prize ${formatINR(item.prizes.winner)}, runner-up prize ${formatINR(item.prizes.runnerUp)}` : ""}`}
               disabled={!ready}
               className={cn(
                 "grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[20px] border px-3 py-3.5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-brand disabled:cursor-wait sm:px-4",
@@ -136,23 +138,23 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[14px] font-semibold text-go-white">{item.name}</span>
-                <span className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-go-brand">
+                {!isPickleball ? <span className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-go-brand">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   {formatDayLabel(item.date)}
-                </span>
+                </span> : null}
                 <span className="mt-1 flex items-center gap-1.5 text-[11.5px] text-go-off/70">
                   <Users className="h-3 w-3 shrink-0" aria-hidden />
                   {item.format} · {item.squadSize} {item.squadSize === 1 ? "player" : "players"}
                 </span>
               </span>
-              <span className="shrink-0 text-right">
+              {!isPickleball ? <span className="shrink-0 text-right">
                 <span className="block font-mono text-[15px] font-semibold text-go-brand">
                   {formatINR(item.fee)}
                 </span>
                 <span className="block text-[10px] uppercase tracking-wider text-go-off/70">
                   per {categoryFeeUnit(item)}
                 </span>
-              </span>
+              </span> : null}
               {item.prizes ? (
                 <span className="col-span-3 grid grid-cols-2 divide-x divide-amber-300/15 rounded-xl border border-amber-300/20 bg-amber-300/[0.05] py-2.5">
                   <span className="min-w-0 px-3">
@@ -182,7 +184,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         ))}
       </div>
 
-      {chosen.length > 0 ? (
+      {chosen.length > 0 && !isPickleball ? (
         <Panel className="mt-5 border-go-brand/25 bg-go-brand/[0.06]">
           <p className="text-sm font-semibold text-go-white">Your selected match days</p>
           <p className="mt-1 text-[13px] text-go-brand">{scheduleLabel(chosen)}</p>
@@ -195,7 +197,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
       <div className="mt-4">
         <Button href={BASE} size="lg">Add another sport</Button>
       </div>
-      <LeagueCartSummary />
+      <LeagueCartSummary hidePricing={isPickleball} />
       <StepFooter>
         <div className="flex items-center gap-3 lg:justify-between">
           <div className="min-w-0 flex-1 lg:flex-none">
@@ -205,7 +207,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
                 : "Select a category"}
             </p>
             <p className="font-display text-lg leading-tight text-go-white">
-              {categories.length > 0 ? formatINR(pricing.total) : "—"}
+              {isPickleball ? "Review your selection" : categories.length > 0 ? formatINR(pricing.total) : "—"}
             </p>
           </div>
           <Button

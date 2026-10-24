@@ -354,10 +354,10 @@ test("Selecting a category tracks AddToCart; deselecting it does not", () => {
   const { LeagueSportDetail } = load("src/components/league/sport-detail.tsx");
   const render = () => { buttons.length = 0; renderToStaticMarkup(React.createElement(LeagueSportDetail, { sportId: "pickleball" })); };
   render();
-  buttons.find(button => button["aria-label"]?.startsWith("Open Mixed Doubles,")).onClick();
-  draft.selections = [{ sportId: "pickleball", categoryId: "mixed-doubles" }];
+  buttons.find(button => button["aria-label"]?.startsWith("Mixed Open Doubles,")).onClick();
+  draft.selections = [{ sportId: "pickleball", categoryId: "mixed-open-doubles" }];
   render();
-  buttons.find(button => button["aria-label"]?.startsWith("Open Mixed Doubles,")).onClick();
-  assert.deepEqual(events, [{ event: "AddToCart", parameters: { id: "pickleball:mixed-doubles", value: 2400, currency: "INR" } }]);
+  buttons.find(button => button["aria-label"]?.startsWith("Mixed Open Doubles,")).onClick();
+  assert.deepEqual(events, [{ event: "AddToCart", parameters: { id: "pickleball:mixed-open-doubles", value: 2799, currency: "INR" } }]);
   assert.equal(changes.length, 2);
 });

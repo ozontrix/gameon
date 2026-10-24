@@ -4,8 +4,7 @@
  * Shared catalog used by the registration screens and server-side payment quote.
  *
  * Fees mirror the Game On Multisports League registration sheet:
- *   Pickleball  U14 singles ₹1,000/person · U14 doubles ₹1,600/team
- *               Open singles ₹1,200/person · Open doubles ₹2,400/team · Mixed doubles ₹2,400/team
+ *   Pickleball  Showdown ticket categories and fees from the supplied ticket list.
  *   Badminton   Singles ₹1,000/person · Doubles ₹2,000/team
  *   Cricket     7v7 · 6 overs a side · ₹2,000 per team
  *   Football    6v6 · 30 minutes full time · ₹2,000 per team
@@ -24,8 +23,10 @@ export interface Category {
   fee: number;
   /** Category prize money in INR; omitted until confirmed for a sport. */
   prizes?: { winner: number; runnerUp: number };
-  /** Fixed tournament day, not a player-selectable booking date. */
+  /** Fixed match day, or tournament start when endDate is present. */
   date: string;
+  /** Tournament-wide availability; does not assign a category to a specific day. */
+  endDate?: string;
   /** Who can enter and how many entries the bracket holds. */
   format: string;
   /** How many people one entry covers (1 singles, 2 doubles, 7 cricket…). */
@@ -51,6 +52,13 @@ export interface Sport {
   capacity: string;
   categories: Category[];
 }
+
+export const PICKLEBALL_TOURNAMENT = {
+  name: "Pickleball Showdown",
+  startDate: "2026-10-31",
+  endDate: "2026-11-01",
+  label: "31 October & 1 November 2026",
+} as const;
 
 export const SPORTS: Sport[] = [
   {
@@ -79,19 +87,25 @@ export const SPORTS: Sport[] = [
     name: "Pickleball",
     emoji: "🏓",
     accent: "#F5D000",
-    tagline: "Fastest growing sport",
-    description: "4 courts — 2 indoor AC and 2 outdoor courts.",
+    tagline: "Pickleball Showdown",
+    description: "4 courts — 2 indoor AC and 2 outdoor courts. Singles and doubles for beginners, intermediate and advanced players, plus Parent and Child and Split Category Doubles 35+.",
     prizePool: 75000,
     mode: "individual",
     slotLength: "60 min per match slot",
-    capacity: "5 categories",
+    capacity: "11 categories",
     categories: [
-      { id: "u14-singles", name: "Under 14 Singles", short: "Under 14 · Singles", fee: 1000, prizes: { winner: 3500, runnerUp: 2500 }, date: "2026-10-24", format: "Under 14", squadSize: 1 },
-      { id: "u14-doubles", name: "Under 14 Doubles", short: "Under 14 · Doubles", fee: 1600, prizes: { winner: 7000, runnerUp: 5000 }, date: "2026-10-24", format: "Under 14", squadSize: 2 },
-      { id: "mixed-doubles", name: "Open Mixed Doubles", short: "Open · Mixed Doubles", fee: 2400, prizes: { winner: 10000, runnerUp: 6000 }, date: "2026-10-24", format: "Open · Mixed pair", squadSize: 2 },
-      { id: "open-singles", name: "Open Singles", short: "Open · Singles", fee: 1200, prizes: { winner: 10000, runnerUp: 6000 }, date: "2026-10-25", format: "Open category", squadSize: 1 },
-      { id: "open-doubles", name: "Open Doubles", short: "Open · Doubles", fee: 2400, prizes: { winner: 15000, runnerUp: 10000 }, date: "2026-10-25", format: "Open category", squadSize: 2 },
-    ],
+      { id: "mens-beginner-singles", name: "Men's Beginner Singles", short: "Men · Beginner Singles", fee: 999, format: "Below 3 DUPR or GRIP", squadSize: 1 },
+      { id: "mens-intermediate-singles", name: "Men's Intermediate Singles", short: "Men · Intermediate Singles", fee: 1299, format: "Intermediate · Men", squadSize: 1 },
+      { id: "advanced-singles", name: "Advanced Singles Category", short: "Advanced · Singles", fee: 1899, format: "Advanced · Singles", squadSize: 1 },
+      { id: "parent-and-child", name: "Parent and Child", short: "Parent & Child", fee: 1999, format: "Parent-child doubles", squadSize: 2 },
+      { id: "mens-intermediate-doubles", name: "Men's Intermediate Doubles", short: "Men · Intermediate Doubles", fee: 2299, format: "Intermediate · Men", squadSize: 2 },
+      { id: "mixed-intermediate-doubles", name: "Mixed Intermediate Doubles", short: "Mixed · Intermediate Doubles", fee: 2299, format: "Intermediate · Mixed pair", squadSize: 2 },
+      { id: "beginner-mens-doubles", name: "Beginner Men's Doubles", short: "Men · Beginner Doubles", fee: 2299, format: "Beginner · Men", squadSize: 2 },
+      { id: "beginner-mixed-doubles", name: "Beginner Mixed Doubles", short: "Mixed · Beginner Doubles", fee: 2299, format: "Beginner · Mixed pair", squadSize: 2 },
+      { id: "split-category-doubles-35-plus", name: "Split Category Doubles 35+", short: "Split · Doubles 35+", fee: 2399, format: "Split category · 35+", squadSize: 2 },
+      { id: "mens-open-doubles", name: "Men's Open Doubles", short: "Men · Open Doubles", fee: 2799, format: "Open · Men", squadSize: 2 },
+      { id: "mixed-open-doubles", name: "Mixed Open Doubles", short: "Mixed · Open Doubles", fee: 2799, format: "Open · Mixed pair", squadSize: 2 },
+    ].map((category) => ({ ...category, date: PICKLEBALL_TOURNAMENT.startDate, endDate: PICKLEBALL_TOURNAMENT.endDate })),
   },
   {
     id: "cricket",
@@ -177,16 +191,19 @@ export function entryFees(categories: Category[]): number {
   return categories.reduce((sum, category) => sum + category.fee, 0);
 }
 
-/** Sorted match days; a multi-category entry can span both tournament days. */
-export function categoryDates(categories: { date: string }[]): string[] {
-  return [...new Set(categories.map((category) => category.date))].sort();
+/** Sorted match days, including tournament-wide availability when no bracket day is assigned. */
+export function categoryDates(categories: { date: string; endDate?: string }[]): string[] {
+  return [...new Set(categories.flatMap((category) => category.endDate ? [category.date, category.endDate] : [category.date]))].sort();
 }
 
 export function categoryFeeUnit(category: Pick<Category, "squadSize">): string {
   return category.squadSize === 1 ? "person" : "team";
 }
 
-export function scheduleLabel(categories: { date: string }[]): string {
+export function scheduleLabel(categories: { date: string; endDate?: string }[]): string {
+  if (categories.length && categories.every((category) => category.date === PICKLEBALL_TOURNAMENT.startDate && category.endDate === PICKLEBALL_TOURNAMENT.endDate)) {
+    return PICKLEBALL_TOURNAMENT.label;
+  }
   const dates = categoryDates(categories);
   return dates.length ? dates.map(formatDayLabel).join(" & ") : "Select a category";
 }
@@ -359,7 +376,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     kicker: "Game On Multisports League · Season 1",
     title: "4 Sports.",
     highlight: "One Arena.",
-    copy: "4 sports, 14 categories and a ₹3 lakh+ overall prize pool on 24 & 25 October 2026.",
+    copy: "4 sports, 20 categories and a ₹3 lakh+ overall prize pool. Pickleball Showdown: 31 October & 1 November 2026. Other sports: 24 & 25 October 2026.",
     cta: "See all sports",
     href: "/gameon-multisports-league/sports",
   },
@@ -423,13 +440,13 @@ export const LEAGUE_EVENTS: LeagueEvent[] = [
   },
   {
     id: "pickleball-championship",
-    name: "Pickleball Championship",
+    name: PICKLEBALL_TOURNAMENT.name,
     sport: "Pickleball",
-    period: "24 – 25 Oct 2026",
+    period: PICKLEBALL_TOURNAMENT.label,
     day: "Sat & Sun",
     venue: "Indoor + Outdoor · Zone B",
-    entry: "from ₹1,000",
-    bracket: "Under 14 · Open singles, doubles & mixed doubles",
+    entry: "",
+    bracket: "11 categories · Beginner, intermediate & advanced singles · Beginner, intermediate & open doubles · Parent and Child · Split Category Doubles 35+",
     filled: 52,
     status: "Registration open",
     href: "/gameon-multisports-league/sports/pickleball",
@@ -483,7 +500,7 @@ export interface Faq {
 export const FAQS: Faq[] = [
   {
     q: "Who can register for Game On Multisports League?",
-    a: "Choose an age-appropriate category: U-13 Boys/Girls or U-17 Boys in badminton, Under 14 in pickleball, or an open category. Team entries are box cricket 7v7 and football 6v6.",
+    a: "Choose an eligible category: U-13 Boys/Girls, U-17 Boys or open badminton; beginner, intermediate or advanced pickleball singles; beginner, intermediate or open pickleball doubles; Parent and Child; or Split Category Doubles 35+. Men's Beginner Singles is below 3 DUPR or GRIP. Team entries are box cricket 7v7 and football 6v6.",
   },
   {
     q: "What is included in the entry fee?",
@@ -495,7 +512,7 @@ export const FAQS: Faq[] = [
   },
   {
     q: "When will I play?",
-    a: "Every category has a fixed date, shown before you register. Football is on 24 October and Cricket on 25 October 2026. Badminton and pickleball categories run across both days. Organisers share exact match timings separately.",
+    a: "Pickleball Showdown is on 31 October and 1 November 2026; individual category dates are not assigned here. Badminton is on 24 and 25 October, football on 24 October and cricket on 25 October 2026. Organisers share exact match timings separately.",
   },
   {
     q: "Do you offer refunds?",

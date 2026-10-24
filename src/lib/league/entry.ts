@@ -14,6 +14,7 @@ import {
   entryFees,
   entryTickets,
   findSport,
+  SPORTS,
   type Category,
   type Sport,
 } from "@/components/league/data";
@@ -29,13 +30,13 @@ export const LEAGUE_SPORT_IDS = ["badminton", "pickleball", "cricket", "football
 export const LeagueEntrySchema = z.object({
   sport: z.enum(LEAGUE_SPORT_IDS).optional(),
   /** Every bracket the player is entering — one entry can hold several. */
-  categoryIds: z.array(z.string().trim().min(1).max(40)).min(1).max(7).optional(),
+  categoryIds: z.array(z.string().trim().min(1).max(40)).min(1).max(Math.max(...SPORTS.map((sport) => sport.categories.length))).optional(),
   selections: z.array(z.object({
     sportId: z.enum(LEAGUE_SPORT_IDS),
     categoryId: z.string().trim().min(1).max(40),
-  })).min(1).max(14).optional(),
+  })).min(1).max(SPORTS.reduce((sum, sport) => sum + sport.categories.length, 0)).optional(),
   date: z.string().trim().min(8).max(10),
-  squadSize: z.number().int().min(1).max(30).optional(),
+  squadSize: z.number().int().min(1).max(SPORTS.reduce((sum, sport) => sum + entryTickets(sport.categories), 0)).optional(),
   teamName: z.string().trim().max(60).optional().default(""),
   captainName: z.string().trim().min(3, "Please enter the player's full name.").max(80),
   phone: z.string().trim().min(10, "Please enter a valid mobile number.").max(18),
@@ -106,7 +107,7 @@ export function parseLeagueEntry(input: unknown): ParseResult {
   const sports = [...new Set(categories.map((item) => item.sportId))].map((id) => findSport(id)!);
   const sport = sports[0];
 
-  if (!findMatchDay(data.date)) return { ok: false, error: "Please pick one of the two match days." };
+  if (!findMatchDay(data.date)) return { ok: false, error: "Please use a scheduled tournament date." };
   const dates = categoryDates(categories);
   if (data.date !== dates[0]) {
     return { ok: false, error: "The match date does not match your categories. Please select your categories again." };

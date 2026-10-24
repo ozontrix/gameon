@@ -6,7 +6,7 @@
  */
 
 export const LEAGUE_NAME = "Game On Multisports League";
-export const LEAGUE_TAGLINE = "Season 1 · 24 & 25 October 2026";
+export const LEAGUE_TAGLINE = "Season 1 · 24 & 25 October · Pickleball: 31 October & 1 November 2026";
 export const LEAGUE_PRIZE_POOL = "₹3 lakh+";
 export const LEAGUE_VENUE = "GameOn Multisports Complex, Sector 70, Gurugram";
 export const LEAGUE_HELP_PHONE = "+91 74948 25740";
@@ -17,10 +17,12 @@ export interface LeagueMatchDay {
   label: string;
 }
 
-/** The two fixed tournament days; each category is assigned one in the catalog. */
+/** Sport-specific event days; pickleball runs on its own weekend. */
 export const LEAGUE_MATCH_DAYS: LeagueMatchDay[] = [
   { iso: "2026-10-24", label: "Day 1" },
   { iso: "2026-10-25", label: "Day 2" },
+  { iso: "2026-10-31", label: "Pickleball Day 1" },
+  { iso: "2026-11-01", label: "Pickleball Day 2" },
 ];
 
 export function findMatchDay(iso: string | null | undefined): LeagueMatchDay | null {

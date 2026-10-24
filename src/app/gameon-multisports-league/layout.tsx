@@ -18,11 +18,11 @@ export const metadata: Metadata = {
     template: "%s | Game On Multisports League",
   },
   description:
-    "Register for Game On Multisports League on 24 & 25 October 2026 at Sector 70, Gurugram. Badminton, pickleball, box cricket 7v7 and football 6v6 with a ₹3 lakh+ overall prize pool. Check each category's date and entry fee.",
+    "Game On Multisports League at Sector 70, Gurugram. Pickleball Showdown: 31 October & 1 November 2026. Badminton, box cricket 7v7 and football 6v6: 24 & 25 October 2026. 4 sports, 20 categories and a ₹3 lakh+ overall prize pool.",
   openGraph: {
     title: "Game On Multisports League",
     description:
-      "24 & 25 October 2026 · 4 sports · 14 categories · ₹3 lakh+ overall prize pool. Choose your categories, check match dates and register.",
+      "4 sports · 20 categories · ₹3 lakh+ overall prize pool. Pickleball Showdown: 31 October & 1 November 2026. Other sports: 24 & 25 October 2026.",
     siteName: "Game On",
     locale: "en_IN",
     type: "website",

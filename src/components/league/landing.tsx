@@ -17,7 +17,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ArrowRight, CalendarDays, MapPin, Trophy, Users, Zap } from "lucide-react";
-import { SPORTS, formatINR, scheduleLabel, type EntryMode } from "@/components/league/data";
+import { SPORTS, PICKLEBALL_TOURNAMENT, formatINR, scheduleLabel, type EntryMode } from "@/components/league/data";
 import { LEAGUE_HELP_PHONE, LEAGUE_PRIZE_POOL } from "@/lib/league/constants";
 import { Button, Chip, IconTile, Kicker, Panel } from "@/components/league/ui";
 import { LeagueCartSummary } from "./cart-summary";
@@ -63,13 +63,15 @@ export function LeagueLanding() {
         </h1>
         <p className="mt-2.5 max-w-xl text-[13.5px] leading-relaxed text-go-off/60">
           Four sports. {SPORTS.reduce((sum, sport) => sum + sport.categories.length, 0)} categories.
-          One arena. Join us on 24 &amp; 25 October 2026 — add categories from any sport
-          to your cart, check match days and pay together in one checkout.
+          One arena. Badminton, cricket and football: 24 &amp; 25 October 2026.
+          Pickleball Showdown: 31 October &amp; 1 November 2026. Add eligible categories
+          to your cart and pay together in one checkout.
         </p>
 
         <div className="mt-3.5 flex flex-wrap gap-2">
           <Chip icon={MapPin}>Sector 70, Gurugram</Chip>
           <Chip icon={CalendarDays}>24 &amp; 25 October 2026</Chip>
+          <Chip icon={CalendarDays} tone="brand">Pickleball: {PICKLEBALL_TOURNAMENT.label}</Chip>
           <Chip icon={Trophy} tone="brand">{LEAGUE_PRIZE_POOL} overall prize pool</Chip>
           <Chip icon={Zap} tone="brand">
             Instant confirmation
@@ -109,7 +111,7 @@ export function LeagueLanding() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-display text-xl uppercase leading-tight text-go-white">
-                    {sport.name}
+                    {sport.id === "pickleball" ? PICKLEBALL_TOURNAMENT.name : sport.name}
                   </h2>
                   <Chip tone={sport.mode === "team" ? "warn" : "brand"}>
                     {sport.mode === "team" ? "Team entry" : "Individual"}
@@ -144,14 +146,14 @@ export function LeagueLanding() {
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
-              <div>
+              {sport.id !== "pickleball" ? <div>
                 {sport.id !== "cricket" && sport.id !== "football" ? (
                   <Kicker>Starts from</Kicker>
                 ) : null}
                 <p className="font-display text-lg text-go-white">
                   {formatINR(Math.min(...sport.categories.map((c) => c.fee)))}
                 </p>
-              </div>
+              </div> : <p className="text-xs text-go-off/70">Explore all 11 categories</p>}
               <Button href={`${BASE}/sports/${sport.id}`} size="md">
                 Select Sport
                 <ArrowRight className="h-4 w-4" />
@@ -161,7 +163,7 @@ export function LeagueLanding() {
         ))}
       </div>
 
-      <LeagueCartSummary footer />
+      <LeagueCartSummary footer hidePricing={draft.selections.some((item) => item.sportId === "pickleball")} />
       {/* ─── Help strip ─── */}
       <Panel className="mt-4 border-go-brand/20 bg-go-brand/[0.07]">
         <Kicker>Not sure where you fit?</Kicker>
