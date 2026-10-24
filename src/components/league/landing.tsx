@@ -163,7 +163,7 @@ export function LeagueLanding() {
         ))}
       </div>
 
-      <LeagueCartSummary footer hidePricing={draft.selections.some((item) => item.sportId === "pickleball")} />
+      <LeagueCartSummary footer />
       {/* ─── Help strip ─── */}
       <Panel className="mt-4 border-go-brand/20 bg-go-brand/[0.07]">
         <Kicker>Not sure where you fit?</Kicker>

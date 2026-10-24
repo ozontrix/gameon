@@ -25,8 +25,8 @@ export function CategorySchedule({
           </div>
           {category.fee !== undefined ? (
             <div className="shrink-0 text-right">
-              {!category.endDate ? <p className="font-mono text-sm font-semibold text-go-white">{formatINR(category.fee)}</p> : null}
-              {!category.endDate && category.squadSize !== undefined ? (
+              <p className="font-mono text-sm font-semibold text-go-white">{formatINR(category.fee)}</p>
+              {category.squadSize !== undefined ? (
                 <p className="mt-0.5 text-[11px] text-go-off/70">per {categoryFeeUnit({ squadSize: category.squadSize })}</p>
               ) : null}
               {onRemove && category.sportId ? (

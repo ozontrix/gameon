@@ -86,7 +86,7 @@ test("Pickleball checkout totals use the new singles and doubles fees", () => {
   assert.deepEqual(result.entry.dates, ["2026-10-31", "2026-11-01"]);
 });
 
-test("Pickleball category summaries hide prices and bracket dates while checkout uses screenshot fees", () => {
+test("Pickleball category summaries show screenshot fees and units without bracket dates", () => {
   const { CategorySchedule } = load("src/components/league/category-schedule.tsx");
   const sport = findSport("pickleball");
   for (const { id, fee } of sport.categories) {
@@ -96,7 +96,9 @@ test("Pickleball category summaries hide prices and bracket dates while checkout
     assert.equal(result.quote.entryFee, fee, id);
     assert.equal(result.quote.total, fee, id);
     const html = renderToStaticMarkup(createElement(CategorySchedule, { categories }));
-    assert.doesNotMatch(html, /₹|Oct|Nov|per team|per person/);
+    assert.ok(html.includes(new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(fee)), id);
+    assert.ok(html.includes(categories[0].squadSize === 1 ? "per person" : "per team"), id);
+    assert.doesNotMatch(html, /Oct|Nov/);
   }
 });
 

@@ -4,8 +4,8 @@
  * Game On Multisports League — category page.
  *
  * Opens from a sport card on the league landing and hands the chosen category
- * straight to details. Pickleball uses a tournament-wide schedule and hides
- * browse-stage prices; other sports retain their dated, priced options.
+ * straight to details. Every category shows its entry fee; pickleball uses a
+ * tournament-wide schedule while other sports retain per-category dates.
  */
 
 import { useRouter } from "next/navigation";
@@ -97,7 +97,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
         </h2>
         <p className="mt-1 text-xs text-go-off/70">Tap to add or remove a category. Your cart is saved immediately, even when you go back.</p>
         <p className="mt-0.5 text-[12px] text-go-off/70">
-          {sport.categories.length} {sport.categories.length === 1 ? "category" : "categories"} · {isPickleball ? "select multiple categories if eligible" : "fee covers one person for singles or one team for doubles/team sports · select multiple categories if eligible"}
+          {sport.categories.length} {sport.categories.length === 1 ? "category" : "categories"} · fee covers one person for singles or one team for doubles/team sports · select multiple categories if eligible
         </p>
       </div>
 
@@ -119,7 +119,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
               type="button"
               onClick={() => toggle(item.id)}
               aria-pressed={active}
-              aria-label={isPickleball ? `${item.name}, ${item.format}, ${item.squadSize} ${item.squadSize === 1 ? "player" : "players"}` : `${item.name}, ${formatINR(item.fee)} per ${categoryFeeUnit(item)}, ${formatDayLabel(item.date)}${item.prizes ? `, winner prize ${formatINR(item.prizes.winner)}, runner-up prize ${formatINR(item.prizes.runnerUp)}` : ""}`}
+              aria-label={isPickleball ? `${item.name}, ${formatINR(item.fee)} per ${categoryFeeUnit(item)}, ${item.format}, ${item.squadSize} ${item.squadSize === 1 ? "player" : "players"}` : `${item.name}, ${formatINR(item.fee)} per ${categoryFeeUnit(item)}, ${formatDayLabel(item.date)}${item.prizes ? `, winner prize ${formatINR(item.prizes.winner)}, runner-up prize ${formatINR(item.prizes.runnerUp)}` : ""}`}
               disabled={!ready}
               className={cn(
                 "grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[20px] border px-3 py-3.5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-brand disabled:cursor-wait sm:px-4",
@@ -147,14 +147,14 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
                   {item.format} · {item.squadSize} {item.squadSize === 1 ? "player" : "players"}
                 </span>
               </span>
-              {!isPickleball ? <span className="shrink-0 text-right">
+              <span className="shrink-0 text-right">
                 <span className="block font-mono text-[15px] font-semibold text-go-brand">
                   {formatINR(item.fee)}
                 </span>
                 <span className="block text-[10px] uppercase tracking-wider text-go-off/70">
                   per {categoryFeeUnit(item)}
                 </span>
-              </span> : null}
+              </span>
               {item.prizes ? (
                 <span className="col-span-3 grid grid-cols-2 divide-x divide-amber-300/15 rounded-xl border border-amber-300/20 bg-amber-300/[0.05] py-2.5">
                   <span className="min-w-0 px-3">
@@ -197,7 +197,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
       <div className="mt-4">
         <Button href={BASE} size="lg">Add another sport</Button>
       </div>
-      <LeagueCartSummary hidePricing={isPickleball} />
+      <LeagueCartSummary />
       <StepFooter>
         <div className="flex items-center gap-3 lg:justify-between">
           <div className="min-w-0 flex-1 lg:flex-none">
@@ -207,7 +207,7 @@ export function LeagueSportDetail({ sportId }: { sportId: SportId }) {
                 : "Select a category"}
             </p>
             <p className="font-display text-lg leading-tight text-go-white">
-              {isPickleball ? "Review your selection" : categories.length > 0 ? formatINR(pricing.total) : "—"}
+              {categories.length > 0 ? formatINR(pricing.total) : "—"}
             </p>
           </div>
           <Button

@@ -333,7 +333,7 @@ test("Pickleball replacement categories retain screenshot fees without obsolete 
   assert.deepEqual(sport.categories.map(({ fee }) => fee), [999, 1299, 1899, 1999, 2299, 2299, 2299, 2299, 2399, 2799, 2799]);
 });
 
-test("Pickleball cards hide dates and prices accessibly, and selecting all eleven preserves checkout totals", () => {
+test("Pickleball cards show screenshot fees accessibly without bracket dates, and all eleven preserve checkout totals", () => {
   const h = uiHarness();
   h.sport("pickleball");
   const cards = h.buttons.filter(button => button["aria-pressed"] !== undefined);
@@ -343,14 +343,19 @@ test("Pickleball cards hide dates and prices accessibly, and selecting all eleve
     const card = cards.find(button => button["aria-label"].startsWith(`${category.name},`));
     const markup = renderToStaticMarkup(createElement("span", null, card.children));
     assert.ok(markup.includes(category.name.replaceAll("'", "&#x27;")), category.name);
-    assert.doesNotMatch(markup + card["aria-label"], /₹|Oct|Nov|Winner|Runner-up/);
+    assert.ok(markup.includes(formatINR(category.fee)), category.name);
+    assert.ok(markup.includes(category.squadSize === 1 ? "per person" : "per team"), category.name);
+    assert.ok(card["aria-label"].includes(formatINR(category.fee)), category.name);
+    assert.doesNotMatch(markup + card["aria-label"], /Oct|Nov|Winner|Runner-up/);
     card.onClick();
   });
   assert.equal(h.booking().pricing.total, 23389);
   assert.equal(h.booking().categories.length, 11);
   const selected = h.sport("pickleball");
   assert.equal((selected.match(/aria-pressed="true"/g) ?? []).length, 11);
-  assert.doesNotMatch(selected, /₹23,389|₹999|Runner-up|match-day-2026/);
+  assert.ok(selected.includes("₹23,389"));
+  assert.ok(selected.includes("₹999"));
+  assert.doesNotMatch(selected, /Runner-up|match-day-2026/);
   assert.match(selected, /31 October &amp; 1 November 2026/);
   h.buttons.find(button => button["aria-label"]?.startsWith("Men's Beginner Singles,")).onClick();
   assert.equal(h.booking().pricing.total, 22390);
@@ -432,7 +437,7 @@ test("Sport clicks persist immediately; returning to another sport keeps the com
   const back = h.sport("badminton");
   assert.match(back, /aria-pressed="true"/);
   assert.ok(back.includes("3 categories in cart"));
-  assert.ok(!h.landing().includes("₹3,999"));
+  assert.ok(h.landing().includes("₹3,999"));
   const review = h.review();
   for (const text of ["3 categories", "2 sports", "Badminton", "Pickleball", "₹3,999", "Test Player", "player@example.com", "Gurugram"]) assert.ok(review.includes(text), text);
 });

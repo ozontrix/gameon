@@ -86,11 +86,12 @@ try {
     await until(`document.querySelectorAll('button[aria-pressed]').length === 11 && !document.querySelector('button[aria-pressed]').disabled`);
     assert.equal(await evaluate(`document.querySelector('h1').textContent`), 'Pickleball Showdown');
     assert.equal(await evaluate(`document.body.innerText.includes('31 October & 1 November 2026')`), true);
-    assert.equal(await evaluate(`Array.from(document.querySelectorAll('button[aria-pressed]')).every(b => !/₹|October|November|Oct,|Nov,/.test(b.textContent + b.getAttribute('aria-label')))`), true);
+    assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('button[aria-pressed]')).map(b => b.textContent.match(/₹[\\d,]+/)?.[0])`), ['₹999', '₹1,299', '₹1,899', '₹1,999', '₹2,299', '₹2,299', '₹2,299', '₹2,299', '₹2,399', '₹2,799', '₹2,799']);
+    assert.equal(await evaluate(`Array.from(document.querySelectorAll('button[aria-pressed]')).every(b => b.getAttribute('aria-label').includes('₹') && /per (person|team)/.test(b.textContent) && !/October|November|Oct,|Nov,/.test(b.textContent + b.getAttribute('aria-label')))`), true);
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, `pickleball category overflow at ${width}`);
     await evaluate(`document.querySelector('button[aria-pressed]').click()`);
     await until(`document.querySelector('button[aria-pressed="true"]')`);
-    assert.equal(await evaluate(`/₹999|₹1,299|₹1,899|₹2,299|₹2,799/.test(document.body.innerText)`), false);
+    assert.equal(await evaluate(`document.querySelector('button[aria-pressed="true"]').innerText.includes('₹999')`), true);
     await command('Page.navigate', { url: `${origin}/gameon-multisports-league` });
     await until(`Array.from(document.querySelectorAll('h2')).some(h => h.textContent === 'Pickleball Showdown')`);
     assert.equal(await evaluate(`(() => { const card = Array.from(document.querySelectorAll('h2')).find(h => h.textContent === 'Pickleball Showdown').closest('.glass-subtle'); return card && card.innerText.includes('11 categories') && card.innerText.includes('31 October & 1 November 2026') && !card.innerText.toLowerCase().includes('starts from'); })()`), true);
