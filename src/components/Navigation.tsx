@@ -16,6 +16,7 @@ import {
   ArrowUp,
   Bell,
   BookOpen,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,8 @@ const desktopSections: NavItem[] = [
   { id: "zones", label: "Zones", icon: Building },
   { id: "sponsorship", label: "Sponsorships", icon: Handshake, href: "/sponsorship" },
   { id: "blogs", label: "Blogs", icon: BookOpen, href: "/blogs" },
-  { id: "league", label: "Game On Multi Sports League", icon: Trophy, href: "/gameon-multisports-league", highlighted: true },
+  { id: "league", label: "League", icon: Trophy, href: "/gameon-multisports-league" },
+  { id: "booking", label: "Book now", icon: Calendar, href: "/app", highlighted: true },
 ];
 
 // Primary tabs always visible in the mobile bottom bar
@@ -56,7 +58,7 @@ const mobileTabs: MobileTab[] = [
   { id: "hero", label: "Home", icon: Home },
   { id: "sports", label: "Sports", icon: LayoutGrid },
   { id: "zones", label: "Zones", icon: Building },
-  { id: "league", label: "GML", icon: Trophy, href: "/gameon-multisports-league", highlighted: true, ariaLabel: "Game On Multi Sports League" },
+  { id: "booking", label: "Book now", icon: Calendar, href: "/app", highlighted: true, ariaLabel: "Book now in the GameOn web app" },
   { id: "more", label: "More", image: "/game_on_favicon.png" },
 ];
 
@@ -64,7 +66,9 @@ const mobileTabs: MobileTab[] = [
 const moreItems: NavItem[] = [
   { id: "sponsorship", label: "Sponsorships", icon: Handshake, href: "/sponsorship", desc: "Partner your brand with Game On" },
   { id: "blogs", label: "Blogs", icon: BookOpen, href: "/blogs", desc: "Sports guides and stories from the court" },
-  { id: "booking", label: "Book", icon: Calendar, desc: "Reserve your next game" },
+  { id: "league", label: "Multisports League", icon: Trophy, href: "/gameon-multisports-league", desc: "Explore the GameOn league" },
+  { id: "booking", label: "Book", icon: Calendar, href: "/app", desc: "Reserve your next game in our web app" },
+  { id: "download-app", label: "Get the app", icon: Smartphone, desc: "Explore the GameOn app" },
   { id: "location", label: "Location", icon: MapPin, desc: "Sector 70, Gurugram" },
 ];
 
@@ -105,7 +109,7 @@ export function Navigation({ onNotifyClick }: NavigationProps) {
 
       for (let i = sections.length - 1; i >= 0; i--) {
         const el = document.getElementById(sections[i]);
-        if (el && scrollPos >= el.offsetTop) {
+        if (el && scrollPos >= el.getBoundingClientRect().top + window.scrollY) {
           setActiveSection(sections[i]);
           break;
         }

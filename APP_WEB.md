@@ -11,6 +11,28 @@ build uses.
 
 ## Routes
 
+### Homepage entry points
+
+The marketing homepage now leads with the venue hero and **Book the slot now**
+link to `/app`. Its sport picker and sport-detail CTAs link to `/app/sports?sport=…`
+using the existing catalogue filters. The combined turf links with both cricket
+and football filters. The old homepage booking form and league highlight are no
+longer mounted; independent league routes remain unchanged.
+
+The `#download-app` showcase has an interactive, explicitly labelled app preview.
+Store buttons appear only when valid HTTPS listing URLs are configured as
+`NEXT_PUBLIC_GAMEON_PLAY_STORE_URL` (play.google.com) and
+`NEXT_PUBLIC_GAMEON_APP_STORE_URL` (apps.apple.com). Otherwise each platform shows
+“Coming soon” and visitors can use the working web app. These public values are
+read at build time; rebuild after changing them. See `.env.homepage.example`.
+
+Run `node --test scripts/test-homepage-app.mjs scripts/test-navigation.mjs scripts/test-home-highlights.mjs`
+for the homepage regression checks.
+After building, run `node scripts/browser-homepage-app.mjs --background` for
+Chrome checks at 320, 375, 768, 1024 and 1440 pixels, interactive sport selection
+and real navigation to `/app`. Results/screenshots go to the OS temp directory
+under `gameon-homepage-app`; the check does not submit any bookings.
+
 | Route | Screen | Reached from |
 |---|---|---|
 | `/app` | Sign in — phone, email, or guest, plus a direct "Create an account" | direct |

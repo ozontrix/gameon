@@ -17,10 +17,11 @@ import {
   Shield,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
 import type { EmblaCarouselType } from "embla-carousel";
 import { useEmblaAutoplay } from "@/lib/useEmblaAutoplay";
-import { cn } from "@/lib/utils";
+import { sportBookingHref, SPORTS_APP_HREF } from "@/lib/homepage-app";
 
 // ─── Each sport gets its own unique identity ───
 const sports = [
@@ -95,7 +96,6 @@ const sports = [
 ];
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 28 };
-const springSnap = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 interface SportsSectionProps {
   onReserve?: () => void;
@@ -111,12 +111,12 @@ function SportParticle({ emoji, delay = 0, x = 0, y = 0 }: { emoji: string; dela
       animate={{
         opacity: [0, 0.12, 0],
         scale: [0, 1, 0],
-        y: [0, -120 - Math.random() * 80],
-        x: [0, (Math.random() - 0.5) * 60],
+        y: [0, -120 - (x % 7) * 10],
+        x: [0, ((y % 5) - 2) * 12],
         rotate: [0, 180, 360],
       }}
       transition={{
-        duration: 8 + Math.random() * 6,
+        duration: 8 + (x % 6),
         repeat: Infinity,
         delay,
         ease: "easeOut",
@@ -170,7 +170,7 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
 
 // ─── Magnetic Button ───
 function MagneticButton({ children, onClick, className = "" }: { children: React.ReactNode; onClick?: () => void; className?: string }) {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLAnchorElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const smoothX = useSpring(x, { stiffness: 250, damping: 20 });
@@ -191,8 +191,9 @@ function MagneticButton({ children, onClick, className = "" }: { children: React
   }, [x, y]);
 
   return (
-    <motion.button
+    <motion.a
       ref={ref}
+      href={SPORTS_APP_HREF}
       onClick={onClick}
       onMouseMove={handleMouse}
       onMouseLeave={handleLeave}
@@ -200,7 +201,7 @@ function MagneticButton({ children, onClick, className = "" }: { children: React
       style={{ x: smoothX, y: smoothY }}
     >
       {children}
-    </motion.button>
+    </motion.a>
   );
 }
 
@@ -617,23 +618,21 @@ function SportCard({
                 </div>
 
                 {/* CTA */}
-                <motion.button
+                <Link
+                  href={sportBookingHref(sport.id)}
                   onClick={() => {
                     setExpanded(false);
                     onReserve?.();
                   }}
-                  className="w-full rounded-2xl py-4 font-semibold text-sm tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full rounded-2xl px-4 py-4 font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-go-brand"
                   style={{
                     background: `linear-gradient(135deg, ${sport.accentColor}, ${sport.accentColor}cc)`,
-                    color: "#fff",
+                    color: sport.id === "badminton" ? "#fff" : "#0B0B0C",
                   }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={springSnap}
                 >
                   <Calendar className="w-4 h-4" />
-                  Reserve a Slot
-                </motion.button>
+                  Book now in the web app
+                </Link>
               </div>
               </motion.div>
             </motion.div>
@@ -793,7 +792,7 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
               animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             />
-            Book Your Slot Now
+            Book in the web app
             <motion.span
               className="inline-block"
               animate={{ x: [0, 4, 0] }}
@@ -860,7 +859,7 @@ export function SportsSection({ onReserve }: SportsSectionProps) {
             animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           />
-          Book Your Slot Now
+          Book in the web app
           <motion.span
             className="inline-block"
             animate={{ x: [0, 4, 0] }}

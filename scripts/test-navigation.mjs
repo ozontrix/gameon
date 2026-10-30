@@ -38,7 +38,7 @@ function navigation(pathname = '/', moreOpen = false) {
       links.push(props);
       return createElement('a', props, props.children);
     } },
-    'next/image': { __esModule: true, default: props => createElement('img', props) },
+    'next/image': { __esModule: true, default: ({ priority, ...props }) => { void priority; return createElement('img', props); } },
     'framer-motion': { motion, AnimatePresence: ({ children }) => children, useScroll: () => ({ scrollYProgress: 0 }), useSpring: value => value },
     '@/lib/utils': { cn: (...classes) => classes.filter(Boolean).join(' ') },
     'react/jsx-runtime': {
@@ -64,22 +64,22 @@ function navigation(pathname = '/', moreOpen = false) {
   return { html, desktop, mobile, links, buttons, updates, pushed };
 }
 
-test('Desktop has exactly the essential destinations and a permanently highlighted league link', () => {
+test('Desktop retains the league and highlights the working web-app booking destination', () => {
   const { desktop, links } = navigation();
   assert.ok(desktop);
-  assert.deepEqual([...desktop.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ['/', '/', '/#sports', '/#zones', '/sponsorship', '/blogs', leaguePath]);
-  for (const label of ['Home', 'Sports', 'Zones', 'Sponsorships', 'Blogs', 'Game On Multi Sports League']) assert.ok(desktop.includes(`>${label}<`));
+  assert.deepEqual([...desktop.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ['/', '/', '/#sports', '/#zones', '/sponsorship', '/blogs', leaguePath, '/app']);
+  for (const label of ['Home', 'Sports', 'Zones', 'Sponsorships', 'Blogs', 'League', 'Book now']) assert.ok(desktop.includes(`>${label}<`));
   assert.doesNotMatch(desktop, /For You|Community|>Book<|>Location</);
-  assert.ok(links.find(link => link.href === leaguePath && !link['aria-label']).className.includes('bg-go-brand text-go-black'));
+  assert.ok(links.find(link => link.href === '/app' && !link['aria-label']).className.includes('bg-go-brand text-go-black'));
 });
 
-test('Mobile replaces Book with a highlighted GML route while retaining More', () => {
+test('Mobile exposes a highlighted web-app booking link while retaining More', () => {
   const { mobile, links, buttons, updates } = navigation();
-  assert.deepEqual([...mobile.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ['/', '/#sports', '/#zones', leaguePath]);
-  for (const label of ['Home', 'Sports', 'Zones', 'GML', 'More']) assert.ok(mobile.includes(`>${label}<`));
+  assert.deepEqual([...mobile.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ['/', '/#sports', '/#zones', '/app']);
+  for (const label of ['Home', 'Sports', 'Zones', 'Book now', 'More']) assert.ok(mobile.includes(`>${label}<`));
   assert.doesNotMatch(mobile, />Book<|For You|Community/);
-  const league = links.find(link => link.href === leaguePath && link['aria-label']);
-  assert.equal(league['aria-label'], 'Game On Multi Sports League');
+  const league = links.find(link => link.href === '/app' && link['aria-label']);
+  assert.equal(league['aria-label'], 'Book now in the GameOn web app');
   assert.ok(league.className.includes('bg-go-brand text-go-black'));
   league.onClick();
   assert.deepEqual(updates.pop(), { index: 2, value: false });
@@ -90,14 +90,16 @@ test('Mobile replaces Book with a highlighted GML route while retaining More', (
 });
 
 test('More contains Sponsorships, Blogs, Book and Location and closes on route selection', () => {
-  const { html, links, buttons, updates, pushed } = navigation('/blogs', true);
+  const { html, links, updates } = navigation('/blogs', true);
   const sheet = html.slice(html.indexOf('role="dialog"'));
   for (const label of ['Sponsorships', 'Blogs', 'Book', 'Location']) assert.ok(sheet.includes(`>${label}<`));
   assert.doesNotMatch(sheet, /For You|Community/);
   links.find(link => link.href === '/sponsorship' && link.onClick).onClick();
   assert.deepEqual(updates.pop(), { index: 2, value: false });
-  buttons.find(button => renderToStaticMarkup(button.children).includes('>Book<')).onClick();
-  assert.deepEqual(pushed, ['/#booking']);
+  links.find(link => link.href === '/app' && link.onClick).onClick();
+  assert.deepEqual(updates.pop(), { index: 2, value: false });
+  assert.doesNotMatch(sheet, /#booking/);
+  assert.match(sheet, /Get the app/);
 });
 
 test('Blogs and nested articles use immediate route-based desktop and More active states', () => {
@@ -109,9 +111,9 @@ test('Blogs and nested articles use immediate route-based desktop and More activ
   }
 });
 
-test('League and nested league routes highlight the correct desktop and mobile destinations', () => {
+test('League and nested league routes retain active desktop and More destinations', () => {
   for (const path of [leaguePath, `${leaguePath}/sports/badminton`]) {
-    const { links } = navigation(path);
+    const { links } = navigation(path, true);
     const leagueLinks = links.filter(link => link.href === leaguePath);
     assert.equal(leagueLinks.length, 2);
     assert.ok(leagueLinks.every(link => link['aria-current'] === 'page'));
@@ -127,7 +129,7 @@ test('All blog pages inherit shared navigation and reserve space for fixed deskt
   assert.match(source, /pb-\[calc\(6rem\+env\(safe-area-inset-bottom\)\)\]/);
 });
 
-test('Home header keeps only the league CTA without an early-access or booking CTA', () => {
+test('Home header has one primary booking CTA without early-access messaging', () => {
   const source = readFileSync(resolve(root, 'src/components/HomePage.tsx'), 'utf8');
   assert.match(source, /<Navigation \/>/);
   assert.match(source, /<HeroSection \/>/);
@@ -137,24 +139,9 @@ test('Home header keeps only the league CTA without an early-access or booking C
   assert.equal([...desktop.matchAll(/bg-go-brand text-go-black/g)].length, 1);
 });
 
-test('Hero league CTA contains its smaller booking text inside the same link', () => {
+test('Hero CTA opens the web app and clearly labels the booking action', () => {
   const source = readFileSync(resolve(root, 'src/components/HeroSection.tsx'), 'utf8');
-  const ast = ts.createSourceFile('HeroSection.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const leagueLinks = [];
-  function visit(node) {
-    if (ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'Link') {
-      const href = node.openingElement.attributes.properties.find(attribute =>
-        ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === 'href');
-      if (href?.initializer && ts.isStringLiteral(href.initializer) && href.initializer.text === leaguePath) leagueLinks.push(node);
-    }
-    ts.forEachChild(node, visit);
-  }
-  visit(ast);
-  assert.equal(leagueLinks.length, 1);
-  const cta = leagueLinks[0].getText(ast);
-  assert.match(cta, /<span>Game On Multi Sports League<\/span>/);
-  assert.match(cta, /flex flex-col items-center/);
-  assert.match(cta, /text-\[10px\][^>]*>Book Your Slot Now<\/span>/);
-  assert.match(cta, /focus-visible:outline/);
-  assert.doesNotMatch(source, /Get Early Access|onNotifyClick/);
+  assert.match(source, /<WebAppCTA href=\{WEB_APP_HREF\}[^>]*>Book the slot now<\/WebAppCTA>/);
+  assert.match(source, /No download needed/);
+  assert.doesNotMatch(source, /gameon-multisports-league|Get Early Access|onNotifyClick/);
 });

@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { Briefcase, Heart, Trophy, Swords, Building2 } from "lucide-react";
+import { WebAppCTA } from "./WebAppCTA";
+import { sportBookingHref } from "@/lib/homepage-app";
 
 interface Audience {
   id: string;
@@ -139,6 +141,7 @@ export function AudienceSection() {
             <div>
               <h4 className="font-display text-lg text-go-white mb-2">{current.tagline}</h4>
               <p className="text-sm text-go-off/60 leading-relaxed">{current.description}</p>
+              <WebAppCTA href={sportBookingHref(current.id)} className="mt-5">Find your next game</WebAppCTA>
             </div>
           </div>
         </motion.div>

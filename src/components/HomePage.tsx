@@ -2,12 +2,11 @@
 
 import { Navigation } from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
-import { HomeHighlights } from "@/components/HomeHighlights";
 import { SportsSection } from "@/components/SportsSection";
 import { ZonesSection } from "@/components/ZonesSection";
 import { AudienceSection } from "@/components/AudienceSection";
 import { CommunitySection } from "@/components/CommunitySection";
-import { BookingSection } from "@/components/BookingSection";
+import { AppDownloadSection } from "@/components/AppDownloadSection";
 import { LocationSection } from "@/components/LocationSection";
 import { FooterSection } from "@/components/FooterSection";
 import { StackedCard } from "@/components/StackedCard";
@@ -18,15 +17,12 @@ export default function HomePage() {
     <>
       <Navigation />
 
-      <main className="relative">
-        <HomeHighlights />
+      <main className="relative bg-go-black">
         <HeroSection />
 
         {/* Stacked cards — each section slides up as a card with rounded top corners */}
         <StackedCard index={0} totalCards={6}>
-          <SportsSection onReserve={() => {
-            document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" });
-          }} />
+          <SportsSection />
         </StackedCard>
 
         <StackedCard index={1} totalCards={6}>
@@ -42,7 +38,7 @@ export default function HomePage() {
         </StackedCard>
 
         <StackedCard index={4} totalCards={6}>
-          <BookingSection />
+          <AppDownloadSection />
         </StackedCard>
 
         <StackedCard index={5} totalCards={6}>

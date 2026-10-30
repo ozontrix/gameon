@@ -1,591 +1,71 @@
 "use client";
 
-import { useRef, useEffect, useState, useMemo } from "react";
-import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Trophy, ArrowRight, Timer } from "lucide-react";
-import { GlassCard } from "./GlassCard";
-
-const stats = [
-  { value: 5, label: "Badminton Courts", subtitle: "2 AC + 3 Non-AC" },
-  { value: 4, label: "Pickleball Courts", subtitle: "2 Indoor AC + 2 Outdoor" },
-  { value: 5, label: "Cricket Nets", subtitle: "2 Indoor + 3 Outdoor" },
-  { value: 1, label: "Cricket + Football Turf", subtitle: "100×60 ft Astro Turf" },
-];
-
-// ─── Countdown Timer ───
-function CountdownTimer() {
-  const launchDate = useMemo(() => new Date("2025-07-01T00:00:00+05:30"), []);
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
-
-  useEffect(() => {
-    const update = () => {
-      const diff = launchDate.getTime() - Date.now();
-      if (diff <= 0) return;
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((diff / (1000 * 60)) % 60),
-      });
-    };
-    update();
-    const interval = setInterval(update, 60000);
-    return () => clearInterval(interval);
-  }, [launchDate]);
-
-  return (
-    <motion.div
-      className="flex items-center gap-3 text-[10px] tracking-[0.15em] uppercase text-go-brand/80 font-medium"
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.5 }}
-    >
-      <Timer className="w-3 h-3" />
-      <span>Opening in</span>
-      <span className="tabular-nums font-bold text-go-brand">
-        {timeLeft.days}d
-      </span>
-      <span className="text-go-off/30">:</span>
-      <span className="tabular-nums font-bold text-go-brand">
-        {timeLeft.hours.toString().padStart(2, "0")}h
-      </span>
-      <span className="text-go-off/30">:</span>
-      <span className="tabular-nums font-bold text-go-brand">
-        {timeLeft.minutes.toString().padStart(2, "0")}m
-      </span>
-    </motion.div>
-  );
-}
-
-const sportsRotator = [
-  { text: "Pickleball", icon: "🏓" },
-  { text: "Badminton", icon: "🏸" },
-  { text: "Box Cricket", icon: "🏏" },
-  { text: "Football", icon: "⚽" },
-];
-
-type TaglineIcon = { emoji: string } | { src: string; alt: string };
-
-const taglineWords: { text: string; icons: TaglineIcon[] }[] = [
-  {
-    text: "Spin",
-    icons: [
-      { emoji: "🎾" },
-      { emoji: "🏓" },
-      { src: "/pickleball.png", alt: "Pickleball" },
-      { src: "/cricket.png", alt: "Cricket" },
-    ],
-  },
-  {
-    text: "Smash",
-    icons: [{ emoji: "🏸" }, { src: "/badminton.png", alt: "Badminton" }],
-  },
-  {
-    text: "Socialize",
-    icons: [{ emoji: "☕️" }, { emoji: "🥤" }, { emoji: "🍕" }, { emoji: "🎉" }],
-  },
-];
-
-// ─── Rotating emoji — alternates icons for the tagline ───
-function RotatingEmoji({ icons, interval = 2200 }: { icons: TaglineIcon[]; interval?: number }) {
-  const [index, setIndex] = useState(0);
-  const icon = icons[index];
-
-  useEffect(() => {
-    const timer = setInterval(() => setIndex((prev) => (prev + 1) % icons.length), interval);
-    return () => clearInterval(timer);
-  }, [icons.length, interval]);
-
-  return (
-    <span className="inline-flex items-center justify-center w-7 h-7 overflow-hidden shrink-0">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.span
-          key={index}
-          initial={{ opacity: 0, y: 12, rotate: -25, scale: 0.5 }}
-          animate={{ opacity: 1, y: 0, rotate: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -12, rotate: 25, scale: 0.5 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="inline-block"
-        >
-          {"src" in icon ? (
-            <Image
-              src={icon.src}
-              alt={icon.alt}
-              width={512}
-              height={512}
-              className="w-5 h-5 object-contain"
-            />
-          ) : (
-            icon.emoji
-          )}
-        </motion.span>
-      </AnimatePresence>
-    </span>
-  );
-}
-
-// ─── Floating particle ───
-function FloatingParticle({ delay = 0, size = 4, x = 0, y = 0, color = "brand" }: {
-  delay?: number;
-  size?: number;
-  x?: number;
-  y?: number;
-  color?: string;
-}) {
-  const bgColor = color === "brand" ? "bg-go-brand" : "bg-go-white/10";
-  return (
-    <motion.div
-      className={`absolute rounded-full ${bgColor} pointer-events-none`}
-      style={{ width: size, height: size, left: `${x}%`, top: `${y}%` }}
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{
-        opacity: [0, 0.8, 0],
-        scale: [0, 1, 0],
-        y: [0, -80 - Math.random() * 60],
-        x: [0, (Math.random() - 0.5) * 40],
-      }}
-      transition={{
-        duration: 4 + Math.random() * 3,
-        repeat: Infinity,
-        delay,
-        ease: "easeOut",
-      }}
-    />
-  );
-}
-
-// ─── Floating court lines decorative ───
-function CourtLines() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-[1]">
-      {/* Horizontal lines */}
-      <motion.div
-        className="absolute left-0 right-0 h-px"
-        style={{
-          top: "30%",
-          background: "linear-gradient(90deg, transparent, rgba(243, 143, 47, 0.12), transparent)",
-        }}
-        initial={{ scaleX: 0, opacity: 0 }}
-        animate={{ scaleX: 1, opacity: 1 }}
-        transition={{ duration: 1.5, delay: 0.3 }}
-      />
-      <motion.div
-        className="absolute left-0 right-0 h-px"
-        style={{
-          top: "55%",
-          background: "linear-gradient(90deg, transparent, rgba(243, 143, 47, 0.08), transparent)",
-        }}
-        initial={{ scaleX: 0, opacity: 0 }}
-        animate={{ scaleX: 1, opacity: 1 }}
-        transition={{ duration: 1.5, delay: 0.6 }}
-      />
-      <motion.div
-        className="absolute left-0 right-0 h-px"
-        style={{
-          top: "75%",
-          background: "linear-gradient(90deg, transparent, rgba(243, 143, 47, 0.06), transparent)",
-        }}
-        initial={{ scaleX: 0, opacity: 0 }}
-        animate={{ scaleX: 1, opacity: 1 }}
-        transition={{ duration: 1.5, delay: 0.9 }}
-      />
-      {/* Vertical center line */}
-      <motion.div
-        className="absolute top-0 bottom-0 w-px left-1/2"
-        style={{
-          background: "linear-gradient(180deg, transparent, rgba(243, 143, 47, 0.06), transparent)",
-        }}
-        initial={{ scaleY: 0, opacity: 0 }}
-        animate={{ scaleY: 1, opacity: 1 }}
-        transition={{ duration: 1.5, delay: 0.5 }}
-      />
-    </div>
-  );
-}
+import { ArrowDown, ArrowUpRight, Globe2, MapPin, Smartphone } from "lucide-react";
+import { homepageSports, sportBookingHref, WEB_APP_HREF } from "@/lib/homepage-app";
+import { WebAppCTA } from "./WebAppCTA";
 
 export function HeroSection() {
-  const ref = useRef<HTMLElement>(null);
-  const [sportIndex, setSportIndex] = useState(0);
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
-  const smoothX = useSpring(mouseX, { stiffness: 50, damping: 20 });
-  const smoothY = useSpring(mouseY, { stiffness: 50, damping: 20 });
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"],
-  });
-
-  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
-  const contentY = useTransform(scrollYProgress, [0, 1], [0, 150]);
-  const statOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
-  const overlayOpacity = useTransform(scrollYProgress, [0, 0.6], [0, 1]);
-
-  // Rotate through sports
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSportIndex((prev) => (prev + 1) % sportsRotator.length);
-    }, 2500);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Parallax mouse tracking
-  useEffect(() => {
-    const handleMouse = (e: MouseEvent) => {
-      mouseX.set(e.clientX / window.innerWidth);
-      mouseY.set(e.clientY / window.innerHeight);
-    };
-    window.addEventListener("mousemove", handleMouse);
-    return () => window.removeEventListener("mousemove", handleMouse);
-  }, [mouseX, mouseY]);
-
-  // ─── Gyroscope / Device Orientation Parallax ───
-  useEffect(() => {
-    // Only run on devices that support DeviceOrientationEvent
-    if (typeof window === "undefined") return;
-    if (!window.DeviceOrientationEvent) return;
-
-    let granted = false;
-    let listening = false;
-
-    const handleOrientation = (e: DeviceOrientationEvent) => {
-      // gamma: left(-) to right(+) tilt, range ~ -90 to 90
-      // beta: front(-) to back(+) tilt, range ~ -180 to 180
-      const g = e.gamma ?? 0;   // left-right
-      const b = e.beta ?? 0;    // front-back
-
-      // Clamp and normalise to 0-1 range (centered at 0.5)
-      const clampedG = Math.max(-45, Math.min(45, g));
-      const clampedB = Math.max(-45, Math.min(45, b));
-      const nx = (clampedG + 45) / 90;   // 0..1
-      const ny = (clampedB + 45) / 90;   // 0..1
-
-      mouseX.set(nx);
-      mouseY.set(ny);
-    };
-
-    const startListening = () => {
-      if (listening) return;
-      window.addEventListener("deviceorientation", handleOrientation);
-      listening = true;
-    };
-
-    // iOS 13+ requires explicit permission
-    const DeviceOrientationEventAny = window.DeviceOrientationEvent as
-      | (typeof window.DeviceOrientationEvent & { requestPermission?: () => Promise<"granted" | "denied"> })
-      | undefined;
-
-    if (DeviceOrientationEventAny?.requestPermission) {
-      // iOS 13+ path — we request permission on first user interaction
-      const requestPermission = async () => {
-        try {
-          const result = await DeviceOrientationEventAny.requestPermission!();
-          granted = result === "granted";
-          if (granted) startListening();
-        } catch {
-          // fallback: just try listening anyway
-          startListening();
-        }
-      };
-
-      // Try to request on touch/click (first user interaction)
-      const onInteraction = () => {
-        if (!granted && !listening) requestPermission();
-        window.removeEventListener("touchstart", onInteraction);
-        window.removeEventListener("click", onInteraction);
-      };
-      window.addEventListener("touchstart", onInteraction, { once: true });
-      window.addEventListener("click", onInteraction, { once: true });
-
-      // Also try immediately (some browsers may already have permission)
-      requestPermission();
-
-      return () => {
-        window.removeEventListener("deviceorientation", handleOrientation);
-        window.removeEventListener("touchstart", onInteraction);
-        window.removeEventListener("click", onInteraction);
-      };
-    } else {
-      // Non-iOS path — just listen
-      startListening();
-      return () => {
-        window.removeEventListener("deviceorientation", handleOrientation);
-      };
-    }
-  }, [mouseX, mouseY]);
-
-  const bgX = useTransform(smoothX, [0, 1], [-15, 15]);
-  const bgY = useTransform(smoothY, [0, 1], [-15, 15]);
+  const [selected, setSelected] = useState(homepageSports[0]);
 
   return (
-    <section
-      id="discover-gameon"
-      ref={ref}
-      className="relative h-screen w-full overflow-hidden bg-go-black"
-    >
-      {/* ─── Background Image Layer ─── */}
-      <motion.div
-        className="absolute inset-0 z-0"
-        style={{ scale: bgScale, x: bgX, y: bgY }}
-      >
-        {/* Background image — high-quality sports facility stock */}
-        <div className="absolute inset-0 bg-[url('/hero_background.png')] bg-cover bg-center bg-no-repeat" />
-
-        {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-go-black/70 via-go-black/40 to-go-black z-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-go-black/80 via-transparent to-go-black/50 z-10" />
-
-        {/* Brand color wash */}
-        <div className="absolute inset-0 z-[5] mix-blend-overlay opacity-20"
-          style={{
-            background: `linear-gradient(135deg, rgba(243, 143, 47, 0.3) 0%, transparent 50%, rgba(243, 143, 47, 0.1) 100%)`,
-          }}
-        />
-      </motion.div>
-
-      {/* ─── Court Lines Decorative ─── */}
-      <CourtLines />
-
-      {/* ─── Floating Particles ─── */}
-      <FloatingParticle delay={0} size={3} x={15} y={20} />
-      <FloatingParticle delay={1.2} size={5} x={85} y={25} />
-      <FloatingParticle delay={2.5} size={3} x={25} y={60} />
-      <FloatingParticle delay={0.8} size={4} x={75} y={55} />
-      <FloatingParticle delay={3} size={3} x={50} y={15} />
-      <FloatingParticle delay={1.8} size={2} x={10} y={45} />
-      <FloatingParticle delay={2.2} size={4} x={90} y={70} />
-
-      {/* ─── Top Corner Brand Number ─── */}
-      <motion.div
-        className="absolute top-6 right-6 lg:top-10 lg:right-10 z-30 text-right hidden lg:block"
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-      >
-        <div className="text-[9px] tracking-[0.25em] uppercase text-go-off/30 font-medium">Est. 2025</div>
-        <div className="text-xs tracking-wider text-go-brand/60 font-medium">Sector 70, Gurugram</div>
-      </motion.div>
-
-      {/* ─── Content ─── */}
-      <motion.div
-        className="relative z-20 flex flex-col h-full w-full px-6 sm:px-8 lg:px-14 xl:px-20"
-        style={{ y: contentY }}
-      >
-        <div className="pt-6 lg:pt-10 shrink-0" />
-
-        {/* ─── Center Content ─── */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          {/* Pre-heading badge */}
-          <motion.div
-            className="mb-6 mt-12 lg:mt-16"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full glass text-[8px] sm:text-[10px] tracking-[0.1em] sm:tracking-[0.18em] uppercase text-go-off/50 font-medium whitespace-nowrap">
-              <span className="w-1.5 h-1.5 rounded-full bg-go-brand animate-pulse shrink-0" />
-              Where the City Unplugs,&nbsp;
-              <span className="text-go-brand font-bold">GameOn</span>&nbsp;Begins
-            </span>
-          </motion.div>
-
-          {/* Logo */}
-          <motion.div
-            className="w-full max-w-[380px] lg:max-w-[480px] xl:max-w-[540px]"
-            initial={{ opacity: 0, y: 30, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 180, damping: 22, delay: 0.2 }}
-          >
-            <Image
-              src="/game_on.png"
-              alt="Game On — Where the City Unplugs & GameOn Begins"
-              width={540}
-              height={162}
-              className="object-contain w-full h-auto"
-              style={{ width: "auto", height: "auto" }}
-            />
-          </motion.div>
-
-          {/* Sports Rotator */}
-          <motion.div
-            className="mt-6 flex items-center gap-2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <span className="text-xs text-go-off/40 tracking-wider uppercase">Play</span>
-            <motion.span
-              key={sportIndex}
-              initial={{ opacity: 0, y: 10, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.9 }}
-              transition={{ duration: 0.3 }}
-              className="text-sm font-bold text-go-brand tracking-wider uppercase flex items-center gap-2"
-            >
-              {sportsRotator[sportIndex].icon} {sportsRotator[sportIndex].text}
-            </motion.span>
-            <span className="text-xs text-go-off/40 tracking-wider uppercase">Every Day</span>
-          </motion.div>
-
-          {/* Tagline with rotating emojis */}
-          <motion.div
-            className="mt-5 flex flex-wrap justify-center gap-x-4 gap-y-1"
-            initial="hidden"
-            animate="visible"
-          >
-            {taglineWords.map((word, i) => (
-              <motion.span
-                key={word.text}
-                className="inline-flex items-center gap-2 text-lg lg:text-xl font-display text-go-off tracking-[0.15em] uppercase"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 + i * 0.12, type: "spring", stiffness: 200, damping: 20 }}
-              >
-                <span>{word.text}</span>
-                <RotatingEmoji icons={word.icons} />
-              </motion.span>
-            ))}
-          </motion.div>
-
-          <motion.div
-            className="w-16 h-[2px] rounded-full mt-5"
-            style={{ background: "linear-gradient(90deg, transparent, var(--go-brand), transparent)" }}
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 1.1, duration: 0.8 }}
-          />
-
-          {/* Subtitle */}
-          <motion.p
-            className="text-xs text-go-off/30 tracking-wider mt-5 max-w-md text-center leading-relaxed"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.5 }}
-          >
-            1.5 acres of premium air-conditioned & open-air courts.
-            <br />
-            5 badminton, 4 pickleball, 5 cricket nets, box cricket & football turf & more.
-          </motion.p>
-
-          {/* CTA with glow effect */}
-          <motion.div
-            className="mt-7 w-full max-w-md"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 22, delay: 1.3 }}
-          >
-            <Link
-              href="/gameon-multisports-league"
-              className="group relative w-full bg-go-brand text-go-black font-bold text-xs sm:text-sm tracking-[0.12em] uppercase rounded-full py-4 px-5 sm:px-8 flex items-center justify-center gap-3 cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-[0_0_40px_rgba(243,143,47,0.4)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-go-brand"
-            >
-              {/* Ripple border */}
-              <span className="absolute inset-0 rounded-full border-2 border-transparent group-hover:border-go-brand/30 transition-all duration-500" />
-              {/* Sweep */}
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
-              <Trophy className="w-4 h-4 shrink-0 relative z-10" aria-hidden="true" />
-              <span className="relative z-10 flex flex-col items-center gap-1 text-center">
-                <span>Game On Multi Sports League</span>
-                <span className="text-[10px] sm:text-xs font-medium tracking-wide normal-case">Book Your Slot Now</span>
-              </span>
-              <ArrowRight className="w-4 h-4 shrink-0 relative z-10 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-            </Link>
-          </motion.div>
+    <section id="hero" aria-labelledby="hero-heading" className="relative isolate overflow-hidden bg-go-black px-5 pb-10 pt-8 text-go-off sm:px-8 lg:px-14 lg:pb-12 lg:pt-36 xl:px-20">
+      <div aria-hidden="true" className="pointer-events-none absolute -left-40 top-0 -z-10 size-[650px] rounded-full bg-go-brand/10 blur-[140px]" />
+      <div className="mx-auto max-w-[1400px]">
+        <div className="mb-9 flex items-center justify-between gap-4 lg:hidden">
+          <Image src="/game_on.png" alt="Game On" width={160} height={45} className="h-auto w-32" />
+          <Link href={WEB_APP_HREF} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 px-4 text-xs font-semibold hover:border-go-brand focus-visible:outline-2 focus-visible:outline-go-brand">Open web app<ArrowUpRight aria-hidden="true" className="size-4" /></Link>
         </div>
-
-        {/* ─── Glass Stat Strip ─── */}
-        <motion.div
-          className="shrink-0 pb-6 lg:pb-10"
-          style={{ opacity: statOpacity }}
-        >
-          <GlassCard
-            variant="subtle"
-            className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden rounded-[28px]"
-          >
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                className="p-4 lg:p-5 flex flex-col items-center text-center"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.4 + i * 0.08, duration: 0.4 }}
-              >
-                <span className="text-2xl lg:text-3xl font-display text-go-brand font-bold tabular-nums">
-                  <AnimatedNumber to={stat.value} />
-                </span>
-                <span className="text-xs font-medium text-go-off/70 mt-1 leading-tight">{stat.label}</span>
-                {stat.subtitle && (
-                  <span className="text-[10px] text-go-off/40 mt-0.5">{stat.subtitle}</span>
-                )}
-              </motion.div>
+        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
+          <div className="min-w-0 pb-2">
+            <p className="mb-6 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-go-off/75 sm:text-xs"><MapPin aria-hidden="true" className="size-3.5 text-go-brand" />Sector 70, Gurugram <span aria-hidden="true" className="mx-1 text-go-brand">/</span> Your home court</p>
+            <h1 id="hero-heading" className="font-display text-[clamp(3rem,13vw,5rem)] uppercase leading-[1.04] tracking-[-0.025em] lg:text-[clamp(3.5rem,6vw,6rem)]">Less scrolling.<br /><span className="text-go-brand">More playing.</span></h1>
+            <p className="mt-6 max-w-lg text-base leading-relaxed text-go-off/75 sm:text-lg">Your next great game starts here. Premium courts, your favourite people, and a little time just for you.</p>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <WebAppCTA href={WEB_APP_HREF} className="w-full sm:w-auto">Book the slot now</WebAppCTA>
+              <a href="#sports" className="inline-flex min-h-12 items-center gap-3 rounded-full px-3 text-sm font-medium text-go-off transition-colors hover:text-go-brand focus-visible:outline-2 focus-visible:outline-go-brand">Find your sport<ArrowDown aria-hidden="true" className="size-4" /></a>
+            </div>
+            <p className="mt-3 flex items-center gap-2 text-xs text-go-off/65"><Globe2 aria-hidden="true" className="size-3.5" />Book in the GameOn web app. No download needed.</p>
+            <div className="mt-10 flex flex-wrap gap-x-7 gap-y-4 border-t border-white/15 pt-6">
+              {[["1.5", "Acres of play"], ["3", "Playing zones"], ["4", "Sports. One home."]].map(([value, label]) => (
+                <div key={label} className="flex items-center gap-3"><span className="font-display text-3xl text-go-off">{value}</span><span className="max-w-24 text-xs leading-relaxed text-go-off/65">{label}</span></div>
+              ))}
+            </div>
+          </div>
+          <div className="relative min-w-0">
+            <div className="relative h-[340px] overflow-hidden rounded-[28px] border border-white/15 sm:h-[430px] lg:h-[550px]">
+              <Image src="/ac-indoor.jpeg" alt="Indoor badminton and pickleball courts at GameOn in Gurugram" fill preload sizes="(max-width: 1023px) 100vw, 46vw" className="object-cover" />
+              <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-go-black via-go-black/10 to-go-black/20" />
+              <div className="absolute left-5 right-5 top-5 flex flex-wrap items-center justify-between gap-3 sm:left-7 sm:right-7">
+                <span className="rounded-full border border-white/25 bg-go-black/65 px-4 py-2 font-mono text-[10px] uppercase tracking-widest backdrop-blur-md">The venue. The vibe.</span>
+                <a href="#sports" aria-label="Explore GameOn sports and courts" className="flex size-11 items-center justify-center rounded-full bg-go-brand text-go-black transition-colors hover:bg-go-off focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-go-brand"><ArrowUpRight aria-hidden="true" className="size-5" /></a>
+              </div>
+              <div className="absolute bottom-7 left-6 right-6 sm:bottom-9 sm:left-8 sm:right-8">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-go-off/80">Spin. Smash. Socialize.</p>
+                <p className="max-w-sm font-display text-4xl uppercase leading-tight sm:text-5xl">Good games.<br />Even better company.</p>
+              </div>
+            </div>
+            <div className="relative mx-3 -mt-3 flex items-center gap-4 rounded-2xl border border-white/15 bg-go-navy px-5 py-4 shadow-2xl sm:mx-6 sm:-mt-5">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-go-brand/15 text-go-brand"><Smartphone aria-hidden="true" className="size-5" /></span>
+              <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Your next game. One app.</p><p className="mt-1 text-xs leading-relaxed text-go-off/65">Courts, bookings &amp; events, together.</p></div>
+              <a href="#download-app" aria-label="Explore the GameOn app" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 transition-colors hover:bg-go-brand hover:text-go-black focus-visible:outline-2 focus-visible:outline-go-brand"><ArrowUpRight aria-hidden="true" className="size-5" /></a>
+            </div>
+          </div>
+        </div>
+        <div className="mt-12 grid gap-6 rounded-[24px] border border-white/15 bg-white/[0.03] p-5 sm:p-7 lg:mt-16 lg:grid-cols-[1fr_1.5fr_1fr] lg:items-center lg:gap-8">
+          <div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-go-brand">Make time for play</p><h2 className="mt-2 font-display text-2xl uppercase">What&apos;s your game?</h2><p className="mt-1 text-xs text-go-off/65">Pick a sport. We&apos;ll take you to the courts.</p></div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Choose your sport">
+            {homepageSports.map((sport) => (
+              <button key={sport.id} type="button" aria-pressed={selected.id === sport.id} onClick={() => setSelected(sport)} className={`flex min-h-20 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-brand ${selected.id === sport.id ? "border-go-brand bg-go-brand/15 text-go-brand" : "border-white/10 text-go-off/75 hover:border-go-brand/60 hover:bg-white/5"}`}>
+                <Image src={sport.image} alt="" width={32} height={32} className="size-8 object-contain" />{sport.label}
+              </button>
             ))}
-          </GlassCard>
-        </motion.div>
-      </motion.div>
-
-      {/* Scroll indicator */}
-      <motion.div
-        className="absolute bottom-6 lg:bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2, duration: 0.5 }}
-      >
-        <span className="text-[9px] tracking-[0.2em] uppercase text-go-off/20 font-medium">Scroll to explore</span>
-        <motion.div
-          className="w-4 h-6 rounded-full border border-go-border-subtle flex items-start justify-center pt-1"
-          animate={{ y: [0, 4, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <motion.div
-            className="w-1 h-1.5 rounded-full bg-go-brand/60"
-            animate={{ y: [0, 4, 0], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </motion.div>
-      </motion.div>
-
-      {/* Bottom gradient overlay that fades in on scroll */}
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 h-32 z-10 pointer-events-none"
-        style={{
-          opacity: overlayOpacity,
-          background: "linear-gradient(to top, var(--go-black), transparent)",
-        }}
-      />
+          </div>
+          <div><p aria-live="polite" aria-atomic="true" className="mb-3 min-h-5 text-xs text-go-off/75">{selected.detail}</p><WebAppCTA href={sportBookingHref(selected.id)} className="w-full px-4">Book {selected.label.toLowerCase()}</WebAppCTA></div>
+        </div>
+      </div>
     </section>
   );
-}
-
-// ─── Animated Counter component ───
-function AnimatedNumber({ to }: { to: number }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          const steps = 30;
-          const increment = to / steps;
-          const interval = 2000 / steps;
-          let current = 0;
-          const timer = setInterval(() => {
-            current += increment;
-            if (current >= to) {
-              setCount(to);
-              clearInterval(timer);
-            } else {
-              setCount(Math.round(current));
-            }
-          }, interval);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [to]);
-
-  return <span ref={ref}>{count}</span>;
 }

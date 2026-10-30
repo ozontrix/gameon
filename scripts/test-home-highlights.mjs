@@ -73,7 +73,7 @@ test('Highlights use real local images, unique IDs, and the correct public desti
   }
 });
 
-test('Home shows only the league, with autoplay off and navigation disabled', () => {
+test('Retained standalone highlights component handles a single slide without autoplay', () => {
   const { html, groups, links, buttons, autoplay } = renderCarousel({ slides: homeHighlights });
   assert.equal(groups.length, 1);
   assert.equal(links[0].href, '/gameon-multisports-league');
@@ -91,13 +91,12 @@ test('Main league page is identical to the updated page and keeps the same layou
   assert.doesNotMatch(read('src/app/gameon-multisports-league/page.tsx'), /open.play|sportsx-dandia/i);
 });
 
-test('Existing hero stays below the carousel, with unique home and discovery anchors', () => {
+test('Homepage leads with the hero instead of the league carousel or booking form', () => {
   const homepage = read('src/components/HomePage.tsx');
-  assert.ok(homepage.indexOf('<HomeHighlights />') < homepage.indexOf('<HeroSection />'));
-  assert.match(read('src/components/HeroSection.tsx'), /id="discover-gameon"/);
-  const { html } = renderCarousel();
-  assert.match(html, /id="hero"/);
-  assert.match(html, /href="#discover-gameon"/);
+  assert.doesNotMatch(homepage, /HomeHighlights|BookingSection|getElementById\("booking"\)/);
+  assert.match(homepage, /<HeroSection \/>/);
+  assert.match(homepage, /<AppDownloadSection \/>/);
+  assert.match(read('src/components/HeroSection.tsx'), /id="hero"/);
 });
 
 test('Only the active slide is exposed to screen readers and keyboard focus', () => {

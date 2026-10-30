@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { Thermometer, Wind, Sun, Building2, RefreshCw } from "lucide-react";
 import { SegmentedControl } from "./SegmentedControl";
-import { cn } from "@/lib/utils";
+import { WebAppCTA } from "./WebAppCTA";
 
 const zones = [
   {
@@ -169,7 +169,7 @@ export function ZonesSection() {
 
             {/* Highlights list */}
             <div className="lg:col-span-2 glass-subtle rounded-[28px] p-6 lg:p-8 flex flex-col justify-center">
-              <h4 className="text-sm font-display font-bold text-go-white mb-5">What's Inside</h4>
+              <h4 className="text-sm font-display font-bold text-go-white mb-5">What&apos;s Inside</h4>
               <ul className="space-y-4">
                 {currentZone.highlights.map((h, i) => (
                   <motion.li
@@ -197,6 +197,7 @@ export function ZonesSection() {
                    "Open-air with evening floodlights"}
                 </div>
               </div>
+              <WebAppCTA className="mt-6 w-full">Book a court in the web app</WebAppCTA>
             </div>
           </div>
         </motion.div>
